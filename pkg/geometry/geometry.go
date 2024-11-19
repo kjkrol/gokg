@@ -13,43 +13,9 @@ import "math"
 //   - Mod(v1, v2 Vec[T]) Vec[T]: Returns a new vector that is the result of applying the modulus operation between two vectors.
 //   - ModMutable(v1 *Vec[T], v2 Vec[T]): Modifies the first vector by applying the modulus operation with the second vector.
 type Geometry[T int | float64] interface {
-	// Length calculates the length (magnitude) of a vector.
-	//
-	// Parameters:
-	//   - v: The vector for which to calculate the length.
-	//
-	// Returns:
-	//   - The length of the vector.
 	Length(v Vec[T]) T
-
-	// Distance calculates the distance between two vectors.
-	//
-	// Parameters:
-	//   - v1: The first vector.
-	//   - v2: The second vector.
-	//
-	// Returns:
-	//   - The distance between the two vectors.
 	Distance(v1, v2 Vec[T]) T
-
-	// Mod returns a new vector that is the result of applying the modulus operation between two vectors.
-	//
-	// Parameters:
-	//   - v1: The first vector.
-	//   - v2: The second vector.
-	//
-	// Returns:
-	//   - A new vector that is the result of the modulus operation.
 	Mod(v1, v2 Vec[T]) Vec[T]
-
-	// ModMutable modifies the first vector by applying the modulus operation with the second vector.
-	//
-	// Parameters:
-	//   - v1: A pointer to the first vector, which will be modified.
-	//   - v2: The second vector.
-	//
-	// Returns:
-	//   - None.
 	ModMutable(v1 *Vec[T], v2 Vec[T])
 }
 
@@ -83,7 +49,6 @@ type IntGeometry struct{}
 func (g IntGeometry) Length(v Vec[int]) int {
 	return int(math.Ceil(math.Sqrt(float64(v.X*v.X + v.Y*v.Y))))
 }
-
 func (g IntGeometry) Distance(v1, v2 Vec[int]) int {
 	delta := v1.Sub(v2)
 	return g.Length(delta)

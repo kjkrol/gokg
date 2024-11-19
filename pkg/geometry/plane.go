@@ -2,34 +2,17 @@ package geometry
 
 // Plane represents a geometric plane that supports translation, metric calculation, and containment checks.
 // T is a numeric type that is supported by the plane.
+// Plane represents a geometric plane with operations defined for a numeric type T.
+// T must satisfy the SupportedNumeric constraint.
+//
+// Translate moves a vector by a given delta vector.
+//
+// Metric calculates the distance or metric between two vectors.
+//
+// Contains checks if a given vector lies on the plane.
 type Plane[T SupportedNumeric] interface {
-	// Translate moves the given vector by the specified delta.
-	//
-	// Parameters:
-	//   - vec: A pointer to the vector that will be translated.
-	//   - delta: The vector representing the translation delta.
-	//
-	// Returns:
-	//   - None.
 	Translate(vec *Vec[T], delta Vec[T])
-
-	// Metric calculates a metric (such as distance) between two vectors.
-	//
-	// Parameters:
-	//   - v1: The first vector.
-	//   - v2: The second vector.
-	//
-	// Returns:
-	//   - The calculated metric value between the two vectors.
 	Metric(v1, v2 Vec[T]) T
-
-	// Contains checks if the given vector is contained within a certain context (e.g., within a plane or a shape).
-	//
-	// Parameters:
-	//   - vec: The vector to check for containment.
-	//
-	// Returns:
-	//   - True if the vector is contained within the context, otherwise false.
 	Contains(vec Vec[T]) bool
 }
 
