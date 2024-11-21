@@ -20,63 +20,63 @@ type Plane[T SupportedNumeric] interface {
 	Min() Vec[T]
 }
 
-// BoundedPlane represents a plane in a geometric space that is bounded by minimum and maximum vectors.
+// boundedPlane represents a plane in a geometric space that is bounded by minimum and maximum vectors.
 // The type parameter T must satisfy the SupportedNumeric constraint, which ensures that the plane's
 // coordinates are numeric types.
 //
 // Fields:
 // - min: The minimum vector defining one corner of the bounded plane.
 // - max: The maximum vector defining the opposite corner of the bounded plane.
-// - Geometry: An embedded field that provides geometric operations and properties for the plane.
-type BoundedPlane[T SupportedNumeric] struct {
+// - gometry: An embedded field that provides geometric operations and properties for the plane.
+type boundedPlane[T SupportedNumeric] struct {
 	min, max Vec[T]
-	Geometry Geometry[T]
+	geometry Geometry[T]
 }
 
-func (c BoundedPlane[T]) Max() Vec[T] { return c.max }
+func (c boundedPlane[T]) Max() Vec[T] { return c.max }
 
-func (c BoundedPlane[T]) Min() Vec[T] { return c.min }
+func (c boundedPlane[T]) Min() Vec[T] { return c.min }
 
-func (b BoundedPlane[T]) clamp(v *Vec[T]) {
-	if v.X > b.max.X-1 {
-		v.X = b.max.X - 1
+func (b boundedPlane[T]) clamp(v *Vec[T]) {
+	if v.X > b.max.X {
+		v.X = b.max.X
 	} else if v.X < b.min.X {
 		v.X = b.min.X
 	}
-	if v.Y > b.max.Y-1 {
-		v.Y = b.max.Y - 1
+	if v.Y > b.max.Y {
+		v.Y = b.max.Y
 	} else if v.Y < b.min.Y {
 		v.Y = b.min.Y
 	}
 }
 
-func (b BoundedPlane[T]) Translate(vec *Vec[T], delta Vec[T]) {
+func (b boundedPlane[T]) Translate(vec *Vec[T], delta Vec[T]) {
 	vec.AddMutable(delta)
 	b.clamp(vec)
 }
 
-func (b BoundedPlane[T]) Metric(v1, v2 Vec[T]) T {
+func (b boundedPlane[T]) Metric(v1, v2 Vec[T]) T {
 	delta1 := v1.Sub(v2)
 	b.clamp(&delta1)
 	delta2 := v2.Sub(v1)
 	b.clamp(&delta2)
-	return max(b.Geometry.Length(delta1), b.Geometry.Length(delta2))
+	return max(b.geometry.Length(delta1), b.geometry.Length(delta2))
 }
 
-func (b BoundedPlane[T]) Contains(vec Vec[T]) bool {
+func (b boundedPlane[T]) Contains(vec Vec[T]) bool {
 	return vec.X >= b.min.X && vec.X <= b.max.X &&
 		vec.Y >= b.min.Y && vec.Y <= b.max.Y
 }
 
-func newBoundedPlane[T SupportedNumeric](sizeX, sizeY T, geometry Geometry[T]) BoundedPlane[T] {
-	return BoundedPlane[T]{
+func newBoundedPlane[T SupportedNumeric](sizeX, sizeY T, geometry Geometry[T]) boundedPlane[T] {
+	return boundedPlane[T]{
 		min:      Vec[T]{0, 0},
-		max:      Vec[T]{sizeX, sizeY},
-		Geometry: geometry,
+		max:      Vec[T]{sizeX - 1, sizeY - 1},
+		geometry: geometry,
 	}
 }
 
-// CyclicBoundedPlane represents a plane in a cyclic bounded space.
+// cyclicBoundedPlane represents a plane in a cyclic bounded space.
 // It is defined by minimum and maximum vectors, and a geometry object.
 //
 // T is a type parameter that must satisfy the SupportedNumeric constraint.
@@ -85,27 +85,27 @@ func newBoundedPlane[T SupportedNumeric](sizeX, sizeY T, geometry Geometry[T]) B
 // - min: The minimum vector defining one corner of the plane.
 // - max: The maximum vector defining the opposite corner of the plane.
 // - geometry: The geometry object associated with the plane.
-type CyclicBoundedPlane[T SupportedNumeric] struct {
-	min, max Vec[T]
-	Geometry Geometry[T]
+type cyclicBoundedPlane[T SupportedNumeric] struct {
+	min, max, size Vec[T]
+	Geometry       Geometry[T]
 }
 
-func (c CyclicBoundedPlane[T]) Max() Vec[T] { return c.max }
+func (c cyclicBoundedPlane[T]) Max() Vec[T] { return c.max }
 
-func (c CyclicBoundedPlane[T]) Min() Vec[T] { return c.min }
+func (c cyclicBoundedPlane[T]) Min() Vec[T] { return c.min }
 
-func (c CyclicBoundedPlane[T]) wrap(v *Vec[T]) {
-	c.Geometry.ModMutable(v, c.max)
-	v.AddMutable(c.max)
-	c.Geometry.ModMutable(v, c.max)
+func (c cyclicBoundedPlane[T]) wrap(v *Vec[T]) {
+	c.Geometry.ModMutable(v, c.size)
+	v.AddMutable(c.size)
+	c.Geometry.ModMutable(v, c.size)
 }
 
-func (c CyclicBoundedPlane[T]) Translate(vec *Vec[T], delta Vec[T]) {
+func (c cyclicBoundedPlane[T]) Translate(vec *Vec[T], delta Vec[T]) {
 	vec.AddMutable(delta)
 	c.wrap(vec)
 }
 
-func (c CyclicBoundedPlane[T]) Metric(v1, v2 Vec[T]) T {
+func (c cyclicBoundedPlane[T]) Metric(v1, v2 Vec[T]) T {
 	delta1 := v1.Sub(v2)
 	c.wrap(&delta1)
 	delta2 := v2.Sub(v1)
@@ -113,15 +113,16 @@ func (c CyclicBoundedPlane[T]) Metric(v1, v2 Vec[T]) T {
 	return min(c.Geometry.Length(delta1), c.Geometry.Length(delta2))
 }
 
-func (c CyclicBoundedPlane[T]) Contains(vec Vec[T]) bool {
-	return vec.X >= c.min.X && vec.X < c.max.X &&
-		vec.Y >= c.min.Y && vec.Y < c.max.Y
+func (c cyclicBoundedPlane[T]) Contains(vec Vec[T]) bool {
+	return vec.X >= c.min.X && vec.X <= c.max.X &&
+		vec.Y >= c.min.Y && vec.Y <= c.max.Y
 }
 
-func newCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T, geometry Geometry[T]) CyclicBoundedPlane[T] {
-	return CyclicBoundedPlane[T]{
+func newCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T, geometry Geometry[T]) Plane[T] {
+	return cyclicBoundedPlane[T]{
 		min:      Vec[T]{0, 0},
-		max:      Vec[T]{sizeX, sizeY},
+		max:      Vec[T]{sizeX - 1, sizeY - 1},
+		size:     Vec[T]{sizeX, sizeY},
 		Geometry: geometry,
 	}
 }
@@ -137,7 +138,7 @@ func newCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T, geometry Geometry
 // Returns:
 //
 //	A CyclicBoundedPlane with integer coordinates.
-func NewDiscreteCyclicBoundedPlane(sizeX int, sizeY int) CyclicBoundedPlane[int] {
+func NewDiscreteCyclicBoundedPlane(sizeX int, sizeY int) Plane[int] {
 	return newCyclicBoundedPlane(sizeX, sizeY, INT_GEOMETRY)
 }
 
@@ -151,7 +152,7 @@ func NewDiscreteCyclicBoundedPlane(sizeX int, sizeY int) CyclicBoundedPlane[int]
 // Returns:
 //
 //	A BoundedPlane with integer coordinates.
-func NewDiscreteBoundedPlane(sizeX int, sizeY int) BoundedPlane[int] {
+func NewDiscreteBoundedPlane(sizeX int, sizeY int) Plane[int] {
 	return newBoundedPlane(sizeX, sizeY, INT_GEOMETRY)
 }
 
@@ -166,7 +167,7 @@ func NewDiscreteBoundedPlane(sizeX int, sizeY int) BoundedPlane[int] {
 // Returns:
 //
 //	A new CyclicBoundedPlane with the specified dimensions.
-func NewContinuousCyclicBoundedPlane(sizeX float64, sizeY float64) CyclicBoundedPlane[float64] {
+func NewContinuousCyclicBoundedPlane(sizeX float64, sizeY float64) Plane[float64] {
 	return newCyclicBoundedPlane(sizeX, sizeY, FLOAT_64_GEOMETRY)
 }
 
@@ -180,6 +181,6 @@ func NewContinuousCyclicBoundedPlane(sizeX float64, sizeY float64) CyclicBounded
 // Returns:
 //
 //	A BoundedPlane instance with float64 precision.
-func NewContinuousBoundedPlane(sizeX float64, sizeY float64) BoundedPlane[float64] {
+func NewContinuousBoundedPlane(sizeX float64, sizeY float64) Plane[float64] {
 	return newBoundedPlane(sizeX, sizeY, FLOAT_64_GEOMETRY)
 }

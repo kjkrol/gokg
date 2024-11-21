@@ -178,7 +178,7 @@ func ExampleBoundedPlane_Max() {
 	// Get max vector
 	max := plane.Max()
 	fmt.Println(max)
-	// Output: (10,10)
+	// Output: (9,9)
 }
 
 // ExampleBoundedPlane_Min demonstrates how to use the BoundedPlane Min methods.
@@ -221,7 +221,7 @@ func ExampleCyclicBoundedPlane_Max() {
 	// Get max vector
 	max := plane.Max()
 	fmt.Println(max)
-	// Output: (10,10)
+	// Output: (9,9)
 }
 
 // ExampleCyclicBoundedPlane_Min demonstrates how to use the CyclicBoundedPlane Max methods.
