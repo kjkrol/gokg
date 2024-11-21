@@ -148,8 +148,8 @@ func Example_intGeometry_Mod() {
 	// Output: (3,4)
 }
 
-// ExampleBoundedPlane_Translate demonstrates how to use the BoundedPlane Translate method.
-func ExampleBoundedPlane_Translate() {
+// Example_boundedPlane_Translate demonstrates how to use the BoundedPlane Translate method.
+func Example_boundedPlane_Translate() {
 	plane := geometry.NewDiscreteBoundedPlane(10, 10)
 	v1 := geometry.Vec[int]{X: 3, Y: 4}
 	delta := geometry.Vec[int]{X: 2, Y: 2}
@@ -160,8 +160,8 @@ func ExampleBoundedPlane_Translate() {
 	// Output: (5,6)
 }
 
-// ExampleBoundedPlane_Contains demonstrates how to use the BoundedPlane Contains method.
-func ExampleBoundedPlane_Contains() {
+// Example_boundedPlane_Contains demonstrates how to use the BoundedPlane Contains method.
+func Example_boundedPlane_Contains() {
 	plane := geometry.NewDiscreteBoundedPlane(10, 10)
 	v1 := geometry.Vec[int]{X: 5, Y: 6}
 
@@ -171,8 +171,8 @@ func ExampleBoundedPlane_Contains() {
 	// Output: true
 }
 
-// ExampleBoundedPlane_Max demonstrates how to use the BoundedPlane Max methods.
-func ExampleBoundedPlane_Max() {
+// Example_boundedPlane_Max demonstrates how to use the BoundedPlane Max methods.
+func Example_boundedPlane_Max() {
 	plane := geometry.NewDiscreteBoundedPlane(10, 10)
 
 	// Get max vector
@@ -181,8 +181,8 @@ func ExampleBoundedPlane_Max() {
 	// Output: (9,9)
 }
 
-// ExampleBoundedPlane_Min demonstrates how to use the BoundedPlane Min methods.
-func ExampleBoundedPlane_Min() {
+// Example_boundedPlane_Min demonstrates how to use the BoundedPlane Min methods.
+func Example_boundedPlane_Min() {
 	plane := geometry.NewDiscreteBoundedPlane(10, 10)
 
 	// Get min vector
@@ -191,8 +191,8 @@ func ExampleBoundedPlane_Min() {
 	// Output: (0,0)
 }
 
-// ExampleCyclicBoundedPlane_Translate demonstrates how to use the CyclicBoundedPlane Translate method.
-func ExampleCyclicBoundedPlane_Translate() {
+// Example_cyclicBoundedPlane_Translate demonstrates how to use the CyclicBoundedPlane Translate method.
+func Example_cyclicBoundedPlane_Translate() {
 	plane := geometry.NewDiscreteCyclicBoundedPlane(10, 10)
 	v1 := geometry.Vec[int]{X: 9, Y: 9}
 	delta := geometry.Vec[int]{X: 2, Y: 2}
@@ -203,8 +203,8 @@ func ExampleCyclicBoundedPlane_Translate() {
 	// Output: (1,1)
 }
 
-// ExampleCyclicBoundedPlane_Contains demonstrates how to use the CyclicBoundedPlane Contains method.
-func ExampleCyclicBoundedPlane_Contains() {
+// Example_cyclicBoundedPlane_Contains demonstrates how to use the CyclicBoundedPlane Contains method.
+func Example_cyclicBoundedPlane_Contains() {
 	plane := geometry.NewDiscreteCyclicBoundedPlane(10, 10)
 	v1 := geometry.Vec[int]{X: 1, Y: 1}
 
@@ -214,8 +214,8 @@ func ExampleCyclicBoundedPlane_Contains() {
 	// Output: true
 }
 
-// ExampleCyclicBoundedPlane_Max demonstrates how to use the CyclicBoundedPlane Max methods.
-func ExampleCyclicBoundedPlane_Max() {
+// Example_cyclicBoundedPlane_Max demonstrates how to use the CyclicBoundedPlane Max methods.
+func Example_cyclicBoundedPlane_Max() {
 	plane := geometry.NewDiscreteCyclicBoundedPlane(10, 10)
 
 	// Get max vector
@@ -224,8 +224,8 @@ func ExampleCyclicBoundedPlane_Max() {
 	// Output: (9,9)
 }
 
-// ExampleCyclicBoundedPlane_Min demonstrates how to use the CyclicBoundedPlane Max methods.
-func ExampleCyclicBoundedPlane_Min() {
+// Example_cyclicBoundedPlane_Min demonstrates how to use the CyclicBoundedPlane Max methods.
+func Example_cyclicBoundedPlane_Min() {
 	plane := geometry.NewDiscreteCyclicBoundedPlane(10, 10)
 
 	// Get main vector
