@@ -19,41 +19,45 @@ type Geometry[T int | float64] interface {
 	ModMutable(v1 *Vec[T], v2 Vec[T])
 }
 
-// Float64Geometry represents a geometric structure with floating-point precision.
+var FLOAT_64_GEOMETRY = float64Geometry{}
+
+var INT_GEOMETRY = intGeometry{}
+
+// float64Geometry represents a geometric structure with floating-point precision.
 // This type can be used to perform various geometric calculations and operations
 // involving floating-point numbers.
-type Float64Geometry struct{}
+type float64Geometry struct{}
 
-func (g Float64Geometry) Length(v Vec[float64]) float64 {
+func (g float64Geometry) Length(v Vec[float64]) float64 {
 	return math.Sqrt(v.X*v.X + v.Y*v.Y)
 }
 
-func (g Float64Geometry) Distance(v1, v2 Vec[float64]) float64 {
+func (g float64Geometry) Distance(v1, v2 Vec[float64]) float64 {
 	delta := v1.Sub(v2)
 	return g.Length(delta)
 }
 
-func (g Float64Geometry) ModMutable(v1 *Vec[float64], v2 Vec[float64]) {
+func (g float64Geometry) ModMutable(v1 *Vec[float64], v2 Vec[float64]) {
 	v1.X = math.Mod(v1.X, v2.X)
 	v1.Y = math.Mod(v1.Y, v2.Y)
 }
 
-func (g Float64Geometry) Mod(v1, v2 Vec[float64]) Vec[float64] {
+func (g float64Geometry) Mod(v1, v2 Vec[float64]) Vec[float64] {
 	return Vec[float64]{math.Mod(v1.X, v2.X), math.Mod(v1.Y, v2.Y)}
 }
 
-// IntGeometry represents a geometric structure with integer coordinates.
+// intGeometry represents a geometric structure with integer coordinates.
 // It provides methods to perform various geometric operations and calculations.
-type IntGeometry struct{}
+type intGeometry struct{}
 
-func (g IntGeometry) Length(v Vec[int]) int {
+func (g intGeometry) Length(v Vec[int]) int {
 	return int(math.Ceil(math.Sqrt(float64(v.X*v.X + v.Y*v.Y))))
 }
-func (g IntGeometry) Distance(v1, v2 Vec[int]) int {
+func (g intGeometry) Distance(v1, v2 Vec[int]) int {
 	delta := v1.Sub(v2)
 	return g.Length(delta)
 }
 
-func (g IntGeometry) ModMutable(v1 *Vec[int], v2 Vec[int]) { v1.X %= v2.X; v1.Y %= v2.Y }
+func (g intGeometry) ModMutable(v1 *Vec[int], v2 Vec[int]) { v1.X %= v2.X; v1.Y %= v2.Y }
 
-func (g IntGeometry) Mod(v1, v2 Vec[int]) Vec[int] { return Vec[int]{v1.X % v2.X, v1.Y % v2.Y} }
+func (g intGeometry) Mod(v1, v2 Vec[int]) Vec[int] { return Vec[int]{v1.X % v2.X, v1.Y % v2.Y} }
