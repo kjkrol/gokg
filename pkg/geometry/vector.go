@@ -5,13 +5,20 @@ import (
 	"fmt"
 )
 
-type SupportedNumeric interface{ int | float64 }
+type (
+	SupportedNumeric interface{ int | float64 }
 
-// Vec is a generic 2D vector with components X and Y.
-//
-// Type Parameters:
-//   - T: A numeric type that satisfies the Number constraint.
-type Vec[T SupportedNumeric] struct{ X, Y T }
+	// Vec is a generic 2D vector with components X and Y.
+	//
+	// Type Parameters:
+	//   - T: A numeric type that satisfies the Number constraint.
+	Vec[T SupportedNumeric] struct{ X, Y T }
+)
+
+var (
+	ZERO_INT_VEC   = Vec[int]{0, 0}
+	ZERO_FLOAT_VEC = Vec[float64]{0, 0}
+)
 
 // Add computes the sum of the current vector and the given vector.
 // It returns a new vector containing the result without modifying the current vector.
