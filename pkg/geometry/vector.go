@@ -74,3 +74,31 @@ func (v Vec[T]) Equals(v2 Vec[T]) bool { return v.X == v2.X && v.Y == v2.Y }
 // Returns:
 //   - A string in the format "(X, Y)" representing the vector.
 func (v Vec[T]) String() string { return fmt.Sprintf("(%v,%v)", v.X, v.Y) }
+
+// Bounds returns the zero-area rectangle representing the point.
+func (v Vec[T]) Bounds() Rectangle[T] {
+	return BuildRectangle(v, 0)
+}
+
+// Probe builds a rectangle centered on the point and wraps it when the plane is cyclic.
+func (v Vec[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
+	probe := BuildRectangle(v, margin)
+	rectangles := []Rectangle[T]{probe}
+	if plane.Name() == "cyclic" {
+		rectangles = append(rectangles, WrapRectangleCyclic(probe, plane.Size(), plane.Contains)...)
+	}
+	return rectangles
+}
+
+// DistanceTo uses bounding rectangles to compute the distance to another spatial object.
+func (v Vec[T]) DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T) T {
+	return aabbDistance(&v, other, metric)
+}
+
+// Vertices returns the address of the vector so callers can mutate it in place.
+func (v *Vec[T]) Vertices() []*Vec[T] {
+	if v == nil {
+		return nil
+	}
+	return []*Vec[T]{v}
+}

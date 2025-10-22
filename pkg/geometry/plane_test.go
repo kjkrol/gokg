@@ -162,3 +162,13 @@ func TestDiscreteBoundedPlaneMetricFloat64(t *testing.T) {
 		}
 	}
 }
+
+func TestPlaneNormalize(t *testing.T) {
+	plane := NewCyclicBoundedPlane(5, 5)
+	vec := Vec[int]{X: 7, Y: -2}
+	plane.Normalize(&vec)
+	expected := Vec[int]{X: 2, Y: 3}
+	if vec != expected {
+		t.Errorf("expected normalized vector %v, got %v", expected, vec)
+	}
+}

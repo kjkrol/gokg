@@ -1,0 +1,14 @@
+./line.go
+./plane.go
+./polygon.go
+./rectangle.go
+./spatial.go
+./vector.go
+./vector_math.go
+./line_test.go
+./plane_test.go
+./polygon_test.go
+./rectangle_test.go
+./spatial_test.go
+./vector_math_test.go
+./vector_test.go

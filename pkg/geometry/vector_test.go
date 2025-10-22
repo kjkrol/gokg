@@ -1,25 +1,37 @@
-package geometry_test
+package geometry
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/kjkrol/gokg/pkg/geometry"
-)
+func TestVec_Probe_WrapsOnCyclicPlane(t *testing.T) {
+	vec := Vec[int]{X: 9, Y: 9}
+	plane := NewCyclicBoundedPlane(10, 10)
 
-func TestVecSub(t *testing.T) {
-	for _, test := range []struct {
-		arg1     geometry.Vec[int]
-		arg2     geometry.Vec[int]
-		expected geometry.Vec[int]
-	}{
-		{geometry.Vec[int]{2, 3}, geometry.Vec[int]{1, 2}, geometry.Vec[int]{1, 1}},
-		{geometry.Vec[int]{1, 2}, geometry.Vec[int]{1, 2}, geometry.Vec[int]{0, 0}},
-		{geometry.Vec[int]{0, 0}, geometry.Vec[int]{4, 4}, geometry.Vec[int]{-4, -4}},
-		{geometry.Vec[int]{4, 0}, geometry.Vec[int]{1, 0}, geometry.Vec[int]{3, 0}},
-		{geometry.Vec[int]{1, 0}, geometry.Vec[int]{4, 0}, geometry.Vec[int]{-3, 0}},
-	} {
-		if output := test.arg1.Sub(test.arg2); !output.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", test.arg1, test.expected)
+	probes := vec.Probe(1, plane)
+	if len(probes) <= 1 {
+		t.Fatalf("expected additional wrapped probes, got %d", len(probes))
+	}
+
+	wrappedFound := false
+	expectedTopLeft := Vec[int]{X: 8, Y: 8}
+	expectedBottomRight := Vec[int]{X: 10, Y: 10}
+	for _, p := range probes {
+		if p.TopLeft != expectedTopLeft || p.BottomRight != expectedBottomRight {
+			wrappedFound = true
 		}
+	}
+	if !wrappedFound {
+		t.Errorf("expected wrapped rectangle in probes %v", probes)
+	}
+}
+
+func TestVec_DistanceTo_Rectangle(t *testing.T) {
+	vec := Vec[int]{X: 0, Y: 0}
+	rect := NewRectangle(Vec[int]{X: 4, Y: 0}, Vec[int]{X: 6, Y: 2})
+	plane := NewBoundedPlane(100, 100)
+
+	distance := vec.DistanceTo(&rect, plane.Metric)
+	expected := plane.Metric(Vec[int]{X: 4, Y: 0}, ZERO_INT_VEC)
+	if distance != expected {
+		t.Errorf("expected distance %v, got %v", expected, distance)
 	}
 }

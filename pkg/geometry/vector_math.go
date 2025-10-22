@@ -23,14 +23,11 @@ var (
 )
 
 func VectorMathByType[T SupportedNumeric]() VectorMath[T] {
-	switch any(*new(T)).(type) {
-	case float64:
+	var zero T
+	if _, ok := any(zero).(float64); ok {
 		return any(FLOAT_64_VEC_MATH).(VectorMath[T])
-	case int:
-		return any(INT_VEC_MATH).(VectorMath[T])
-	default:
-		panic("unsupported type")
 	}
+	return any(INT_VEC_MATH).(VectorMath[T])
 }
 
 // -----------------------------------------------------------------------------

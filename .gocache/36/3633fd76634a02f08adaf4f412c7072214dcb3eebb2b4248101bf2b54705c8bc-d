@@ -1,0 +1,3 @@
+./plane_example_test.go
+./vector_example_test.go
+./vector_math_example_test.go
