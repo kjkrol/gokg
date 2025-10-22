@@ -71,7 +71,7 @@ func (p Polygon[T]) Points() []Vec[T] {
 }
 
 // Vertices returns pointers to the underlying vertices so callers can mutate them.
-func (p Polygon[T]) Vertices() []*Vec[T] {
+func (p *Polygon[T]) Vertices() []*Vec[T] {
 	ptrs := make([]*Vec[T], len(p.points))
 	for i := range p.points {
 		ptrs[i] = &p.points[i]

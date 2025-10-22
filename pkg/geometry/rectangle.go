@@ -1,5 +1,7 @@
 package geometry
 
+import "fmt"
+
 // Rectangle represents an axis-aligned area in a 2D space defined by its top-left and bottom-right corners.
 // It also includes the center point of the rectangle for convenience.
 //
@@ -47,7 +49,7 @@ func (r Rectangle[T]) DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T
 }
 
 // Vertices returns the corners that define the rectangle.
-func (r Rectangle[T]) Vertices() []*Vec[T] {
+func (r *Rectangle[T]) Vertices() []*Vec[T] {
 	return []*Vec[T]{&r.TopLeft, &r.BottomRight}
 }
 
@@ -151,3 +153,7 @@ func WrapRectangleCyclic[T SupportedNumeric](
 }
 
 //-------------------------------------------------------------------------
+
+func (r Rectangle[T]) String() string {
+	return fmt.Sprintf("{%v %v %v}", r.TopLeft, r.BottomRight, r.Center)
+}
