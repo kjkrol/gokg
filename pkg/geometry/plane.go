@@ -10,30 +10,30 @@ type Plane[T SupportedNumeric] struct {
 
 // -----------------------------------------------------------------------------
 
-func (b Plane[T]) Size() Vec[T] { return b.size }
+func (p Plane[T]) Size() Vec[T] { return p.size }
 
-func (b Plane[T]) Translate(vec *Vec[T], delta Vec[T]) {
+func (p Plane[T]) Translate(vec *Vec[T], delta Vec[T]) {
 	vec.AddMutable(delta)
-	b.normalize(vec)
+	p.normalize(vec)
 }
 
-func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) {
+func (p Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) {
 	if spatial == nil {
 		return
 	}
 
 	switch s := spatial.(type) {
 	case *Vec[T]:
-		b.Translate(s, delta)
+		p.Translate(s, delta)
 		spatial.SetFragments(nil)
 		return
 	case *Rectangle[T]:
 		s.TopLeft.AddMutable(delta)
 		s.BottomRight.AddMutable(delta)
 		s.Center.AddMutable(delta)
-		if b.name != "cyclic" {
-			b.normalize(&s.TopLeft)
-			b.normalize(&s.BottomRight)
+		if p.name != "cyclic" {
+			p.normalize(&s.TopLeft)
+			p.normalize(&s.BottomRight)
 			s.Center = Vec[T]{
 				X: (s.TopLeft.X + s.BottomRight.X) / 2,
 				Y: (s.TopLeft.Y + s.BottomRight.Y) / 2,
@@ -44,9 +44,9 @@ func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) {
 	case *Line[T]:
 		s.Start.AddMutable(delta)
 		s.End.AddMutable(delta)
-		if b.name != "cyclic" {
-			b.normalize(&s.Start)
-			b.normalize(&s.End)
+		if p.name != "cyclic" {
+			p.normalize(&s.Start)
+			p.normalize(&s.End)
 			spatial.SetFragments(nil)
 			return
 		}
@@ -55,9 +55,9 @@ func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) {
 			s.points[i] = s.points[i].Add(delta)
 		}
 		s.bounds = computeBounds(s.points)
-		if b.name != "cyclic" {
+		if p.name != "cyclic" {
 			for i := range s.points {
-				b.normalize(&s.points[i])
+				p.normalize(&s.points[i])
 			}
 			s.bounds = computeBounds(s.points)
 			spatial.SetFragments(nil)
@@ -74,39 +74,39 @@ func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) {
 				continue
 			}
 			v.AddMutable(delta)
-			if b.name != "cyclic" {
-				b.normalize(v)
+			if p.name != "cyclic" {
+				p.normalize(v)
 			}
 		}
-		if b.name != "cyclic" {
+		if p.name != "cyclic" {
 			spatial.SetFragments(nil)
 			return
 		}
 	}
 
-	if b.name != "cyclic" {
+	if p.name != "cyclic" {
 		spatial.SetFragments(nil)
 		return
 	}
 
-	spatial.SetFragments(wrapSpatialFragments(spatial, b.size, b.vectorMath))
+	spatial.SetFragments(wrapSpatialFragments(spatial, p.size, p.vectorMath))
 }
 
-func (b Plane[T]) Metric(v1, v2 Vec[T]) T { return b.metric(v1, v2) }
+func (p Plane[T]) Metric(v1, v2 Vec[T]) T { return p.metric(v1, v2) }
 
-func (b Plane[T]) Contains(vec Vec[T]) bool {
-	return vec.X >= 0 && vec.X < b.size.X && vec.Y >= 0 && vec.Y < b.size.Y
+func (p Plane[T]) Contains(vec Vec[T]) bool {
+	return vec.X >= 0 && vec.X < p.size.X && vec.Y >= 0 && vec.Y < p.size.Y
 }
 
-func (b Plane[T]) Normalize(vec *Vec[T]) { b.normalize(vec) }
+func (p Plane[T]) Normalize(vec *Vec[T]) { p.normalize(vec) }
 
-func (b Plane[T]) relativeMetric(v1, v2 Vec[T]) T {
+func (p Plane[T]) relativeMetric(v1, v2 Vec[T]) T {
 	delta := v1.Sub(v2)
-	b.normalize(&delta)
-	return b.vectorMath.Length(delta)
+	p.normalize(&delta)
+	return p.vectorMath.Length(delta)
 }
 
-func (b Plane[T]) Name() string { return b.name }
+func (p Plane[T]) Name() string { return p.name }
 
 // -----------------------------------------------------------------------------
 
