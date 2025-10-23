@@ -1,7 +1,5 @@
 package geometry
 
-import "fmt"
-
 func wrapSpatialFragments[T SupportedNumeric](spatial Spatial[T], size Vec[T], vecMath VectorMath[T]) []Spatial[T] {
 	vertices := spatial.Vertices()
 	if len(vertices) == 0 {
@@ -51,15 +49,22 @@ func candidateOffsets[T SupportedNumeric](base Vec[T], size Vec[T]) []Vec[T] {
 }
 
 func dedupeOffsets[T SupportedNumeric](offsets []Vec[T]) []Vec[T] {
-	seen := make(map[string]struct{}, len(offsets))
-	result := make([]Vec[T], 0, len(offsets))
+	if len(offsets) == 0 {
+		return offsets
+	}
+
+	result := offsets[:0]
 	for _, off := range offsets {
-		key := fmt.Sprintf("%v:%v", off.X, off.Y)
-		if _, ok := seen[key]; ok {
-			continue
+		duplicate := false
+		for _, existing := range result {
+			if off == existing {
+				duplicate = true
+				break
+			}
 		}
-		seen[key] = struct{}{}
-		result = append(result, off)
+		if !duplicate {
+			result = append(result, off)
+		}
 	}
 	return result
 }
