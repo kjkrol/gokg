@@ -44,9 +44,9 @@ func (r Rectangle[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
 	return rectangles
 }
 
-// DistanceTo computes the distance to another spatial object using their bounds.
-func (r Rectangle[T]) DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T) T {
-	return aabbDistance(&r, other, metric)
+// DistanceTo delegates distance evaluation to the provided strategy.
+func (r Rectangle[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
+	return distance(&r, other)
 }
 
 // Vertices returns the corners that define the rectangle.

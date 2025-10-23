@@ -29,7 +29,7 @@ func TestVec_DistanceTo_Rectangle(t *testing.T) {
 	rect := NewRectangle(Vec[int]{X: 4, Y: 0}, Vec[int]{X: 6, Y: 2})
 	plane := NewBoundedPlane(100, 100)
 
-	distance := vec.DistanceTo(&rect, plane.Metric)
+	distance := vec.DistanceTo(&rect, BoundingBoxDistanceForPlane(plane))
 	expected := plane.Metric(Vec[int]{X: 4, Y: 0}, ZERO_INT_VEC)
 	if distance != expected {
 		t.Errorf("expected distance %v, got %v", expected, distance)

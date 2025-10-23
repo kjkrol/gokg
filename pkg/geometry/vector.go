@@ -90,9 +90,9 @@ func (v Vec[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
 	return rectangles
 }
 
-// DistanceTo uses bounding rectangles to compute the distance to another spatial object.
-func (v Vec[T]) DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T) T {
-	return aabbDistance(&v, other, metric)
+// DistanceTo delegates distance evaluation to the provided strategy.
+func (v Vec[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
+	return distance(&v, other)
 }
 
 // Vertices returns the address of the vector so callers can mutate it in place.

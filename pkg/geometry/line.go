@@ -42,9 +42,9 @@ func (l Line[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
 	return l.Bounds().Probe(margin, plane)
 }
 
-// DistanceTo computes the distance to another spatial object using the bounding rectangles.
-func (l Line[T]) DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T) T {
-	return aabbDistance[T](&l, other, metric)
+// DistanceTo delegates distance evaluation to the provided strategy.
+func (l Line[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
+	return distance(&l, other)
 }
 
 // Vertices returns the endpoints of the line.

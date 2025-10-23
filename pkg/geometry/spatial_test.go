@@ -17,12 +17,12 @@ func TestRectanglesAxisDistance(t *testing.T) {
 	}
 }
 
-func TestAABBADistance(t *testing.T) {
+func TestBoundingBoxDistance(t *testing.T) {
 	rectA := NewRectangle(Vec[int]{X: 0, Y: 0}, Vec[int]{X: 2, Y: 2})
 	rectB := NewRectangle(Vec[int]{X: 4, Y: 5}, Vec[int]{X: 6, Y: 7})
 
 	plane := NewBoundedPlane(20, 20)
-	distance := aabbDistance[int](&rectA, &rectB, plane.Metric)
+	distance := BoundingBoxDistance[int](plane.Metric)(&rectA, &rectB)
 
 	expected := plane.Metric(Vec[int]{X: 2, Y: 3}, ZERO_INT_VEC)
 	if distance != expected {
@@ -30,12 +30,12 @@ func TestAABBADistance(t *testing.T) {
 	}
 }
 
-func TestAABBADistance_ReturnsZeroOnIntersection(t *testing.T) {
+func TestBoundingBoxDistance_ReturnsZeroOnIntersection(t *testing.T) {
 	rectA := NewRectangle(Vec[int]{X: 0, Y: 0}, Vec[int]{X: 4, Y: 4})
 	rectB := NewRectangle(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 6, Y: 6})
 
 	plane := NewBoundedPlane(20, 20)
-	distance := aabbDistance[int](&rectA, &rectB, plane.Metric)
+	distance := BoundingBoxDistance[int](plane.Metric)(&rectA, &rectB)
 	if distance != 0 {
 		t.Errorf("expected distance 0 for intersecting rectangles, got %v", distance)
 	}

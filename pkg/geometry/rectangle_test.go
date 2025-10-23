@@ -182,7 +182,7 @@ func TestRectangle_DistanceTo_Point(t *testing.T) {
 	point := Vec[float64]{X: 5, Y: 6}
 	plane := NewBoundedPlane(100.0, 100.0)
 
-	distance := rect.DistanceTo(&point, plane.Metric)
+	distance := rect.DistanceTo(&point, BoundingBoxDistanceForPlane(plane))
 	expected := plane.Metric(Vec[float64]{X: 3, Y: 4}, ZERO_FLOAT_VEC)
 	if distance != expected {
 		t.Errorf("expected distance %v, got %v", expected, distance)

@@ -57,7 +57,7 @@ func TestPolygon_DistanceTo(t *testing.T) {
 	)
 
 	plane := NewBoundedPlane(10.0, 10.0)
-	dist := polyA.DistanceTo(&polyB, plane.Metric)
+	dist := polyA.DistanceTo(&polyB, BoundingBoxDistanceForPlane(plane))
 
 	expected := plane.Metric(
 		Vec[float64]{X: 3, Y: 3},

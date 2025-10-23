@@ -59,9 +59,9 @@ func (p Polygon[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
 	return p.bounds.Probe(margin, plane)
 }
 
-// DistanceTo computes the distance to another spatial object using bounding rectangles.
-func (p Polygon[T]) DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T) T {
-	return aabbDistance[T](&p, other, metric)
+// DistanceTo delegates distance evaluation to the provided strategy.
+func (p Polygon[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
+	return distance(&p, other)
 }
 
 // Points returns a copy of the polygon vertices.

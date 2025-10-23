@@ -21,7 +21,7 @@ func TestLine_SpatialMethods(t *testing.T) {
 	}
 
 	other := NewLine(Vec[int]{X: 8, Y: 8}, Vec[int]{X: 9, Y: 9})
-	distance := line.DistanceTo(&other, plane.Metric)
+	distance := line.DistanceTo(&other, BoundingBoxDistanceForPlane(plane))
 	expectedDistance := plane.Metric(Vec[int]{X: 4, Y: 5}, ZERO_INT_VEC)
 	if distance != expectedDistance {
 		t.Errorf("expected distance %v, got %v", expectedDistance, distance)
