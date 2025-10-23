@@ -102,3 +102,7 @@ func (v *Vec[T]) Vertices() []*Vec[T] {
 	}
 	return []*Vec[T]{v}
 }
+
+func (v Vec[T]) Fragments() []Spatial[T] { return nil }
+
+func (v Vec[T]) SetFragments(_ []Spatial[T]) {}

@@ -34,7 +34,7 @@ func TestRectangle_Split(t *testing.T) {
 		NewRectangle(Vec[int]{X: 5, Y: 5}, Vec[int]{X: 10, Y: 10}),
 	}
 	for i := 0; i < 4; i++ {
-		if splitted[i] != expected[i] {
+		if !rectEquals(splitted[i], expected[i]) {
 			t.Errorf("split %v not equal to expected %v", splitted[i], expected[i])
 		}
 	}
@@ -168,7 +168,7 @@ func TestRectangle_Probe_CyclicWrap(t *testing.T) {
 
 	wrappedFound := false
 	for _, p := range probes {
-		if p != rect && (p.TopLeft != rect.TopLeft || p.BottomRight != rect.BottomRight) {
+		if !rectEquals(p, rect) {
 			wrappedFound = true
 		}
 	}

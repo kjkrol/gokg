@@ -17,15 +17,16 @@ func (b Plane[T]) Translate(vec *Vec[T], delta Vec[T]) {
 	b.normalize(vec)
 }
 
-func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) []Spatial[T] {
+func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) {
 	if spatial == nil {
-		return nil
+		return
 	}
 
 	switch s := spatial.(type) {
 	case *Vec[T]:
 		b.Translate(s, delta)
-		return []Spatial[T]{s}
+		spatial.SetFragments(nil)
+		return
 	case *Rectangle[T]:
 		s.TopLeft.AddMutable(delta)
 		s.BottomRight.AddMutable(delta)
@@ -37,7 +38,8 @@ func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) []Spatial[T
 				X: (s.TopLeft.X + s.BottomRight.X) / 2,
 				Y: (s.TopLeft.Y + s.BottomRight.Y) / 2,
 			}
-			return []Spatial[T]{s}
+			spatial.SetFragments(nil)
+			return
 		}
 	case *Line[T]:
 		s.Start.AddMutable(delta)
@@ -45,7 +47,8 @@ func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) []Spatial[T
 		if b.name != "cyclic" {
 			b.normalize(&s.Start)
 			b.normalize(&s.End)
-			return []Spatial[T]{s}
+			spatial.SetFragments(nil)
+			return
 		}
 	case *Polygon[T]:
 		for i := range s.points {
@@ -57,12 +60,14 @@ func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) []Spatial[T
 				b.normalize(&s.points[i])
 			}
 			s.bounds = computeBounds(s.points)
-			return []Spatial[T]{s}
+			spatial.SetFragments(nil)
+			return
 		}
 	default:
 		vertices := spatial.Vertices()
 		if len(vertices) == 0 {
-			return []Spatial[T]{spatial}
+			spatial.SetFragments(nil)
+			return
 		}
 		for _, v := range vertices {
 			if v == nil {
@@ -74,15 +79,17 @@ func (b Plane[T]) TranslateSpatial(spatial Spatial[T], delta Vec[T]) []Spatial[T
 			}
 		}
 		if b.name != "cyclic" {
-			return []Spatial[T]{spatial}
+			spatial.SetFragments(nil)
+			return
 		}
 	}
 
 	if b.name != "cyclic" {
-		return []Spatial[T]{spatial}
+		spatial.SetFragments(nil)
+		return
 	}
 
-	return wrapSpatialFragments(spatial, b.size, b.vectorMath)
+	spatial.SetFragments(wrapSpatialFragments(spatial, b.size, b.vectorMath))
 }
 
 func (b Plane[T]) Metric(v1, v2 Vec[T]) T { return b.metric(v1, v2) }

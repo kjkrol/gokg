@@ -3,8 +3,9 @@ package geometry
 // Line represents a line segment defined by two endpoints.
 // The segment is closed (includes both endpoints).
 type Line[T SupportedNumeric] struct {
-	Start Vec[T]
-	End   Vec[T]
+	Start     Vec[T]
+	End       Vec[T]
+	fragments []Spatial[T]
 }
 
 // NewLine constructs a line segment from two endpoints.
@@ -53,3 +54,7 @@ func (l *Line[T]) Vertices() []*Vec[T] {
 	}
 	return []*Vec[T]{&l.Start, &l.End}
 }
+
+func (l Line[T]) Fragments() []Spatial[T] { return l.fragments }
+
+func (l *Line[T]) SetFragments(f []Spatial[T]) { l.fragments = f }

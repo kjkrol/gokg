@@ -3,8 +3,9 @@ package geometry
 // Polygon represents a simple polygon defined by an ordered list of vertices.
 // The polygon is assumed to be closed, i.e. the last vertex connects back to the first one.
 type Polygon[T SupportedNumeric] struct {
-	points []Vec[T]
-	bounds Rectangle[T]
+	points    []Vec[T]
+	bounds    Rectangle[T]
+	fragments []Spatial[T]
 }
 
 // NewPolygon constructs a polygon from a sequence of vertices.
@@ -78,3 +79,7 @@ func (p *Polygon[T]) Vertices() []*Vec[T] {
 	}
 	return ptrs
 }
+
+func (p Polygon[T]) Fragments() []Spatial[T] { return p.fragments }
+
+func (p *Polygon[T]) SetFragments(f []Spatial[T]) { p.fragments = f }

@@ -13,6 +13,7 @@ type Rectangle[T SupportedNumeric] struct {
 	TopLeft     Vec[T]
 	BottomRight Vec[T]
 	Center      Vec[T]
+	fragments   []Spatial[T]
 }
 
 func NewRectangle[T SupportedNumeric](topLeft Vec[T], bottomRight Vec[T]) Rectangle[T] {
@@ -52,6 +53,10 @@ func (r Rectangle[T]) DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T
 func (r *Rectangle[T]) Vertices() []*Vec[T] {
 	return []*Vec[T]{&r.TopLeft, &r.BottomRight}
 }
+
+func (r Rectangle[T]) Fragments() []Spatial[T] { return r.fragments }
+
+func (r *Rectangle[T]) SetFragments(f []Spatial[T]) { r.fragments = f }
 
 func (r *Rectangle[T]) Split() [4]Rectangle[T] {
 	return [4]Rectangle[T]{

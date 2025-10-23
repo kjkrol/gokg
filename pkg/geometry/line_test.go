@@ -6,7 +6,7 @@ func TestLine_SpatialMethods(t *testing.T) {
 	line := NewLine(Vec[int]{X: 1, Y: 1}, Vec[int]{X: 4, Y: 3})
 	bounds := line.Bounds()
 	expectedBounds := NewRectangle(Vec[int]{X: 1, Y: 1}, Vec[int]{X: 4, Y: 3})
-	if bounds != expectedBounds {
+	if !rectEquals(bounds, expectedBounds) {
 		t.Errorf("expected bounds %v, got %v", expectedBounds, bounds)
 	}
 
@@ -16,7 +16,7 @@ func TestLine_SpatialMethods(t *testing.T) {
 		t.Fatalf("expected a single probe rectangle, got %d", len(probes))
 	}
 	expectedProbe := NewRectangle(Vec[int]{X: 0, Y: 0}, Vec[int]{X: 5, Y: 4})
-	if probes[0] != expectedProbe {
+	if !rectEquals(probes[0], expectedProbe) {
 		t.Errorf("expected expanded rectangle %v, got %v", expectedProbe, probes[0])
 	}
 

@@ -18,6 +18,9 @@ func wrapSpatialFragments[T SupportedNumeric](spatial Spatial[T], size Vec[T], v
 	fragments := make([]Spatial[T], 0, len(offsets))
 
 	for _, offset := range offsets {
+		if offset.X == 0 && offset.Y == 0 {
+			continue
+		}
 		clone := cloneSpatialWithOffset(spatial, offset)
 		if clone == nil {
 			continue

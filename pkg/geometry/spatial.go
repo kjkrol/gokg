@@ -7,6 +7,8 @@ type Spatial[T SupportedNumeric] interface {
 	Probe(margin T, plane Plane[T]) []Rectangle[T]
 	DistanceTo(other Spatial[T], metric func(Vec[T], Vec[T]) T) T
 	Vertices() []*Vec[T]
+	Fragments() []Spatial[T]
+	SetFragments([]Spatial[T])
 }
 
 func aabbDistance[T SupportedNumeric](
