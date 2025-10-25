@@ -6,6 +6,7 @@ type Spatial[T SupportedNumeric] interface {
 	Bounds() Rectangle[T]
 	Probe(margin T, plane Plane[T]) []Rectangle[T]
 	DistanceTo(other Spatial[T], distance Distance[T]) T
+	// Vektory tworzace / kluczowe (np dla Rectangle sa to top-left i bottom-right)
 	Vertices() []*Vec[T]
 	Fragments() []Spatial[T]
 	SetFragments([]Spatial[T])
