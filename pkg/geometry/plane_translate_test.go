@@ -1,15 +1,19 @@
 package geometry
 
-import "testing"
+import (
+	"testing"
+
+	s "github.com/kjkrol/gokg/pkg/geometry/spatial"
+)
 
 func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
-	size := Vec[int]{X: 10, Y: 10}
+	size := vec[int]{X: 10, Y: 10}
 	vecMath := VectorMathByType[int]()
-	shape := NewPolygon(
-		Vec[int]{X: 8, Y: 4},
-		Vec[int]{X: 12, Y: 4},
-		Vec[int]{X: 12, Y: 6},
-		Vec[int]{X: 8, Y: 6},
+	shape := s.NewPolygon(
+		vec[int]{X: 8, Y: 4},
+		vec[int]{X: 12, Y: 4},
+		vec[int]{X: 12, Y: 6},
+		vec[int]{X: 8, Y: 6},
 	)
 	fragments := wrapSpatialFragments(&shape, size, vecMath)
 	if len(fragments) != 1 {
@@ -19,7 +23,7 @@ func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 		{-2, 4}: {},
 	}
 	for _, fragment := range fragments {
-		poly, ok := fragment.(*Polygon[int])
+		poly, ok := fragment.(*polygon[int])
 		if !ok {
 			t.Fatalf("expected polygon fragment, got %T", fragment)
 		}
@@ -39,13 +43,13 @@ func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 }
 
 func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
-	size := Vec[int]{X: 10, Y: 10}
+	size := vec[int]{X: 10, Y: 10}
 	vecMath := VectorMathByType[int]()
-	shape := NewPolygon(
-		Vec[int]{X: 9, Y: 9},
-		Vec[int]{X: 12, Y: 9},
-		Vec[int]{X: 12, Y: 12},
-		Vec[int]{X: 9, Y: 12},
+	shape := s.NewPolygon(
+		vec[int]{X: 9, Y: 9},
+		vec[int]{X: 12, Y: 9},
+		vec[int]{X: 12, Y: 12},
+		vec[int]{X: 9, Y: 12},
 	)
 	fragments := wrapSpatialFragments(&shape, size, vecMath)
 	if len(fragments) != 3 {
@@ -57,7 +61,7 @@ func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
 		{-1, -1}: {},
 	}
 	for _, fragment := range fragments {
-		poly, ok := fragment.(*Polygon[int])
+		poly, ok := fragment.(*polygon[int])
 		if !ok {
 			t.Fatalf("expected polygon fragment, got %T", fragment)
 		}
@@ -78,13 +82,13 @@ func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
 
 func TestTranslateSpatial_SetsFragmentsOnSpatial(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	poly := NewPolygon(
-		Vec[int]{X: 9, Y: 9},
-		Vec[int]{X: 11, Y: 9},
-		Vec[int]{X: 11, Y: 11},
-		Vec[int]{X: 9, Y: 11},
+	poly := s.NewPolygon(
+		vec[int]{X: 9, Y: 9},
+		vec[int]{X: 11, Y: 9},
+		vec[int]{X: 11, Y: 11},
+		vec[int]{X: 9, Y: 11},
 	)
-	plane.TranslateSpatial(&poly, Vec[int]{X: 0, Y: 0})
+	plane.TranslateSpatial(&poly, vec[int]{X: 0, Y: 0})
 	fragments := poly.Fragments()
 	if len(fragments) != 3 {
 		t.Fatalf("expected 3 fragments set on polygon, got %d", len(fragments))
@@ -93,13 +97,13 @@ func TestTranslateSpatial_SetsFragmentsOnSpatial(t *testing.T) {
 
 func TestTranslateSpatial_ClearsFragmentsWhenNotWrapping(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	poly := NewPolygon(
-		Vec[int]{X: 1, Y: 1},
-		Vec[int]{X: 2, Y: 1},
-		Vec[int]{X: 2, Y: 2},
-		Vec[int]{X: 1, Y: 2},
+	poly := s.NewPolygon(
+		vec[int]{X: 1, Y: 1},
+		vec[int]{X: 2, Y: 1},
+		vec[int]{X: 2, Y: 2},
+		vec[int]{X: 1, Y: 2},
 	)
-	plane.TranslateSpatial(&poly, Vec[int]{X: 1, Y: 0})
+	plane.TranslateSpatial(&poly, vec[int]{X: 1, Y: 0})
 	if frags := poly.Fragments(); frags != nil {
 		t.Fatalf("expected no fragments for polygon inside bounds, got %d", len(frags))
 	}

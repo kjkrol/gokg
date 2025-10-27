@@ -1,5 +1,5 @@
 // Package geometry provides a set of operations for 2D graphics
-package geometry
+package spatial
 
 import (
 	"fmt"
@@ -19,6 +19,10 @@ var (
 	ZERO_INT_VEC   = Vec[int]{0, 0}
 	ZERO_FLOAT_VEC = Vec[float64]{0, 0}
 )
+
+func NewVec[T SupportedNumeric](X, Y T) Vec[T] {
+	return Vec[T]{X, Y}
+}
 
 // Add computes the sum of the current vector and the given vector.
 // It returns a new vector containing the result without modifying the current vector.
@@ -80,20 +84,10 @@ func (v Vec[T]) Bounds() Rectangle[T] {
 	return BuildRectangle(v, 0)
 }
 
-// Probe builds a rectangle centered on the point and wraps it when the plane is cyclic.
-func (v Vec[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
-	probe := BuildRectangle(v, margin)
-	rectangles := []Rectangle[T]{probe}
-	if plane.Name() == "cyclic" {
-		rectangles = append(rectangles, WrapRectangleCyclic(probe, plane.Size(), plane.Contains)...)
-	}
-	return rectangles
-}
-
-// DistanceTo delegates distance evaluation to the provided strategy.
-func (v Vec[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
-	return distance(&v, other)
-}
+// // DistanceTo delegates distance evaluation to the provided strategy.
+// func (v Vec[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
+// 	return distance(&v, other)
+// }
 
 // Vertices returns the address of the vector so callers can mutate it in place.
 func (v *Vec[T]) Vertices() []*Vec[T] {

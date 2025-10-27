@@ -1,4 +1,4 @@
-package geometry
+package spatial
 
 // Polygon represents a simple polygon defined by an ordered list of vertices.
 // The polygon is assumed to be closed, i.e. the last vertex connects back to the first one.
@@ -54,14 +54,8 @@ func (p Polygon[T]) Bounds() Rectangle[T] {
 	return p.bounds
 }
 
-// Probe expands the bounding rectangle by the given margin and wraps it on cyclic planes.
-func (p Polygon[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
-	return p.bounds.Probe(margin, plane)
-}
-
-// DistanceTo delegates distance evaluation to the provided strategy.
-func (p Polygon[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
-	return distance(&p, other)
+func (p *Polygon[T]) UpdateBounds() {
+	p.bounds = computeBounds(p.points)
 }
 
 // Points returns a copy of the polygon vertices.
@@ -83,3 +77,13 @@ func (p *Polygon[T]) Vertices() []*Vec[T] {
 func (p Polygon[T]) Fragments() []Spatial[T] { return p.fragments }
 
 func (p *Polygon[T]) SetFragments(f []Spatial[T]) { p.fragments = f }
+
+func (p *Polygon[T]) Clone() Polygon[T] {
+	pointsCopy := make([]Vec[T], len(p.points))
+	copy(pointsCopy, p.points)
+	return Polygon[T]{
+		points: pointsCopy,
+		bounds: p.bounds,
+		// fragments świadomie zostawiasz puste,
+	}
+}

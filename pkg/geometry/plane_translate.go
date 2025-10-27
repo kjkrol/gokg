@@ -1,7 +1,44 @@
 package geometry
 
-func wrapSpatialFragments[T SupportedNumeric](spatial Spatial[T], size Vec[T], vecMath VectorMath[T]) []Spatial[T] {
-	vertices := spatial.Vertices()
+import (
+	"fmt"
+
+	s "github.com/kjkrol/gokg/pkg/geometry/spatial"
+)
+
+func translateInPlace[T supportedNumeric](spatialItem spatial[T], delta vec[T]) {
+	switch s := spatialItem.(type) {
+	case *vec[T]:
+		s.AddMutable(delta)
+
+	case *rectangle[T]:
+		s.TopLeft.AddMutable(delta)
+		s.BottomRight.AddMutable(delta)
+		s.Center.AddMutable(delta)
+
+	case *line[T]:
+		s.Start.AddMutable(delta)
+		s.End.AddMutable(delta)
+
+	case *polygon[T]:
+		for _, v := range s.Vertices() {
+			if v != nil {
+				v.AddMutable(delta)
+			}
+		}
+		s.UpdateBounds()
+
+	default:
+		for _, v := range spatialItem.Vertices() {
+			if v != nil {
+				v.AddMutable(delta)
+			}
+		}
+	}
+}
+
+func wrapSpatialFragments[T supportedNumeric](spatialItem spatial[T], size vec[T], vecMath VectorMath[T]) []spatial[T] {
+	vertices := spatialItem.Vertices()
 	if len(vertices) == 0 {
 		return nil
 	}
@@ -12,14 +49,14 @@ func wrapSpatialFragments[T SupportedNumeric](spatial Spatial[T], size Vec[T], v
 
 	offsets := candidateOffsets(baseShift, size)
 	offsets = dedupeOffsets(offsets)
-	viewport := NewRectangle(Vec[T]{X: 0, Y: 0}, Vec[T]{X: size.X, Y: size.Y})
-	fragments := make([]Spatial[T], 0, len(offsets))
+	viewport := s.NewRectangle(vec[T]{X: 0, Y: 0}, vec[T]{X: size.X, Y: size.Y})
+	fragments := make([]spatial[T], 0, len(offsets))
 
 	for _, offset := range offsets {
 		if offset.X == 0 && offset.Y == 0 {
 			continue
 		}
-		clone := cloneSpatialWithOffset(spatial, offset)
+		clone := cloneSpatialWithOffset(spatialItem, offset)
 		if clone == nil {
 			continue
 		}
@@ -34,11 +71,11 @@ func wrapSpatialFragments[T SupportedNumeric](spatial Spatial[T], size Vec[T], v
 	return fragments
 }
 
-func candidateOffsets[T SupportedNumeric](base Vec[T], size Vec[T]) []Vec[T] {
-	offsets := make([]Vec[T], 0, 9)
+func candidateOffsets[T supportedNumeric](base vec[T], size vec[T]) []vec[T] {
+	offsets := make([]vec[T], 0, 9)
 	for _, mx := range [...]int{-1, 0, 1} {
 		for _, my := range [...]int{-1, 0, 1} {
-			offset := Vec[T]{
+			offset := vec[T]{
 				X: base.X + T(mx)*size.X,
 				Y: base.Y + T(my)*size.Y,
 			}
@@ -48,7 +85,7 @@ func candidateOffsets[T SupportedNumeric](base Vec[T], size Vec[T]) []Vec[T] {
 	return offsets
 }
 
-func dedupeOffsets[T SupportedNumeric](offsets []Vec[T]) []Vec[T] {
+func dedupeOffsets[T supportedNumeric](offsets []vec[T]) []vec[T] {
 	if len(offsets) == 0 {
 		return offsets
 	}
@@ -69,47 +106,29 @@ func dedupeOffsets[T SupportedNumeric](offsets []Vec[T]) []Vec[T] {
 	return result
 }
 
-func cloneSpatialWithOffset[T SupportedNumeric](spatial Spatial[T], offset Vec[T]) Spatial[T] {
-	switch s := spatial.(type) {
-	case *Vec[T]:
+func cloneSpatialWithOffset[T supportedNumeric](spatialItem spatial[T], offset vec[T]) spatial[T] {
+	switch s := spatialItem.(type) {
+	case *vec[T]:
 		vecCopy := *s
-		vecCopy.AddMutable(offset)
+		translateInPlace(&vecCopy, offset)
 		return &vecCopy
-	case *Rectangle[T]:
+
+	case *rectangle[T]:
 		rectCopy := *s
-		rectCopy.TopLeft.AddMutable(offset)
-		rectCopy.BottomRight.AddMutable(offset)
-		rectCopy.Center.AddMutable(offset)
+		translateInPlace(&rectCopy, offset)
 		return &rectCopy
-	case *Line[T]:
+
+	case *line[T]:
 		lineCopy := *s
-		lineCopy.Start.AddMutable(offset)
-		lineCopy.End.AddMutable(offset)
+		translateInPlace(&lineCopy, offset)
 		return &lineCopy
-	case *Polygon[T]:
-		points := make([]Vec[T], len(s.points))
-		copy(points, s.points)
-		for i := range points {
-			points[i] = points[i].Add(offset)
-		}
-		poly := NewPolygon(points...)
-		return &poly
+
+	case *polygon[T]:
+		polyCopy := s.Clone()
+		translateInPlace(&polyCopy, offset)
+		return &polyCopy
+
 	default:
-		vertices := spatial.Vertices()
-		if len(vertices) == 0 {
-			return nil
-		}
-		points := make([]Vec[T], 0, len(vertices))
-		for _, v := range vertices {
-			if v == nil {
-				continue
-			}
-			points = append(points, v.Add(offset))
-		}
-		if len(points) < 3 {
-			return nil
-		}
-		poly := NewPolygon(points...)
-		return &poly
+		panic(fmt.Sprintf("cloneSpatialWithOffset: unsupported spatial type %T", spatialItem))
 	}
 }

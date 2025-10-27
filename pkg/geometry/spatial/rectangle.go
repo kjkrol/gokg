@@ -1,6 +1,8 @@
-package geometry
+package spatial
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Rectangle represents an axis-aligned area in a 2D space defined by its top-left and bottom-right corners.
 // It also includes the center point of the rectangle for convenience.
@@ -32,21 +34,6 @@ func BuildRectangle[T SupportedNumeric](center Vec[T], d T) Rectangle[T] {
 // Bounds returns the rectangle itself.
 func (r Rectangle[T]) Bounds() Rectangle[T] {
 	return r
-}
-
-// Probe expands the rectangle by the given margin and wraps it for cyclic planes.
-func (r Rectangle[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
-	probe := r.Expand(margin)
-	rectangles := []Rectangle[T]{probe}
-	if plane.Name() == "cyclic" {
-		rectangles = append(rectangles, WrapRectangleCyclic(probe, plane.Size(), plane.Contains)...)
-	}
-	return rectangles
-}
-
-// DistanceTo delegates distance evaluation to the provided strategy.
-func (r Rectangle[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
-	return distance(&r, other)
 }
 
 // Vertices returns the corners that define the rectangle.
@@ -95,12 +82,12 @@ func (r Rectangle[T]) Intersects(other Rectangle[T]) bool {
 }
 
 func axisIntersection[T SupportedNumeric](aa, bb Rectangle[T], axisValue func(Vec[T]) T) bool {
-	aa, bb = SortRectanglesBy(aa, bb, axisValue)
+	aa, bb = sortRectanglesBy(aa, bb, axisValue)
 	noIntersection := axisValue(aa.TopLeft) < axisValue(bb.BottomRight) && axisValue(aa.BottomRight) < axisValue(bb.TopLeft)
 	return !noIntersection
 }
 
-func SortRectanglesBy[T SupportedNumeric](a, b Rectangle[T], axisValue func(Vec[T]) T) (aa, bb Rectangle[T]) {
+func sortRectanglesBy[T SupportedNumeric](a, b Rectangle[T], axisValue func(Vec[T]) T) (aa, bb Rectangle[T]) {
 	if axisValue(a.TopLeft) < axisValue(b.TopLeft) {
 		aa = a
 		bb = b
@@ -109,6 +96,20 @@ func SortRectanglesBy[T SupportedNumeric](a, b Rectangle[T], axisValue func(Vec[
 		bb = a
 	}
 	return
+}
+
+//-------------------------------------------------------------------------
+
+func (r Rectangle[T]) AxisDistanceTo(
+	other Rectangle[T],
+	axisValue func(Vec[T]) T,
+) T {
+	r, other = sortRectanglesBy(r, other, axisValue)
+
+	if axisValue(r.BottomRight) >= axisValue(other.TopLeft) {
+		return 0
+	}
+	return axisValue(other.TopLeft) - axisValue(r.BottomRight)
 }
 
 //-------------------------------------------------------------------------
@@ -122,43 +123,12 @@ func (r Rectangle[T]) IntersectsAny(others []Rectangle[T]) bool {
 	return false
 }
 
-func WrapRectangleCyclic[T SupportedNumeric](
-	r Rectangle[T],
-	size Vec[T],
-	contains func(Vec[T]) bool,
-) []Rectangle[T] {
-	var wrappedRectangles []Rectangle[T]
-
-	// Predefined offset values for wrapping
-	offsets := []Vec[T]{
-		{X: size.X, Y: 0},      // Shift right
-		{X: 0, Y: size.Y},      // Shift down
-		{X: size.X, Y: size.Y}, // Shift right-down
-	}
-
-	vecMath := VectorMathByType[T]()
-
-	// Generate wrapped versions for each offset
-	for _, offset := range offsets {
-		wrapped := Rectangle[T]{
-			TopLeft:     r.TopLeft,
-			BottomRight: r.BottomRight,
-			Center:      r.Center,
-		}
-		vecMath.Wrap(&wrapped.TopLeft, offset)
-		vecMath.Wrap(&wrapped.BottomRight, offset)
-		vecMath.Wrap(&wrapped.Center, offset)
-
-		if contains(wrapped.TopLeft) || contains(wrapped.BottomRight) {
-			wrappedRectangles = append(wrappedRectangles, wrapped)
-		}
-	}
-
-	return wrappedRectangles
-}
-
 //-------------------------------------------------------------------------
 
 func (r Rectangle[T]) String() string {
 	return fmt.Sprintf("{%v %v %v}", r.TopLeft, r.BottomRight, r.Center)
+}
+
+func (r Rectangle[T]) Equals(other Rectangle[T]) bool {
+	return r.TopLeft == other.TopLeft && r.BottomRight == other.BottomRight && r.Center == other.Center
 }

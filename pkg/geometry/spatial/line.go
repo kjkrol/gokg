@@ -1,4 +1,4 @@
-package geometry
+package spatial
 
 // Line represents a line segment defined by two endpoints.
 // The segment is closed (includes both endpoints).
@@ -35,16 +35,6 @@ func (l Line[T]) Bounds() Rectangle[T] {
 		Vec[T]{X: minX, Y: minY},
 		Vec[T]{X: maxX, Y: maxY},
 	)
-}
-
-// Probe expands the bounding rectangle of the line by the given margin and wraps for cyclic planes.
-func (l Line[T]) Probe(margin T, plane Plane[T]) []Rectangle[T] {
-	return l.Bounds().Probe(margin, plane)
-}
-
-// DistanceTo delegates distance evaluation to the provided strategy.
-func (l Line[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
-	return distance(&l, other)
 }
 
 // Vertices returns the endpoints of the line.

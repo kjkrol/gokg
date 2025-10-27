@@ -1,4 +1,4 @@
-package geometry
+package spatial
 
 import "testing"
 
@@ -34,7 +34,7 @@ func TestRectangle_Split(t *testing.T) {
 		NewRectangle(Vec[int]{X: 5, Y: 5}, Vec[int]{X: 10, Y: 10}),
 	}
 	for i := 0; i < 4; i++ {
-		if !rectEquals(splitted[i], expected[i]) {
+		if !splitted[i].Equals(expected[i]) {
 			t.Errorf("split %v not equal to expected %v", splitted[i], expected[i])
 		}
 	}
@@ -121,24 +121,6 @@ func TestRectangle_Intersects(t *testing.T) {
 	}
 }
 
-func TestRectangle_IntersectsCyclic(t *testing.T) {
-	intersects := []struct{ rect1, rect2 Rectangle[int] }{
-		{
-			rect1: NewRectangle(Vec[int]{X: 5, Y: 5}, Vec[int]{X: 15, Y: 15}),
-			rect2: NewRectangle(Vec[int]{X: 95, Y: 95}, Vec[int]{X: 105, Y: 105}),
-		},
-	}
-	size := Vec[int]{X: 100, Y: 100}
-	plane := NewBoundedPlane(size.X, size.Y)
-
-	for _, intersection := range intersects {
-		wrapped := WrapRectangleCyclic(intersection.rect2, size, plane.Contains)
-		if !intersection.rect1.IntersectsAny(wrapped) {
-			t.Errorf("rect1 %v should intersect with rect2 %v", intersection.rect1, intersection.rect2)
-		}
-	}
-}
-
 func TestRectangle_IntersectsAny_ReturnsFalse(t *testing.T) {
 	base := Rectangle[int]{
 		TopLeft:     Vec[int]{X: 0, Y: 0},
@@ -154,38 +136,6 @@ func TestRectangle_IntersectsAny_ReturnsFalse(t *testing.T) {
 
 	if base.IntersectsAny(others) {
 		t.Errorf("expected IntersectsAny to return false, but got true")
-	}
-}
-
-func TestRectangle_Probe_CyclicWrap(t *testing.T) {
-	rect := NewRectangle(Vec[int]{X: 8, Y: 8}, Vec[int]{X: 10, Y: 10})
-	plane := NewCyclicBoundedPlane(10, 10)
-
-	probes := rect.Probe(0, plane)
-	if len(probes) < 2 {
-		t.Fatalf("expected wrapped probes, got %d", len(probes))
-	}
-
-	wrappedFound := false
-	for _, p := range probes {
-		if !rectEquals(p, rect) {
-			wrappedFound = true
-		}
-	}
-	if !wrappedFound {
-		t.Errorf("expected wrapped rectangle in probes %v", probes)
-	}
-}
-
-func TestRectangle_DistanceTo_Point(t *testing.T) {
-	rect := NewRectangle(Vec[float64]{X: 0, Y: 0}, Vec[float64]{X: 2, Y: 2})
-	point := Vec[float64]{X: 5, Y: 6}
-	plane := NewBoundedPlane(100.0, 100.0)
-
-	distance := rect.DistanceTo(&point, BoundingBoxDistanceForPlane(plane))
-	expected := plane.Metric(Vec[float64]{X: 3, Y: 4}, ZERO_FLOAT_VEC)
-	if distance != expected {
-		t.Errorf("expected distance %v, got %v", expected, distance)
 	}
 }
 
