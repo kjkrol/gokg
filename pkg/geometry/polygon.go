@@ -1,11 +1,11 @@
-package spatial
+package geometry
 
 // Polygon represents a simple polygon defined by an ordered list of vertices.
 // The polygon is assumed to be closed, i.e. the last vertex connects back to the first one.
 type Polygon[T SupportedNumeric] struct {
 	points    []Vec[T]
-	bounds    Rectangle[T]
-	fragments []Spatial[T]
+	fragments []Shape[T]
+	bounds    AABB[T]
 }
 
 // NewPolygon constructs a polygon from a sequence of vertices.
@@ -26,7 +26,7 @@ func NewPolygon[T SupportedNumeric](vertices ...Vec[T]) Polygon[T] {
 	}
 }
 
-func computeBounds[T SupportedNumeric](vertices []Vec[T]) Rectangle[T] {
+func computeBounds[T SupportedNumeric](vertices []Vec[T]) AABB[T] {
 	minX, maxX := vertices[0].X, vertices[0].X
 	minY, maxY := vertices[0].Y, vertices[0].Y
 	for _, v := range vertices[1:] {
@@ -43,14 +43,14 @@ func computeBounds[T SupportedNumeric](vertices []Vec[T]) Rectangle[T] {
 			maxY = v.Y
 		}
 	}
-	return NewRectangle(
+	return NewAABB(
 		Vec[T]{X: minX, Y: minY},
 		Vec[T]{X: maxX, Y: maxY},
 	)
 }
 
 // Bounds returns the axis-aligned bounding rectangle that contains the polygon.
-func (p Polygon[T]) Bounds() Rectangle[T] {
+func (p Polygon[T]) Bounds() AABB[T] {
 	return p.bounds
 }
 
@@ -74,16 +74,15 @@ func (p *Polygon[T]) Vertices() []*Vec[T] {
 	return ptrs
 }
 
-func (p Polygon[T]) Fragments() []Spatial[T] { return p.fragments }
+func (p Polygon[T]) Fragments() []Shape[T] { return p.fragments }
 
-func (p *Polygon[T]) SetFragments(f []Spatial[T]) { p.fragments = f }
+func (p *Polygon[T]) SetFragments(f []Shape[T]) { p.fragments = f }
 
 func (p *Polygon[T]) Clone() Polygon[T] {
 	pointsCopy := make([]Vec[T], len(p.points))
 	copy(pointsCopy, p.points)
 	return Polygon[T]{
 		points: pointsCopy,
-		bounds: p.bounds,
 		// fragments świadomie zostawiasz puste,
 	}
 }

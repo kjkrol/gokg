@@ -1,5 +1,5 @@
 // Package geometry provides a set of operations for 2D graphics
-package spatial
+package geometry
 
 import (
 	"fmt"
@@ -80,14 +80,9 @@ func (v Vec[T]) Equals(v2 Vec[T]) bool { return v.X == v2.X && v.Y == v2.Y }
 func (v Vec[T]) String() string { return fmt.Sprintf("(%v,%v)", v.X, v.Y) }
 
 // Bounds returns the zero-area rectangle representing the point.
-func (v Vec[T]) Bounds() Rectangle[T] {
-	return BuildRectangle(v, 0)
+func (v Vec[T]) Bounds() AABB[T] {
+	return BuildAABB(v, 0)
 }
-
-// // DistanceTo delegates distance evaluation to the provided strategy.
-// func (v Vec[T]) DistanceTo(other Spatial[T], distance Distance[T]) T {
-// 	return distance(&v, other)
-// }
 
 // Vertices returns the address of the vector so callers can mutate it in place.
 func (v *Vec[T]) Vertices() []*Vec[T] {
@@ -97,6 +92,6 @@ func (v *Vec[T]) Vertices() []*Vec[T] {
 	return []*Vec[T]{v}
 }
 
-func (v Vec[T]) Fragments() []Spatial[T] { return nil }
+func (v Vec[T]) Fragments() []Shape[T] { return nil }
 
-func (v Vec[T]) SetFragments(_ []Spatial[T]) {}
+func (v Vec[T]) SetFragments(_ []Shape[T]) {}

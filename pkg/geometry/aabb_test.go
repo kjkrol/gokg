@@ -1,9 +1,9 @@
-package spatial
+package geometry
 
 import "testing"
 
 func TestRectangle_NewRectangle(t *testing.T) {
-	rect := NewRectangle(ZERO_INT_VEC, Vec[int]{X: 10, Y: 10})
+	rect := NewAABB(ZERO_INT_VEC, Vec[int]{X: 10, Y: 10})
 	expected := Vec[int]{X: 5, Y: 5}
 	if rect.Center != expected {
 		t.Errorf("center %v not equal to expected %v", rect.Center, expected)
@@ -12,7 +12,7 @@ func TestRectangle_NewRectangle(t *testing.T) {
 
 func TestRectangle_BuildRectangle(t *testing.T) {
 	center := Vec[int]{X: 5, Y: 5}
-	rect := BuildRectangle(center, 2)
+	rect := BuildAABB(center, 2)
 	expectedTopLeft := Vec[int]{X: 3, Y: 3}
 	expectedBottomRight := Vec[int]{X: 7, Y: 7}
 	if rect.TopLeft != expectedTopLeft {
@@ -24,14 +24,14 @@ func TestRectangle_BuildRectangle(t *testing.T) {
 }
 
 func TestRectangle_Split(t *testing.T) {
-	parent := NewRectangle(ZERO_INT_VEC, Vec[int]{X: 10, Y: 10})
+	parent := NewAABB(ZERO_INT_VEC, Vec[int]{X: 10, Y: 10})
 	splitted := parent.Split()
 
-	expected := [4]Rectangle[int]{
-		NewRectangle(ZERO_INT_VEC, Vec[int]{X: 5, Y: 5}),
-		NewRectangle(Vec[int]{X: 5, Y: 0}, Vec[int]{X: 10, Y: 5}),
-		NewRectangle(Vec[int]{X: 0, Y: 5}, Vec[int]{X: 5, Y: 10}),
-		NewRectangle(Vec[int]{X: 5, Y: 5}, Vec[int]{X: 10, Y: 10}),
+	expected := [4]AABB[int]{
+		NewAABB(ZERO_INT_VEC, Vec[int]{X: 5, Y: 5}),
+		NewAABB(Vec[int]{X: 5, Y: 0}, Vec[int]{X: 10, Y: 5}),
+		NewAABB(Vec[int]{X: 0, Y: 5}, Vec[int]{X: 5, Y: 10}),
+		NewAABB(Vec[int]{X: 5, Y: 5}, Vec[int]{X: 10, Y: 10}),
 	}
 	for i := 0; i < 4; i++ {
 		if !splitted[i].Equals(expected[i]) {
@@ -41,50 +41,50 @@ func TestRectangle_Split(t *testing.T) {
 }
 
 func TestRectangle_Intersects(t *testing.T) {
-	intersects := []struct{ rect1, rect2 Rectangle[int] }{
+	intersects := []struct{ rect1, rect2 AABB[int] }{
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 4, Y: 4}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 4, Y: 4}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 4, Y: 2}, Vec[int]{X: 6, Y: 4}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 4, Y: 2}, Vec[int]{X: 6, Y: 4}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 2, Y: 4}, Vec[int]{X: 4, Y: 6}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 2, Y: 4}, Vec[int]{X: 4, Y: 6}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 4, Y: 4}, Vec[int]{X: 6, Y: 6}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 4, Y: 4}, Vec[int]{X: 6, Y: 6}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 6, Y: 6}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 6, Y: 6}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 3, Y: 4}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 3, Y: 4}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 2, Y: 4}, Vec[int]{X: 3, Y: 6}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 2, Y: 4}, Vec[int]{X: 3, Y: 6}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 6, Y: 3}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 6, Y: 3}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 2, Y: 5}, Vec[int]{X: 6, Y: 6}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 2, Y: 5}, Vec[int]{X: 6, Y: 6}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 5, Y: 2}, Vec[int]{X: 6, Y: 6}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 5, Y: 2}, Vec[int]{X: 6, Y: 6}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 5, Y: 2}, Vec[int]{X: 6, Y: 6}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 5, Y: 2}, Vec[int]{X: 6, Y: 6}),
 		},
 	}
 
@@ -97,18 +97,18 @@ func TestRectangle_Intersects(t *testing.T) {
 		}
 	}
 
-	notIntersects := []struct{ rect1, rect2 Rectangle[int] }{
+	notIntersects := []struct{ rect1, rect2 AABB[int] }{
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 1, Y: 1}, Vec[int]{X: 2, Y: 2}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 1, Y: 1}, Vec[int]{X: 2, Y: 2}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 6, Y: 0}, Vec[int]{X: 9, Y: 9}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 6, Y: 0}, Vec[int]{X: 9, Y: 9}),
 		},
 		{
-			rect1: NewRectangle(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
-			rect2: NewRectangle(Vec[int]{X: 0, Y: 6}, Vec[int]{X: 9, Y: 9}),
+			rect1: NewAABB(Vec[int]{X: 3, Y: 3}, Vec[int]{X: 5, Y: 5}),
+			rect2: NewAABB(Vec[int]{X: 0, Y: 6}, Vec[int]{X: 9, Y: 9}),
 		},
 	}
 	for _, intersection := range notIntersects {
@@ -122,13 +122,13 @@ func TestRectangle_Intersects(t *testing.T) {
 }
 
 func TestRectangle_IntersectsAny_ReturnsFalse(t *testing.T) {
-	base := Rectangle[int]{
+	base := AABB[int]{
 		TopLeft:     Vec[int]{X: 0, Y: 0},
 		BottomRight: Vec[int]{X: 10, Y: 10},
 		Center:      Vec[int]{X: 5, Y: 5},
 	}
 
-	others := []Rectangle[int]{
+	others := []AABB[int]{
 		{TopLeft: Vec[int]{X: 20, Y: 20}, BottomRight: Vec[int]{X: 30, Y: 30}},
 		{TopLeft: Vec[int]{X: 40, Y: 0}, BottomRight: Vec[int]{X: 50, Y: 10}},
 		{TopLeft: Vec[int]{X: 0, Y: 40}, BottomRight: Vec[int]{X: 10, Y: 50}},
@@ -140,10 +140,10 @@ func TestRectangle_IntersectsAny_ReturnsFalse(t *testing.T) {
 }
 
 func TestRectangle_Contains(t *testing.T) {
-	outer := NewRectangle(Vec[int]{X: 0, Y: 0}, Vec[int]{X: 10, Y: 10})
-	inner := NewRectangle(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 8, Y: 8})
-	onlyTopLeftInside := NewRectangle(Vec[int]{X: -1, Y: -1}, Vec[int]{X: 5, Y: 5})
-	onlyBottomRightInside := NewRectangle(Vec[int]{X: 5, Y: 5}, Vec[int]{X: 12, Y: 12})
+	outer := NewAABB(Vec[int]{X: 0, Y: 0}, Vec[int]{X: 10, Y: 10})
+	inner := NewAABB(Vec[int]{X: 2, Y: 2}, Vec[int]{X: 8, Y: 8})
+	onlyTopLeftInside := NewAABB(Vec[int]{X: -1, Y: -1}, Vec[int]{X: 5, Y: 5})
+	onlyBottomRightInside := NewAABB(Vec[int]{X: 5, Y: 5}, Vec[int]{X: 12, Y: 12})
 
 	if !outer.Contains(inner) {
 		t.Errorf("expected outer to contain inner")
@@ -157,7 +157,7 @@ func TestRectangle_Contains(t *testing.T) {
 }
 
 func TestRectangle_Expand(t *testing.T) {
-	rect := NewRectangle(Vec[int]{X: 2, Y: 3}, Vec[int]{X: 5, Y: 7})
+	rect := NewAABB(Vec[int]{X: 2, Y: 3}, Vec[int]{X: 5, Y: 7})
 	expanded := rect.Expand(2)
 	expectedTopLeft := Vec[int]{X: 0, Y: 1}
 	expectedBottomRight := Vec[int]{X: 7, Y: 9}

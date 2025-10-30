@@ -1,4 +1,4 @@
-package spatial
+package geometry
 
 import (
 	"fmt"

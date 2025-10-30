@@ -1,11 +1,11 @@
-package spatial
+package geometry
 
 // Line represents a line segment defined by two endpoints.
 // The segment is closed (includes both endpoints).
 type Line[T SupportedNumeric] struct {
 	Start     Vec[T]
 	End       Vec[T]
-	fragments []Spatial[T]
+	fragments []Shape[T]
 }
 
 // NewLine constructs a line segment from two endpoints.
@@ -14,7 +14,7 @@ func NewLine[T SupportedNumeric](start, end Vec[T]) Line[T] {
 }
 
 // Bounds returns the axis-aligned bounding rectangle enclosing the line segment.
-func (l Line[T]) Bounds() Rectangle[T] {
+func (l Line[T]) Bounds() AABB[T] {
 	minX, maxX := l.Start.X, l.Start.X
 	minY, maxY := l.Start.Y, l.Start.Y
 
@@ -31,7 +31,7 @@ func (l Line[T]) Bounds() Rectangle[T] {
 		maxY = l.End.Y
 	}
 
-	return NewRectangle(
+	return NewAABB(
 		Vec[T]{X: minX, Y: minY},
 		Vec[T]{X: maxX, Y: maxY},
 	)
@@ -45,6 +45,6 @@ func (l *Line[T]) Vertices() []*Vec[T] {
 	return []*Vec[T]{&l.Start, &l.End}
 }
 
-func (l Line[T]) Fragments() []Spatial[T] { return l.fragments }
+func (l Line[T]) Fragments() []Shape[T] { return l.fragments }
 
-func (l *Line[T]) SetFragments(f []Spatial[T]) { l.fragments = f }
+func (l *Line[T]) SetFragments(f []Shape[T]) { l.fragments = f }

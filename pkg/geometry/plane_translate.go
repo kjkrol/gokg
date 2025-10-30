@@ -2,25 +2,18 @@ package geometry
 
 import (
 	"fmt"
-
-	s "github.com/kjkrol/gokg/pkg/geometry/spatial"
 )
 
-func translateInPlace[T supportedNumeric](spatialItem spatial[T], delta vec[T]) {
+func translateInPlace[T SupportedNumeric](spatialItem Shape[T], delta Vec[T]) {
 	switch s := spatialItem.(type) {
-	case *vec[T]:
+	case *Vec[T]:
 		s.AddMutable(delta)
 
-	case *rectangle[T]:
-		s.TopLeft.AddMutable(delta)
-		s.BottomRight.AddMutable(delta)
-		s.Center.AddMutable(delta)
-
-	case *line[T]:
+	case *Line[T]:
 		s.Start.AddMutable(delta)
 		s.End.AddMutable(delta)
 
-	case *polygon[T]:
+	case *Polygon[T]:
 		for _, v := range s.Vertices() {
 			if v != nil {
 				v.AddMutable(delta)
@@ -37,8 +30,8 @@ func translateInPlace[T supportedNumeric](spatialItem spatial[T], delta vec[T]) 
 	}
 }
 
-func wrapSpatialFragments[T supportedNumeric](spatialItem spatial[T], size vec[T], vecMath VectorMath[T]) []spatial[T] {
-	vertices := spatialItem.Vertices()
+func wrapSpatialFragments[T SupportedNumeric](shape Shape[T], size Vec[T], vecMath VectorMath[T]) []Shape[T] {
+	vertices := shape.Vertices()
 	if len(vertices) == 0 {
 		return nil
 	}
@@ -49,14 +42,14 @@ func wrapSpatialFragments[T supportedNumeric](spatialItem spatial[T], size vec[T
 
 	offsets := candidateOffsets(baseShift, size)
 	offsets = dedupeOffsets(offsets)
-	viewport := s.NewRectangle(vec[T]{X: 0, Y: 0}, vec[T]{X: size.X, Y: size.Y})
-	fragments := make([]spatial[T], 0, len(offsets))
+	viewport := NewAABB(Vec[T]{X: 0, Y: 0}, Vec[T]{X: size.X, Y: size.Y})
+	fragments := make([]Shape[T], 0, len(offsets))
 
 	for _, offset := range offsets {
 		if offset.X == 0 && offset.Y == 0 {
 			continue
 		}
-		clone := cloneSpatialWithOffset(spatialItem, offset)
+		clone := cloneSpatialWithOffset(shape, offset)
 		if clone == nil {
 			continue
 		}
@@ -71,11 +64,11 @@ func wrapSpatialFragments[T supportedNumeric](spatialItem spatial[T], size vec[T
 	return fragments
 }
 
-func candidateOffsets[T supportedNumeric](base vec[T], size vec[T]) []vec[T] {
-	offsets := make([]vec[T], 0, 9)
+func candidateOffsets[T SupportedNumeric](base Vec[T], size Vec[T]) []Vec[T] {
+	offsets := make([]Vec[T], 0, 9)
 	for _, mx := range [...]int{-1, 0, 1} {
 		for _, my := range [...]int{-1, 0, 1} {
-			offset := vec[T]{
+			offset := Vec[T]{
 				X: base.X + T(mx)*size.X,
 				Y: base.Y + T(my)*size.Y,
 			}
@@ -85,7 +78,7 @@ func candidateOffsets[T supportedNumeric](base vec[T], size vec[T]) []vec[T] {
 	return offsets
 }
 
-func dedupeOffsets[T supportedNumeric](offsets []vec[T]) []vec[T] {
+func dedupeOffsets[T SupportedNumeric](offsets []Vec[T]) []Vec[T] {
 	if len(offsets) == 0 {
 		return offsets
 	}
@@ -106,24 +99,19 @@ func dedupeOffsets[T supportedNumeric](offsets []vec[T]) []vec[T] {
 	return result
 }
 
-func cloneSpatialWithOffset[T supportedNumeric](spatialItem spatial[T], offset vec[T]) spatial[T] {
+func cloneSpatialWithOffset[T SupportedNumeric](spatialItem Shape[T], offset Vec[T]) Shape[T] {
 	switch s := spatialItem.(type) {
-	case *vec[T]:
+	case *Vec[T]:
 		vecCopy := *s
 		translateInPlace(&vecCopy, offset)
 		return &vecCopy
 
-	case *rectangle[T]:
-		rectCopy := *s
-		translateInPlace(&rectCopy, offset)
-		return &rectCopy
-
-	case *line[T]:
+	case *Line[T]:
 		lineCopy := *s
 		translateInPlace(&lineCopy, offset)
 		return &lineCopy
 
-	case *polygon[T]:
+	case *Polygon[T]:
 		polyCopy := s.Clone()
 		translateInPlace(&polyCopy, offset)
 		return &polyCopy
