@@ -44,16 +44,6 @@ func BuildAABB[T SupportedNumeric](center Vec[T], d T) AABB[T] {
 	return NewAABB(topLeft, bottomRight)
 }
 
-// Bounds returns the rectangle itself.
-func (r AABB[T]) Bounds() AABB[T] {
-	return r
-}
-
-// Vertices returns the corners that define the rectangle.
-func (r *AABB[T]) Vertices() []*Vec[T] {
-	return []*Vec[T]{&r.TopLeft, &r.BottomRight}
-}
-
 func (r *AABB[T]) Split() [4]AABB[T] {
 	return [4]AABB[T]{
 		NewAABB(r.TopLeft, r.Center), // top left

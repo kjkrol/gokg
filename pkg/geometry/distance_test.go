@@ -10,7 +10,7 @@ func TestBoundingBoxDistance_ForBoundedPlane_LineToLine(t *testing.T) {
 
 	line := NewLine(Vec[int]{X: 1, Y: 1}, Vec[int]{X: 4, Y: 3})
 	other := NewLine(Vec[int]{X: 8, Y: 8}, Vec[int]{X: 9, Y: 9})
-	distance := distanceFun(&line, &other)
+	distance := distanceFun(line.Bounds(), other.Bounds())
 	expectedDistance := plane.Metric(Vec[int]{X: 4, Y: 5}, ZERO_INT_VEC)
 	if distance != expectedDistance {
 		t.Errorf("expected distance %v, got %v", expectedDistance, distance)
@@ -32,7 +32,7 @@ func TestBoundingBoxDistance_ForBoundedPlane_PolygonToPolygon(t *testing.T) {
 		Vec[float64]{X: 6, Y: 7},
 	)
 
-	distance := distanceFun(&polyA, &polyB)
+	distance := distanceFun(polyA.Bounds(), polyB.Bounds())
 
 	expected := plane.Metric(
 		Vec[float64]{X: 3, Y: 3},
@@ -63,7 +63,7 @@ func TestBoundingBoxDistance_ForBoundedPlane(t *testing.T) {
 	rectB := NewPolygon(NewVec(4, 5), NewVec(6, 5), NewVec(6, 7), NewVec(4, 7))
 
 	plane := NewBoundedPlane(20, 20)
-	distance := BoundingBoxDistance(plane.Metric)(&rectA, &rectB)
+	distance := BoundingBoxDistance(plane.Metric)(rectA.Bounds(), rectB.Bounds())
 
 	expected := plane.Metric(Vec[int]{X: 2, Y: 3}, ZERO_INT_VEC)
 	if distance != expected {
@@ -76,7 +76,7 @@ func TestBoundingBoxDistance_ReturnsZeroOnIntersection(t *testing.T) {
 	rectB := NewPolygon(NewVec(2, 2), NewVec(6, 2), NewVec(6, 6), NewVec(2, 6))
 
 	plane := NewBoundedPlane(20, 20)
-	distance := BoundingBoxDistance(plane.Metric)(&rectA, &rectB)
+	distance := BoundingBoxDistance(plane.Metric)(rectA.Bounds(), rectB.Bounds())
 	if distance != 0 {
 		t.Errorf("expected distance 0 for intersecting rectangles, got %v", distance)
 	}
@@ -87,7 +87,7 @@ func TestBoundingBoxDistance_VectorToAABB(t *testing.T) {
 	rect := NewPolygon(NewVec(4, 0), NewVec(6, 0), NewVec(6, 2), NewVec(4, 2))
 	plane := NewBoundedPlane(100, 100)
 
-	distance := BoundingBoxDistanceForPlane(plane)(&vector, &rect)
+	distance := BoundingBoxDistanceForPlane(plane)(vector.Bounds(), rect.Bounds())
 	expected := plane.Metric(NewVec(4, 0), ZERO_INT_VEC)
 	if distance != expected {
 		t.Errorf("expected distance %v, got %v", expected, distance)
@@ -99,7 +99,7 @@ func TestBoundingBoxDistance_RectangleToVector(t *testing.T) {
 	vector := NewVec(5.0, 6.0)
 	plane := NewBoundedPlane(100.0, 100.0)
 
-	distance := BoundingBoxDistanceForPlane(plane)(&rect, &vector)
+	distance := BoundingBoxDistanceForPlane(plane)(rect.Bounds(), vector.Bounds())
 	expected := plane.Metric(Vec[float64]{X: 3, Y: 4}, ZERO_FLOAT_VEC)
 	if distance != expected {
 		t.Errorf("expected distance %v, got %v", expected, distance)

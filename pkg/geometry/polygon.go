@@ -1,5 +1,7 @@
 package geometry
 
+import "strings"
+
 // Polygon represents a simple polygon defined by an ordered list of vertices.
 // The polygon is assumed to be closed, i.e. the last vertex connects back to the first one.
 type Polygon[T SupportedNumeric] struct {
@@ -24,6 +26,13 @@ func NewPolygon[T SupportedNumeric](vertices ...Vec[T]) Polygon[T] {
 		points: copyVertices,
 		bounds: bounds,
 	}
+}
+
+func NewRect[T SupportedNumeric](topLeft Vec[T], witdh T, height T) Polygon[T] {
+	topRight := topLeft.Add(NewVec(witdh, 0))
+	bottomRight := topLeft.Add(NewVec(witdh, height))
+	bottomLeft := topLeft.Add(NewVec(0, height))
+	return NewPolygon(topLeft, topRight, bottomRight, bottomLeft)
 }
 
 func computeBounds[T SupportedNumeric](vertices []Vec[T]) AABB[T] {
@@ -85,4 +94,25 @@ func (p *Polygon[T]) Clone() Polygon[T] {
 		points: pointsCopy,
 		// fragments świadomie zostawiasz puste,
 	}
+}
+
+func (p Polygon[T]) String() string {
+	vertices := p.Vertices()
+	sb := strings.Builder{}
+	sb.WriteString("[")
+	for i, v := range vertices {
+		sb.WriteString(v.String())
+		if i < len(vertices)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString("]")
+	return sb.String()
+}
+
+// ToPolygon returns a rectangular polygon that matches this AABB.
+func (r AABB[T]) ToPolygon() Polygon[T] {
+	width := r.BottomRight.X - r.TopLeft.X
+	height := r.BottomRight.Y - r.TopLeft.Y
+	return NewRect(r.TopLeft, width, height)
 }

@@ -1,5 +1,7 @@
 package geometry
 
+import "strings"
+
 // Line represents a line segment defined by two endpoints.
 // The segment is closed (includes both endpoints).
 type Line[T SupportedNumeric] struct {
@@ -48,3 +50,13 @@ func (l *Line[T]) Vertices() []*Vec[T] {
 func (l Line[T]) Fragments() []Shape[T] { return l.fragments }
 
 func (l *Line[T]) SetFragments(f []Shape[T]) { l.fragments = f }
+
+func (l Line[T]) String() string {
+	sb := strings.Builder{}
+	sb.WriteString("[")
+	sb.WriteString(l.Start.String())
+	sb.WriteString(", ")
+	sb.WriteString(l.End.String())
+	sb.WriteString("]")
+	return sb.String()
+}

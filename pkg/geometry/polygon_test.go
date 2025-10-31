@@ -21,6 +21,21 @@ func TestNewPolygon_Bounds(t *testing.T) {
 	}
 }
 
+func TestNewRect_Bounds(t *testing.T) {
+	poly := NewRect(NewVec(1, 1), 10, 5)
+
+	bounds := poly.Bounds()
+	expectedTopLeft := Vec[int]{X: 1, Y: 1}
+	expectedBottomRight := Vec[int]{X: 11, Y: 6}
+
+	if bounds.TopLeft != expectedTopLeft {
+		t.Errorf("expected top-left %v, got %v", expectedTopLeft, bounds.TopLeft)
+	}
+	if bounds.BottomRight != expectedBottomRight {
+		t.Errorf("expected bottom-right %v, got %v", expectedBottomRight, bounds.BottomRight)
+	}
+}
+
 func TestNewPolygon_PanicOnInvalidInput(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
