@@ -1,7 +1,5 @@
 package geometry
 
-import "slices"
-
 // GenerateBoundaryFragments generates wrapped copies based on the reference point and collects those intersecting the viewport.
 func GenerateBoundaryFragments[T SupportedNumeric, R any](
 	base Vec[T],
@@ -63,17 +61,14 @@ func candidateOffsets[T SupportedNumeric](base Vec[T], size Vec[T]) []Vec[T] {
 	return offsets
 }
 
-func dedupeOffsets[T SupportedNumeric](offsets []Vec[T]) []Vec[T] {
-	if len(offsets) == 0 {
-		return offsets
-	}
-
-	result := offsets[:0]
-	for _, off := range offsets {
-		duplicate := slices.Contains(result, off)
-		if !duplicate {
-			result = append(result, off)
+func dedupeOffsets[T comparable](offsets []T) []T {
+	seen := make(map[T]struct{}, len(offsets))
+	out := offsets[:0]
+	for _, o := range offsets {
+		if _, ok := seen[o]; !ok {
+			seen[o] = struct{}{}
+			out = append(out, o)
 		}
 	}
-	return result
+	return out
 }
