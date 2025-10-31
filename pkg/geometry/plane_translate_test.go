@@ -13,7 +13,7 @@ func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 		Vec[int]{X: 12, Y: 6},
 		Vec[int]{X: 8, Y: 6},
 	)
-	fragments := wrapSpatialFragments(&shape, size, vecMath)
+	fragments := createShapeFragmentsIfNeeded(&shape, size, vecMath)
 	if len(fragments) != 1 {
 		t.Fatalf("expected 1 fragment, got %d", len(fragments))
 	}
@@ -49,7 +49,7 @@ func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
 		Vec[int]{X: 12, Y: 12},
 		Vec[int]{X: 9, Y: 12},
 	)
-	fragments := wrapSpatialFragments(&shape, size, vecMath)
+	fragments := createShapeFragmentsIfNeeded(&shape, size, vecMath)
 	if len(fragments) != 3 {
 		t.Fatalf("expected 3 fragments, got %d", len(fragments))
 	}

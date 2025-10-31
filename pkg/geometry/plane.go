@@ -17,24 +17,40 @@ func (p Plane[T]) Translate(vec *Vec[T], delta Vec[T]) {
 	p.normalize(vec)
 }
 
-func (p Plane[T]) TranslateSpatial(spatialItem Shape[T], delta Vec[T]) {
-	if spatialItem == nil {
+func (p Plane[T]) TranslateSpatial(shape Shape[T], delta Vec[T]) {
+	if shape == nil {
 		return
 	}
 
-	translateInPlace(spatialItem, delta)
+	translateInPlace(shape, delta)
 
 	if p.name != "cyclic" {
-		for _, v := range spatialItem.Vertices() {
+		for _, v := range shape.Vertices() {
 			if v != nil {
 				p.normalize(v)
 			}
 		}
-		spatialItem.SetFragments(nil)
+		shape.SetFragments(nil)
 		return
 	}
 
-	spatialItem.SetFragments(wrapSpatialFragments(spatialItem, p.size, p.vectorMath))
+	shape.SetFragments(createShapeFragmentsIfNeeded(shape, p.size, p.vectorMath))
+}
+
+func createShapeFragmentsIfNeeded[T SupportedNumeric](shape Shape[T], size Vec[T], vecMath VectorMath[T]) []Shape[T] {
+	vertices := shape.Vertices()
+	if len(vertices) == 0 {
+		return nil
+	}
+	base := *vertices[0]
+	return GenerateBoundaryFragments(base, size, vecMath, func(offset Vec[T]) (Shape[T], AABB[T], bool) {
+		clone := shape.Clone()
+		if clone == nil {
+			return nil, AABB[T]{}, false
+		}
+		translateInPlace(clone, offset)
+		return clone, clone.Bounds(), true
+	})
 }
 
 func (p Plane[T]) Metric(v1, v2 Vec[T]) T { return p.metric(v1, v2) }
@@ -50,6 +66,8 @@ func (p Plane[T]) relativeMetric(v1, v2 Vec[T]) T {
 	p.normalize(&delta)
 	return p.vectorMath.Length(delta)
 }
+
+func (p Plane[T]) VectorMath() VectorMath[T] { return p.vectorMath }
 
 func (p Plane[T]) Name() string { return p.name }
 

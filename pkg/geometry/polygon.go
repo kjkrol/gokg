@@ -87,13 +87,14 @@ func (p Polygon[T]) Fragments() []Shape[T] { return p.fragments }
 
 func (p *Polygon[T]) SetFragments(f []Shape[T]) { p.fragments = f }
 
-func (p *Polygon[T]) Clone() Polygon[T] {
+func (p Polygon[T]) Clone() Shape[T] {
 	pointsCopy := make([]Vec[T], len(p.points))
 	copy(pointsCopy, p.points)
-	return Polygon[T]{
+	clone := Polygon[T]{
 		points: pointsCopy,
-		// fragments świadomie zostawiasz puste,
+		bounds: p.bounds,
 	}
+	return &clone
 }
 
 func (p Polygon[T]) String() string {

@@ -51,6 +51,11 @@ func (l Line[T]) Fragments() []Shape[T] { return l.fragments }
 
 func (l *Line[T]) SetFragments(f []Shape[T]) { l.fragments = f }
 
+func (l Line[T]) Clone() Shape[T] {
+	copy := l
+	return &copy
+}
+
 func (l Line[T]) String() string {
 	sb := strings.Builder{}
 	sb.WriteString("[")

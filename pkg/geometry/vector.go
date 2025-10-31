@@ -95,3 +95,8 @@ func (v *Vec[T]) Vertices() []*Vec[T] {
 func (v Vec[T]) Fragments() []Shape[T] { return nil }
 
 func (v Vec[T]) SetFragments(_ []Shape[T]) {}
+
+func (v Vec[T]) Clone() Shape[T] {
+	copy := v
+	return &copy
+}

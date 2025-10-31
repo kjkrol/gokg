@@ -6,4 +6,5 @@ type Shape[T SupportedNumeric] interface {
 	String() string
 	Fragments() []Shape[T]
 	SetFragments([]Shape[T])
+	Clone() Shape[T]
 }
