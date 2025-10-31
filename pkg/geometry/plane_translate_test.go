@@ -5,15 +5,14 @@ import (
 )
 
 func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
-	size := Vec[int]{X: 10, Y: 10}
-	vecMath := VectorMathByType[int]()
+	plane := NewCyclicBoundedPlane(10, 10)
 	shape := NewPolygon(
 		Vec[int]{X: 8, Y: 4},
 		Vec[int]{X: 12, Y: 4},
 		Vec[int]{X: 12, Y: 6},
 		Vec[int]{X: 8, Y: 6},
 	)
-	fragments := createShapeFragmentsIfNeeded(&shape, size, vecMath)
+	fragments := plane.createShapeFragmentsIfNeeded(&shape)
 	if len(fragments) != 1 {
 		t.Fatalf("expected 1 fragment, got %d", len(fragments))
 	}
@@ -41,15 +40,14 @@ func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 }
 
 func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
-	size := Vec[int]{X: 10, Y: 10}
-	vecMath := VectorMathByType[int]()
+	plane := NewCyclicBoundedPlane(10, 10)
 	shape := NewPolygon(
 		Vec[int]{X: 9, Y: 9},
 		Vec[int]{X: 12, Y: 9},
 		Vec[int]{X: 12, Y: 12},
 		Vec[int]{X: 9, Y: 12},
 	)
-	fragments := createShapeFragmentsIfNeeded(&shape, size, vecMath)
+	fragments := plane.createShapeFragmentsIfNeeded(&shape)
 	if len(fragments) != 3 {
 		t.Fatalf("expected 3 fragments, got %d", len(fragments))
 	}
@@ -86,7 +84,7 @@ func TestTranslateSpatial_SetsFragmentsOnSpatial(t *testing.T) {
 		Vec[int]{X: 11, Y: 11},
 		Vec[int]{X: 9, Y: 11},
 	)
-	plane.TranslateSpatial(&poly, Vec[int]{X: 0, Y: 0})
+	plane.Translate(&poly, Vec[int]{X: 0, Y: 0})
 	fragments := poly.Fragments()
 	if len(fragments) != 3 {
 		t.Fatalf("expected 3 fragments set on polygon, got %d", len(fragments))
@@ -101,7 +99,7 @@ func TestTranslateSpatial_ClearsFragmentsWhenNotWrapping(t *testing.T) {
 		Vec[int]{X: 2, Y: 2},
 		Vec[int]{X: 1, Y: 2},
 	)
-	plane.TranslateSpatial(&poly, Vec[int]{X: 1, Y: 0})
+	plane.Translate(&poly, Vec[int]{X: 1, Y: 0})
 	if frags := poly.Fragments(); frags != nil {
 		t.Fatalf("expected no fragments for polygon inside bounds, got %d", len(frags))
 	}

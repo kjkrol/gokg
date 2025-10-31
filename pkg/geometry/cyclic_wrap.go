@@ -1,22 +1,24 @@
 package geometry
 
+import "slices"
+
 // GenerateBoundaryFragments generates wrapped copies based on the reference point and collects those intersecting the viewport.
 func GenerateBoundaryFragments[T SupportedNumeric, R any](
 	base Vec[T],
-	size Vec[T],
-	vecMath VectorMath[T],
+	plane Plane[T],
 	build func(Vec[T]) (R, AABB[T], bool),
 ) []R {
-	offsets := wrapOffsets(base, size, vecMath)
+	size := plane.Size()
+	offsets := wrapOffsets(base, size, plane.normalize)
 	viewport := NewAABB(Vec[T]{X: 0, Y: 0}, Vec[T]{X: size.X, Y: size.Y})
 	return collectWrapped(offsets, viewport, build)
 }
 
 // WrapOffsets returns the candidate wrap offsets for a reference point in the given plane size.
 // The zero offset is included; callers may skip it when they require only wrapped copies.
-func wrapOffsets[T SupportedNumeric](reference Vec[T], size Vec[T], vecMath VectorMath[T]) []Vec[T] {
+func wrapOffsets[T SupportedNumeric](reference Vec[T], size Vec[T], normalize func(*Vec[T])) []Vec[T] {
 	wrapped := reference
-	vecMath.Wrap(&wrapped, size)
+	normalize(&wrapped)
 	baseShift := wrapped.Sub(reference)
 	return dedupeOffsets(candidateOffsets(baseShift, size))
 }
@@ -68,13 +70,7 @@ func dedupeOffsets[T SupportedNumeric](offsets []Vec[T]) []Vec[T] {
 
 	result := offsets[:0]
 	for _, off := range offsets {
-		duplicate := false
-		for _, existing := range result {
-			if off == existing {
-				duplicate = true
-				break
-			}
-		}
+		duplicate := slices.Contains(result, off)
 		if !duplicate {
 			result = append(result, off)
 		}
