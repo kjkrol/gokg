@@ -8,7 +8,7 @@ import (
 
 // ExampleNewBoundedPlane_int demonstrates how to use NewBoundedPlane with int type.
 func ExampleNewBoundedPlane_int() {
-	plane := geometry.NewBoundedPlane[int](10, 10)
+	plane := geometry.NewBoundedPlane(10, 10)
 	vec := geometry.Vec[int]{X: 5, Y: 5}
 	delta := geometry.Vec[int]{X: 3, Y: 4}
 	plane.Translate(&vec, delta)
@@ -18,7 +18,7 @@ func ExampleNewBoundedPlane_int() {
 
 // ExampleNewBoundedPlane_float64 demonstrates how to use NewBoundedPlane with float64 type.
 func ExampleNewBoundedPlane_float64() {
-	plane := geometry.NewBoundedPlane[float64](10.0, 10.0)
+	plane := geometry.NewBoundedPlane(10.0, 10.0)
 	vec := geometry.Vec[float64]{X: 5.0, Y: 5.0}
 	delta := geometry.Vec[float64]{X: 3.0, Y: 4.0}
 	plane.Translate(&vec, delta)
@@ -28,7 +28,7 @@ func ExampleNewBoundedPlane_float64() {
 
 // ExampleNewCyclicBoundedPlane_int demonstrates how to use NewCyclicBoundedPlane with int type.
 func ExampleNewCyclicBoundedPlane_int() {
-	plane := geometry.NewCyclicBoundedPlane[int](10, 10)
+	plane := geometry.NewCyclicBoundedPlane(10, 10)
 	vec := geometry.Vec[int]{X: 9, Y: 9}
 	delta := geometry.Vec[int]{X: 3, Y: 4}
 	plane.Translate(&vec, delta)
@@ -38,7 +38,7 @@ func ExampleNewCyclicBoundedPlane_int() {
 
 // ExampleNewCyclicBoundedPlane_float64 demonstrates how to use NewCyclicBoundedPlane with float64 type.
 func ExampleNewCyclicBoundedPlane_float64() {
-	plane := geometry.NewCyclicBoundedPlane[float64](10.0, 10.0)
+	plane := geometry.NewCyclicBoundedPlane(10.0, 10.0)
 	vec := geometry.Vec[float64]{X: 9.0, Y: 9.0}
 	delta := geometry.Vec[float64]{X: 3.0, Y: 4.0}
 	plane.Translate(&vec, delta)

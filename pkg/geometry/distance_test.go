@@ -59,8 +59,8 @@ func TestRectanglesAxisDistance(t *testing.T) {
 }
 
 func TestBoundingBoxDistance_ForBoundedPlane(t *testing.T) {
-	rectA := NewPolygon(NewVec(0, 0), NewVec(2, 0), NewVec(2, 2), NewVec(0, 2))
-	rectB := NewPolygon(NewVec(4, 5), NewVec(6, 5), NewVec(6, 7), NewVec(4, 7))
+	rectA := NewPolygonBuilder[int]().Add(0, 0).Add(2, 0).Add(2, 2).Add(0, 2).Build()
+	rectB := NewPolygonBuilder[int]().Add(4, 5).Add(6, 5).Add(6, 7).Add(4, 7).Build()
 
 	plane := NewBoundedPlane(20, 20)
 	distance := BoundingBoxDistance(plane.Metric)(rectA.Bounds(), rectB.Bounds())

@@ -59,12 +59,47 @@ func (p Plane[T]) createShapeFragmentsIfNeeded(shape Shape[T]) []Shape[T] {
 		return nil
 	}
 	base := *vertices[0]
+	viewport := NewAABB(Vec[T]{X: 0, Y: 0}, Vec[T]{X: p.size.X, Y: p.size.Y})
+	clipper := NewSutherlandHodgmanClipper(viewport)
+
 	return GenerateBoundaryFragments(base, p, func(offset Vec[T]) (Shape[T], AABB[T], bool) {
 		clone := shape.Clone()
 		if clone == nil {
 			return nil, AABB[T]{}, false
 		}
 		translateInPlace(clone, offset)
-		return clone, clone.Bounds(), true
+		preBounds := clone.Bounds()
+		if !preBounds.Intersects(viewport) {
+			return nil, AABB[T]{}, false
+		}
+
+		if polygon, ok := clone.(*Polygon[T]); ok {
+			return buildPolygonFragment(polygon, clipper)
+		}
+
+		return normalizeFragment(p, clone, preBounds)
 	})
+
+}
+
+func buildPolygonFragment[T SupportedNumeric](polygon *Polygon[T], clipper SutherlandHodgmanClipper[T]) (Shape[T], AABB[T], bool) {
+	clipped := clipper.Clip(polygon.Points())
+	if len(clipped) == 0 {
+		return nil, AABB[T]{}, false
+	}
+
+	clippedPoly := NewPolygon(clipped...)
+	return &clippedPoly, clippedPoly.Bounds(), true
+}
+
+func normalizeFragment[T SupportedNumeric](plane Plane[T], fragment Shape[T], originalBounds AABB[T]) (Shape[T], AABB[T], bool) {
+	for _, v := range fragment.Vertices() {
+		if v != nil {
+			plane.normalize(v)
+		}
+	}
+	if updater, ok := fragment.(interface{ UpdateBounds() }); ok {
+		updater.UpdateBounds()
+	}
+	return fragment, originalBounds, true
 }

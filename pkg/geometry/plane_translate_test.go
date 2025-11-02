@@ -1,23 +1,31 @@
 package geometry
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"testing"
 )
 
 func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	shape := NewPolygon(
-		Vec[int]{X: 8, Y: 4},
-		Vec[int]{X: 12, Y: 4},
-		Vec[int]{X: 12, Y: 6},
-		Vec[int]{X: 8, Y: 6},
-	)
+	shape := NewPolygonBuilder[int]().
+		Add(8, 4).
+		Add(12, 4).
+		Add(12, 6).
+		Add(8, 6).
+		Build()
 	fragments := plane.createShapeFragmentsIfNeeded(&shape)
 	if len(fragments) != 1 {
 		t.Fatalf("expected 1 fragment, got %d", len(fragments))
 	}
-	expectedFirstPoints := map[[2]int]struct{}{
-		{-2, 4}: {},
+	expectedFragments := map[string]struct{}{
+		polygonKey([]Vec[int]{
+			{X: 0, Y: 4},
+			{X: 2, Y: 4},
+			{X: 2, Y: 6},
+			{X: 0, Y: 6},
+		}): {},
 	}
 	for _, fragment := range fragments {
 		poly, ok := fragment.(*Polygon[int])
@@ -28,18 +36,18 @@ func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 		if len(points) == 0 {
 			t.Fatal("polygon fragment has no points")
 		}
-		key := [2]int{points[0].X, points[0].Y}
-		if _, ok := expectedFirstPoints[key]; !ok {
-			t.Fatalf("unexpected fragment starting point %+v", key)
+		key := polygonKey(points)
+		if _, ok := expectedFragments[key]; !ok {
+			t.Fatalf("unexpected fragment points %+v", points)
 		}
-		delete(expectedFirstPoints, key)
+		delete(expectedFragments, key)
 	}
-	if len(expectedFirstPoints) != 0 {
-		t.Fatalf("missing expected fragments: %+v", expectedFirstPoints)
+	if len(expectedFragments) != 0 {
+		t.Fatalf("missing expected fragments: %+v", expectedFragments)
 	}
 }
 
-func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
+func TestWrapFragments_PolygonCrossesCorner(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	shape := NewPolygon(
 		Vec[int]{X: 9, Y: 9},
@@ -51,10 +59,25 @@ func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
 	if len(fragments) != 3 {
 		t.Fatalf("expected 3 fragments, got %d", len(fragments))
 	}
-	expectedFirstPoints := map[[2]int]struct{}{
-		{-1, 9}:  {},
-		{9, -1}:  {},
-		{-1, -1}: {},
+	expectedFragments := map[string]struct{}{
+		polygonKey([]Vec[int]{
+			{X: 0, Y: 9},
+			{X: 2, Y: 9},
+			{X: 2, Y: 10},
+			{X: 0, Y: 10},
+		}): {},
+		polygonKey([]Vec[int]{
+			{X: 9, Y: 0},
+			{X: 10, Y: 0},
+			{X: 10, Y: 2},
+			{X: 9, Y: 2},
+		}): {},
+		polygonKey([]Vec[int]{
+			{X: 0, Y: 0},
+			{X: 2, Y: 0},
+			{X: 2, Y: 2},
+			{X: 0, Y: 2},
+		}): {},
 	}
 	for _, fragment := range fragments {
 		poly, ok := fragment.(*Polygon[int])
@@ -65,18 +88,39 @@ func TestWrapSpatialFragments_PolygonCrossesCorner(t *testing.T) {
 		if len(points) == 0 {
 			t.Fatal("polygon fragment has no points")
 		}
-		key := [2]int{points[0].X, points[0].Y}
-		if _, ok := expectedFirstPoints[key]; !ok {
-			t.Fatalf("unexpected fragment starting point %+v", key)
+		key := polygonKey(points)
+		if _, ok := expectedFragments[key]; !ok {
+			t.Fatalf("unexpected fragment points %+v", points)
 		}
-		delete(expectedFirstPoints, key)
+		delete(expectedFragments, key)
 	}
-	if len(expectedFirstPoints) != 0 {
-		t.Fatalf("missing expected fragments: %+v", expectedFirstPoints)
+	if len(expectedFragments) != 0 {
+		t.Fatalf("missing expected fragments: %+v", expectedFragments)
 	}
 }
 
-func TestTranslateSpatial_SetsFragmentsOnSpatial(t *testing.T) {
+func polygonKey[T SupportedNumeric](points []Vec[T]) string {
+	if len(points) == 0 {
+		return ""
+	}
+
+	sorted := make([]Vec[T], len(points))
+	copy(sorted, points)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].X == sorted[j].X {
+			return sorted[i].Y < sorted[j].Y
+		}
+		return sorted[i].X < sorted[j].X
+	})
+
+	keys := make([]string, len(sorted))
+	for i, p := range sorted {
+		keys[i] = fmt.Sprintf("(%v,%v)", p.X, p.Y)
+	}
+	return strings.Join(keys, ";")
+}
+
+func TestTranslate_SetsFragmentsOnSpatial(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	poly := NewPolygon(
 		Vec[int]{X: 9, Y: 9},
@@ -91,7 +135,7 @@ func TestTranslateSpatial_SetsFragmentsOnSpatial(t *testing.T) {
 	}
 }
 
-func TestTranslateSpatial_ClearsFragmentsWhenNotWrapping(t *testing.T) {
+func TestTranslate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	poly := NewPolygon(
 		Vec[int]{X: 1, Y: 1},

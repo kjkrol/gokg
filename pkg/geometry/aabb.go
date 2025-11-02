@@ -81,20 +81,28 @@ func (r AABB[T]) Intersects(other AABB[T]) bool {
 }
 
 func axisIntersection[T SupportedNumeric](aa, bb AABB[T], axisValue func(Vec[T]) T) bool {
-	aa, bb = sortRectanglesBy(aa, bb, axisValue)
-	noIntersection := axisValue(aa.TopLeft) < axisValue(bb.BottomRight) && axisValue(aa.BottomRight) < axisValue(bb.TopLeft)
+	aa, bb = SortRectanglesBy(
+		aa, bb,
+		func(r AABB[T]) T { return axisValue(r.TopLeft) },
+		func(r AABB[T]) T { return axisValue(r.BottomRight) },
+	)
+
+	noIntersection := axisValue(aa.TopLeft) < axisValue(bb.BottomRight) &&
+		axisValue(aa.BottomRight) < axisValue(bb.TopLeft)
 	return !noIntersection
 }
 
-func sortRectanglesBy[T SupportedNumeric](a, b AABB[T], axisValue func(Vec[T]) T) (aa, bb AABB[T]) {
-	if axisValue(a.TopLeft) < axisValue(b.TopLeft) {
-		aa = a
-		bb = b
-	} else {
-		aa = b
-		bb = a
+func SortRectanglesBy[T SupportedNumeric](a, b AABB[T], keyFns ...func(AABB[T]) T) (aa, bb AABB[T]) {
+	for _, keyFn := range keyFns {
+		av, bv := keyFn(a), keyFn(b)
+		if av < bv {
+			return a, b
+		}
+		if av > bv {
+			return b, a
+		}
 	}
-	return
+	return a, b
 }
 
 //-------------------------------------------------------------------------
@@ -103,7 +111,11 @@ func (r AABB[T]) AxisDistanceTo(
 	other AABB[T],
 	axisValue func(Vec[T]) T,
 ) T {
-	r, other = sortRectanglesBy(r, other, axisValue)
+	r, other = SortRectanglesBy(
+		r, other,
+		func(box AABB[T]) T { return axisValue(box.TopLeft) },
+		func(box AABB[T]) T { return axisValue(box.BottomRight) },
+	)
 
 	if axisValue(r.BottomRight) >= axisValue(other.TopLeft) {
 		return 0
@@ -130,4 +142,11 @@ func (r AABB[T]) String() string {
 
 func (r AABB[T]) Equals(other AABB[T]) bool {
 	return r.TopLeft == other.TopLeft && r.BottomRight == other.BottomRight && r.Center == other.Center
+}
+
+// ToPolygon returns a rectangular polygon that matches this AABB.
+func (r AABB[T]) ToPolygon() Polygon[T] {
+	width := r.BottomRight.X - r.TopLeft.X
+	height := r.BottomRight.Y - r.TopLeft.Y
+	return NewRect(r.TopLeft, width, height)
 }

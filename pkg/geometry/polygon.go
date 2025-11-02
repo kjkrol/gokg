@@ -28,6 +28,29 @@ func NewPolygon[T SupportedNumeric](vertices ...Vec[T]) Polygon[T] {
 	}
 }
 
+// ------- Builder -------------------------------
+
+type PolygonBuilder[T SupportedNumeric] struct {
+	points []Vec[T]
+}
+
+func NewPolygonBuilder[T SupportedNumeric]() *PolygonBuilder[T] {
+	return &PolygonBuilder[T]{
+		points: make([]Vec[T], 0),
+	}
+}
+
+func (pb *PolygonBuilder[T]) Add(x, y T) *PolygonBuilder[T] {
+	pb.points = append(pb.points, NewVec(x, y))
+	return pb
+}
+
+func (pb *PolygonBuilder[T]) Build() Polygon[T] {
+	return NewPolygon(pb.points...)
+}
+
+// -----------------------------------------------
+
 func NewRect[T SupportedNumeric](topLeft Vec[T], witdh T, height T) Polygon[T] {
 	topRight := topLeft.Add(NewVec(witdh, 0))
 	bottomRight := topLeft.Add(NewVec(witdh, height))
@@ -36,26 +59,25 @@ func NewRect[T SupportedNumeric](topLeft Vec[T], witdh T, height T) Polygon[T] {
 }
 
 func computeBounds[T SupportedNumeric](vertices []Vec[T]) AABB[T] {
-	minX, maxX := vertices[0].X, vertices[0].X
-	minY, maxY := vertices[0].Y, vertices[0].Y
+	topLeft := vertices[0]
+	bottomRight := vertices[0]
+
 	for _, v := range vertices[1:] {
-		if v.X < minX {
-			minX = v.X
+		if v.X < topLeft.X {
+			topLeft.X = v.X
 		}
-		if v.X > maxX {
-			maxX = v.X
+		if v.Y < topLeft.Y {
+			topLeft.Y = v.Y
 		}
-		if v.Y < minY {
-			minY = v.Y
+		if v.X > bottomRight.X {
+			bottomRight.X = v.X
 		}
-		if v.Y > maxY {
-			maxY = v.Y
+		if v.Y > bottomRight.Y {
+			bottomRight.Y = v.Y
 		}
 	}
-	return NewAABB(
-		Vec[T]{X: minX, Y: minY},
-		Vec[T]{X: maxX, Y: maxY},
-	)
+
+	return NewAABB(topLeft, bottomRight)
 }
 
 // Bounds returns the axis-aligned bounding rectangle that contains the polygon.
@@ -109,11 +131,4 @@ func (p Polygon[T]) String() string {
 	}
 	sb.WriteString("]")
 	return sb.String()
-}
-
-// ToPolygon returns a rectangular polygon that matches this AABB.
-func (r AABB[T]) ToPolygon() Polygon[T] {
-	width := r.BottomRight.X - r.TopLeft.X
-	height := r.BottomRight.Y - r.TopLeft.Y
-	return NewRect(r.TopLeft, width, height)
 }
