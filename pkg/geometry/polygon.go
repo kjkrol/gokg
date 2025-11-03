@@ -5,8 +5,8 @@ import "strings"
 // Polygon represents a simple polygon defined by an ordered list of vertices.
 // The polygon is assumed to be closed, i.e. the last vertex connects back to the first one.
 type Polygon[T SupportedNumeric] struct {
-	points    []Vec[T]
-	fragments []Shape[T]
+	points    []Vec[T] //TODO: oj oj, wygodniej byloby trzymac liste pointerow
+	fragments map[OffsetRelativPos]Shape[T]
 	bounds    AABB[T]
 }
 
@@ -23,8 +23,9 @@ func NewPolygon[T SupportedNumeric](vertices ...Vec[T]) Polygon[T] {
 	bounds := computeBounds(copyVertices)
 
 	return Polygon[T]{
-		points: copyVertices,
-		bounds: bounds,
+		points:    copyVertices,
+		bounds:    bounds,
+		fragments: make(map[OffsetRelativPos]Shape[T], 4),
 	}
 }
 
@@ -105,9 +106,7 @@ func (p *Polygon[T]) Vertices() []*Vec[T] {
 	return ptrs
 }
 
-func (p Polygon[T]) Fragments() []Shape[T] { return p.fragments }
-
-func (p *Polygon[T]) SetFragments(f []Shape[T]) { p.fragments = f }
+func (p Polygon[T]) Fragments() map[OffsetRelativPos]Shape[T] { return p.fragments }
 
 func (p Polygon[T]) Clone() Shape[T] {
 	pointsCopy := make([]Vec[T], len(p.points))

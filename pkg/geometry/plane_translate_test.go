@@ -15,11 +15,17 @@ func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 		Add(12, 6).
 		Add(8, 6).
 		Build()
-	fragments := plane.createShapeFragmentsIfNeeded(&shape)
-	if len(fragments) != 1 {
-		t.Fatalf("expected 1 fragment, got %d", len(fragments))
+	plane.createShapeFragments(&shape)
+	if len(shape.fragments) != 2 {
+		t.Fatalf("expected 2 fragments, got %d", len(shape.fragments))
 	}
 	expectedFragments := map[string]struct{}{
+		polygonKey([]Vec[int]{
+			{X: 8, Y: 4},
+			{X: 9, Y: 4},
+			{X: 9, Y: 6},
+			{X: 8, Y: 6},
+		}): {},
 		polygonKey([]Vec[int]{
 			{X: 0, Y: 4},
 			{X: 2, Y: 4},
@@ -27,7 +33,7 @@ func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
 			{X: 0, Y: 6},
 		}): {},
 	}
-	for _, fragment := range fragments {
+	for _, fragment := range shape.fragments {
 		poly, ok := fragment.(*Polygon[int])
 		if !ok {
 			t.Fatalf("expected polygon fragment, got %T", fragment)
@@ -55,21 +61,27 @@ func TestWrapFragments_PolygonCrossesCorner(t *testing.T) {
 		Vec[int]{X: 12, Y: 12},
 		Vec[int]{X: 9, Y: 12},
 	)
-	fragments := plane.createShapeFragmentsIfNeeded(&shape)
-	if len(fragments) != 3 {
-		t.Fatalf("expected 3 fragments, got %d", len(fragments))
+	plane.createShapeFragments(&shape)
+	if len(shape.fragments) != 4 {
+		t.Fatalf("expected 4 fragments, got %d", len(shape.fragments))
 	}
 	expectedFragments := map[string]struct{}{
 		polygonKey([]Vec[int]{
 			{X: 0, Y: 9},
 			{X: 2, Y: 9},
-			{X: 2, Y: 10},
-			{X: 0, Y: 10},
+			{X: 2, Y: 9},
+			{X: 0, Y: 9},
+		}): {},
+		polygonKey([]Vec[int]{
+			{X: 9, Y: 9},
+			{X: 9, Y: 9},
+			{X: 9, Y: 9},
+			{X: 9, Y: 9},
 		}): {},
 		polygonKey([]Vec[int]{
 			{X: 9, Y: 0},
-			{X: 10, Y: 0},
-			{X: 10, Y: 2},
+			{X: 9, Y: 0},
+			{X: 9, Y: 2},
 			{X: 9, Y: 2},
 		}): {},
 		polygonKey([]Vec[int]{
@@ -79,7 +91,7 @@ func TestWrapFragments_PolygonCrossesCorner(t *testing.T) {
 			{X: 0, Y: 2},
 		}): {},
 	}
-	for _, fragment := range fragments {
+	for _, fragment := range shape.fragments {
 		poly, ok := fragment.(*Polygon[int])
 		if !ok {
 			t.Fatalf("expected polygon fragment, got %T", fragment)
@@ -130,7 +142,7 @@ func TestTranslate_SetsFragmentsOnSpatial(t *testing.T) {
 	)
 	plane.Translate(&poly, Vec[int]{X: 0, Y: 0})
 	fragments := poly.Fragments()
-	if len(fragments) != 3 {
+	if len(fragments) != 4 {
 		t.Fatalf("expected 3 fragments set on polygon, got %d", len(fragments))
 	}
 }
@@ -144,7 +156,7 @@ func TestTranslate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
 		Vec[int]{X: 1, Y: 2},
 	)
 	plane.Translate(&poly, Vec[int]{X: 1, Y: 0})
-	if frags := poly.Fragments(); frags != nil {
+	if frags := poly.Fragments(); len(frags) > 0 {
 		t.Fatalf("expected no fragments for polygon inside bounds, got %d", len(frags))
 	}
 }

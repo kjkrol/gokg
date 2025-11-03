@@ -4,7 +4,6 @@ type Shape[T SupportedNumeric] interface {
 	Bounds() AABB[T]
 	Vertices() []*Vec[T]
 	String() string
-	Fragments() []Shape[T]
-	SetFragments([]Shape[T])
+	Fragments() map[OffsetRelativPos]Shape[T]
 	Clone() Shape[T]
 }

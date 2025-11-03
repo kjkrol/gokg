@@ -7,12 +7,16 @@ import "strings"
 type Line[T SupportedNumeric] struct {
 	Start     Vec[T]
 	End       Vec[T]
-	fragments []Shape[T]
+	fragments map[OffsetRelativPos]Shape[T]
 }
 
 // NewLine constructs a line segment from two endpoints.
 func NewLine[T SupportedNumeric](start, end Vec[T]) Line[T] {
-	return Line[T]{Start: start, End: end}
+	return Line[T]{
+		Start:     start,
+		End:       end,
+		fragments: make(map[OffsetRelativPos]Shape[T], 4),
+	}
 }
 
 // Bounds returns the axis-aligned bounding rectangle enclosing the line segment.
@@ -47,9 +51,7 @@ func (l *Line[T]) Vertices() []*Vec[T] {
 	return []*Vec[T]{&l.Start, &l.End}
 }
 
-func (l Line[T]) Fragments() []Shape[T] { return l.fragments }
-
-func (l *Line[T]) SetFragments(f []Shape[T]) { l.fragments = f }
+func (l Line[T]) Fragments() map[OffsetRelativPos]Shape[T] { return l.fragments }
 
 func (l Line[T]) Clone() Shape[T] {
 	copy := l

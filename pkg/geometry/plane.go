@@ -1,5 +1,19 @@
 package geometry
 
+type OffsetRelativPos int
+
+const (
+	UPPER_LEFT OffsetRelativPos = iota
+	UPPER
+	UPPER_RIGHT
+	LEFT
+	CENTER
+	RIGHT
+	BOTTOM_LEFT
+	BOTTOM
+	BOTTOM_RIGHT
+)
+
 const (
 	BOUNDED = "bounded"
 	CYCLIC  = "cyclic"
@@ -11,6 +25,8 @@ type Plane[T SupportedNumeric] struct {
 	normalize  func(*Vec[T])
 	metric     func(v1, v2 Vec[T]) T
 	name       string
+	viewport   AABB[T]
+	offsets    map[OffsetRelativPos]Vec[T]
 }
 
 // -----------------------------------------------------------------------------
@@ -28,6 +44,10 @@ func (p Plane[T]) Metric(v1, v2 Vec[T]) T { return p.metric(v1, v2) }
 
 func (p Plane[T]) Contains(vec Vec[T]) bool {
 	return vec.X >= 0 && vec.X < p.size.X && vec.Y >= 0 && vec.Y < p.size.Y
+}
+
+func (p Plane[T]) ContainsShape(shape Shape[T]) bool {
+	return p.viewport.Contains(shape.Bounds())
 }
 
 func (p Plane[T]) Normalize(vec *Vec[T]) { p.normalize(vec) }
@@ -48,6 +68,7 @@ func NewBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 		size:       NewVec(sizeX, sizeY),
 		vectorMath: VectorMathByType[T](),
 	}
+	plane.viewport = NewAABB(NewVec[T](0, 0), plane.size)
 	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Clamp(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return max(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
 	return plane
@@ -61,8 +82,24 @@ func NewCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 		size:       NewVec(sizeX, sizeY),
 		vectorMath: VectorMathByType[T](),
 	}
+	plane.viewport = NewAABB(NewVec[T](0, 0), plane.size)
 	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Wrap(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return min(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
+
+	offsets := make(map[OffsetRelativPos]Vec[T], 9)
+	offsets[UPPER_LEFT] = NewVec(-sizeX, -sizeY)
+	offsets[UPPER] = NewVec(0, -sizeY)
+	offsets[UPPER_RIGHT] = NewVec(sizeX, -sizeY)
+
+	offsets[LEFT] = NewVec(-sizeX, 0)
+	offsets[CENTER] = NewVec[T](0, 0)
+	offsets[RIGHT] = NewVec(sizeX, 0)
+
+	offsets[BOTTOM_LEFT] = NewVec(-sizeX, sizeY)
+	offsets[BOTTOM] = NewVec(0, sizeY)
+	offsets[BOTTOM_RIGHT] = NewVec(sizeX, sizeY)
+	plane.offsets = offsets
+
 	return plane
 }
 
