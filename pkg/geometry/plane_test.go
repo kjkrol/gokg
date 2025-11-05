@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestDiscreteCyclicPlaneTranslate(t *testing.T) {
+func TestDiscreteCyclicPlaneNormalizeAfterAdd(t *testing.T) {
 	plane := NewCyclicBoundedPlane(5, 5)
 	for _, test := range []struct {
 		arg1     Vec[int]
@@ -17,8 +17,11 @@ func TestDiscreteCyclicPlaneTranslate(t *testing.T) {
 		{NewVec(4, 0), NewVec(-1, -0), NewVec(3, 0)},
 		{NewVec(1, 0), NewVec(-4, -0), NewVec(2, 0)},
 	} {
-		if plane.Translate(&test.arg1, test.arg2); !test.arg1.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", test.arg1, test.expected)
+		result := test.arg1
+		result.AddMutable(test.arg2)
+		plane.Normalize(&result)
+		if !result.Equals(test.expected) {
+			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
 	}
 }
@@ -43,7 +46,7 @@ func TestDiscreteCyclicPlaneMetric(t *testing.T) {
 	}
 }
 
-func TestDiscreteBoundedPlaneTranslate(t *testing.T) {
+func TestDiscreteBoundedPlaneNormalizeAfterAdd(t *testing.T) {
 	plane := NewBoundedPlane(9, 9)
 	for _, test := range []struct {
 		arg1     Vec[int]
@@ -56,8 +59,11 @@ func TestDiscreteBoundedPlaneTranslate(t *testing.T) {
 		{NewVec(4, 0), NewVec(-1, -0), NewVec(3, 0)},
 		{NewVec(6, 0), NewVec(-4, -0), NewVec(2, 0)},
 	} {
-		if plane.Translate(&test.arg1, test.arg2); !test.arg1.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", test.arg1, test.expected)
+		result := test.arg1
+		result.AddMutable(test.arg2)
+		plane.Normalize(&result)
+		if !result.Equals(test.expected) {
+			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
 	}
 }
@@ -74,7 +80,7 @@ func TestDiscreteBoundedPlaneMetric(t *testing.T) {
 		{NewVec(0, 0), NewVec(1, 1), 2},
 		{NewVec(0, 0), NewVec(2, 2), 3},
 		{NewVec(0, 0), NewVec(8, 8), 12},
-		{NewVec(0, 0), NewVec(9, 9), 12}, // vec(9,9) has been clamped to vec(8,8)
+		{NewVec(0, 0), NewVec(9, 9), 13}, // vec(9,9) stays on the boundary
 	} {
 		if output := plane.Metric(test.arg1, test.arg2); output != test.expected {
 			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
@@ -84,7 +90,7 @@ func TestDiscreteBoundedPlaneMetric(t *testing.T) {
 
 // -----------------------------------------------------------------------------
 
-func TestDiscreteCyclicPlaneTranslateFloat64(t *testing.T) {
+func TestDiscreteCyclicPlaneNormalizeAfterAddFloat64(t *testing.T) {
 	plane := NewCyclicBoundedPlane(5.0, 5.0)
 	for _, test := range []struct {
 		arg1     Vec[float64]
@@ -97,8 +103,11 @@ func TestDiscreteCyclicPlaneTranslateFloat64(t *testing.T) {
 		{NewVec(4.0, 0.0), NewVec(-1.0, 0.0), NewVec(3.0, 0.0)},
 		{NewVec(1.0, 0.0), NewVec(-4.0, 0.0), NewVec(2.0, 0.0)},
 	} {
-		if plane.Translate(&test.arg1, test.arg2); !test.arg1.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", test.arg1, test.expected)
+		result := test.arg1
+		result.AddMutable(test.arg2)
+		plane.Normalize(&result)
+		if !result.Equals(test.expected) {
+			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
 	}
 }
@@ -123,7 +132,7 @@ func TestDiscreteCyclicPlaneMetricFloat64(t *testing.T) {
 	}
 }
 
-func TestDiscreteBoundedPlaneTranslateFloat64(t *testing.T) {
+func TestDiscreteBoundedPlaneNormalizeAfterAddFloat64(t *testing.T) {
 	plane := NewBoundedPlane(9.0, 9.0)
 	for _, test := range []struct {
 		arg1     Vec[float64]
@@ -136,8 +145,11 @@ func TestDiscreteBoundedPlaneTranslateFloat64(t *testing.T) {
 		{NewVec(4.0, 0.0), NewVec(-1.0, 0.0), NewVec(3.0, 0.0)},
 		{NewVec(6.0, 0.0), NewVec(-4.0, 0.0), NewVec(2.0, 0.0)},
 	} {
-		if plane.Translate(&test.arg1, test.arg2); !test.arg1.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", test.arg1, test.expected)
+		result := test.arg1
+		result.AddMutable(test.arg2)
+		plane.Normalize(&result)
+		if !result.Equals(test.expected) {
+			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
 	}
 }
@@ -154,7 +166,7 @@ func TestDiscreteBoundedPlaneMetricFloat64(t *testing.T) {
 		{NewVec(0.0, 0.0), NewVec(1.0, 1.0), 1.4142135623730951},
 		{NewVec(0.0, 0.0), NewVec(2.0, 2.0), 2.8284271247461903},
 		{NewVec(0.0, 0.0), NewVec(8.0, 8.0), 11.313708498984761},
-		{NewVec(0.0, 0.0), NewVec(9.0, 9.0), 12.727780640001619}, // Vec(9,9) has been clamped to vec(8,8)
+		{NewVec(0.0, 0.0), NewVec(9.0, 9.0), 12.727922061357855}, // Vec(9,9) stays on the boundary
 		{NewVec(0.0, 0.0), NewVec(8.5, 0.0), 8.5},
 	} {
 		if output := plane.Metric(test.arg1, test.arg2); output != test.expected {

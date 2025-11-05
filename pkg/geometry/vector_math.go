@@ -1,33 +1,32 @@
-// VectorMath is a generic interface that defines mathematical operations for Vectors.
-// The type parameter T can be either int or float64.
-//
-// Methods:
-//   - Length(v Vec[T]) T: Calculates the length (magnitude) of the Vector v.
-//   - Clamp(v1 *Vec[T], size Vec[T]): Clamps the Vector v1 within the bounds defined by size.
-//   - Wrap(v1 *Vec[T], size Vec[T]): Wraps the Vector v1 within the bounds defined by size.
+// Package geometry provides helpers for vector math and spatial bounds.
 package geometry
 
 import "math"
 
+// VectorMath exposes vector operations for numeric components.
 type VectorMath[T int | float64] interface {
+	// Length returns the Euclidean magnitude of v.
 	Length(v Vec[T]) T
+	// Clamp bounds v1 to the inclusive box [0,size].
 	Clamp(v1 *Vec[T], size Vec[T])
+	// Wrap folds v1 back into [0,size) using modulo semantics appropriate for T.
 	Wrap(v1 *Vec[T], size Vec[T])
 }
 
-// FLOAT_64_VecEC_MATH is an instance of float64VectorMath that provides
-// various mathematical operations for Vectors with float64 components.
 var (
-	FLOAT_64_VecEC_MATH VectorMath[float64] = float64VectorMath{}
-	INT_VecEC_MATH      VectorMath[int]     = intVectorMath{}
+	// FLOAT_64_VEC_MATH provides vector operations for float64 components.
+	FLOAT_64_VEC_MATH VectorMath[float64] = float64VectorMath{}
+	// INT_VEC_MATH provides vector operations for int components.
+	INT_VEC_MATH VectorMath[int] = intVectorMath{}
 )
 
+// VectorMathByType returns the VectorMath implementation matching the generic type T.
 func VectorMathByType[T SupportedNumeric]() VectorMath[T] {
 	var zero T
 	if _, ok := any(zero).(float64); ok {
-		return any(FLOAT_64_VecEC_MATH).(VectorMath[T])
+		return any(FLOAT_64_VEC_MATH).(VectorMath[T])
 	}
-	return any(INT_VecEC_MATH).(VectorMath[T])
+	return any(INT_VEC_MATH).(VectorMath[T])
 }
 
 // -----------------------------------------------------------------------------
@@ -38,7 +37,7 @@ func (m float64VectorMath) Length(v Vec[float64]) float64 {
 	return math.Sqrt(v.X*v.X + v.Y*v.Y)
 }
 
-func (m float64VectorMath) Clamp(v *Vec[float64], size Vec[float64]) { clamp(v, size, 0.0001) }
+func (m float64VectorMath) Clamp(v *Vec[float64], size Vec[float64]) { clampClosed(v, size) }
 
 func (m float64VectorMath) Wrap(v *Vec[float64], size Vec[float64]) {
 	modMutable := func(v1 *Vec[float64], v2 Vec[float64]) {
@@ -61,7 +60,7 @@ func (m intVectorMath) Length(v Vec[int]) int {
 	return int(math.Ceil(math.Sqrt(float64(v.X*v.X + v.Y*v.Y))))
 }
 
-func (m intVectorMath) Clamp(v *Vec[int], size Vec[int]) { clamp(v, size, 1) }
+func (m intVectorMath) Clamp(v *Vec[int], size Vec[int]) { clampClosed(v, size) }
 
 func (m intVectorMath) Wrap(v *Vec[int], size Vec[int]) {
 	modMutable := func(v1 *Vec[int], v2 Vec[int]) {
@@ -77,14 +76,14 @@ func (m intVectorMath) Wrap(v *Vec[int], size Vec[int]) {
 
 //-----------------------------------------------------------------------------
 
-func clamp[T SupportedNumeric](v *Vec[T], bounds Vec[T], delta T) {
-	if v.X > bounds.X-delta {
-		v.X = bounds.X - delta
+func clampClosed[T SupportedNumeric](v *Vec[T], bounds Vec[T]) {
+	if v.X > bounds.X {
+		v.X = bounds.X
 	} else if v.X < 0 {
 		v.X = 0
 	}
-	if v.Y > bounds.Y-delta {
-		v.Y = bounds.Y - delta
+	if v.Y > bounds.Y {
+		v.Y = bounds.Y
 	} else if v.Y < 0 {
 		v.Y = 0
 	}
