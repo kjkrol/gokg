@@ -6,8 +6,8 @@ import (
 
 // ExampleVec_Add demonstrates how to use the Add method.
 func ExampleVec_Add() {
-	v1 := Vec[float64]{X: 1.0, Y: 2.0}
-	v2 := Vec[float64]{X: 3.0, Y: 4.0}
+	v1 := NewVec(1.0, 2.0)
+	v2 := NewVec(3.0, 4.0)
 	result := v1.Add(v2)
 	fmt.Println(result)
 	// Output: (4,6)
@@ -15,8 +15,8 @@ func ExampleVec_Add() {
 
 // ExampleVec_Sub demonstrates how to use the Sub method.
 func ExampleVec_Sub() {
-	v1 := Vec[float64]{X: 5.0, Y: 7.0}
-	v2 := Vec[float64]{X: 2.0, Y: 3.0}
+	v1 := NewVec(5.0, 7.0)
+	v2 := NewVec(2.0, 3.0)
 	result := v1.Sub(v2)
 	fmt.Println(result)
 	// Output: (3,4)
@@ -24,8 +24,8 @@ func ExampleVec_Sub() {
 
 // ExampleVec_AddMutable demonstrates how to use the AddMutable method.
 func ExampleVec_AddMutable() {
-	v1 := Vec[float64]{X: 1.0, Y: 2.0}
-	v2 := Vec[float64]{X: 3.0, Y: 4.0}
+	v1 := NewVec(1.0, 2.0)
+	v2 := NewVec(3.0, 4.0)
 	v1.AddMutable(v2)
 	fmt.Println(v1)
 	// Output: (4,6)
@@ -33,8 +33,8 @@ func ExampleVec_AddMutable() {
 
 // ExampleVec_SubMutable demonstrates how to use the SubMutable method.
 func ExampleVec_SubMutable() {
-	v1 := Vec[float64]{X: 5.0, Y: 7.0}
-	v2 := Vec[float64]{X: 2.0, Y: 3.0}
+	v1 := NewVec(5.0, 7.0)
+	v2 := NewVec(2.0, 3.0)
 	v1.SubMutable(v2)
 	fmt.Println(v1)
 	// Output: (3,4)
@@ -42,9 +42,9 @@ func ExampleVec_SubMutable() {
 
 // ExampleVec_Equals demonstrates how to use the Equals method.
 func ExampleVec_Equals() {
-	v1 := Vec[float64]{X: 1.0, Y: 2.0}
-	v2 := Vec[float64]{X: 1.0, Y: 2.0}
-	v3 := Vec[float64]{X: 3.0, Y: 4.0}
+	v1 := NewVec(1.0, 2.0)
+	v2 := NewVec(1.0, 2.0)
+	v3 := NewVec(3.0, 4.0)
 	fmt.Println(v1.Equals(v2))
 	fmt.Println(v1.Equals(v3))
 	// Output:
@@ -54,7 +54,7 @@ func ExampleVec_Equals() {
 
 // ExampleVec_String demonstrates how to use the String method.
 func ExampleVec_String() {
-	v := Vec[float64]{X: 1.0, Y: 2.0}
+	v := NewVec(1.0, 2.0)
 	fmt.Println(v.String())
 	// Output: (1,2)
 }

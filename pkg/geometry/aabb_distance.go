@@ -26,8 +26,27 @@ func boundingBoxDistance[T SupportedNumeric](
 		return 0
 	}
 
-	dx := aa.AxisDistanceTo(bb, func(v Vec[T]) T { return v.X })
-	dy := aa.AxisDistanceTo(bb, func(v Vec[T]) T { return v.Y })
+	dx := aa.axisDistanceTo(bb, func(v Vec[T]) T { return v.X })
+	dy := aa.axisDistanceTo(bb, func(v Vec[T]) T { return v.Y })
 
 	return metric(Vec[T]{X: dx, Y: dy}, Vec[T]{X: 0, Y: 0})
 }
+
+// AxisDistanceTo returns the gap between ab and other on the axis selected by axisValue.
+func (ab AABB[T]) axisDistanceTo(
+	other AABB[T],
+	axisValue func(Vec[T]) T,
+) T {
+	ab, other = SortRectanglesBy(
+		ab, other,
+		func(box AABB[T]) T { return axisValue(box.TopLeft) },
+		func(box AABB[T]) T { return axisValue(box.BottomRight) },
+	)
+
+	if axisValue(ab.BottomRight) >= axisValue(other.TopLeft) {
+		return 0
+	}
+	return axisValue(other.TopLeft) - axisValue(ab.BottomRight)
+}
+
+//-------------------------------------------------------------------------

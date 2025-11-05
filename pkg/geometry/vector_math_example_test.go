@@ -22,7 +22,7 @@ func ExampleVectorMath_Clamp() {
 	vm := geometry.VectorMathByType[float64]()
 	vm.Clamp(&v, size)
 	fmt.Println(v)
-	// Output: (4.9999,4.9999)
+	// Output: (5,5)
 }
 
 // ExampleVectorMath_Wrap demonstrates how to use the Wrap method.
@@ -51,7 +51,7 @@ func Example_intVectorMath_Clamp() {
 	vm := geometry.VectorMathByType[int]()
 	vm.Clamp(&v, size)
 	fmt.Println(v)
-	// Output: (4,4)
+	// Output: (5,5)
 }
 
 // Example_intVectorMath_Wrap demonstrates how to use the Wrap method with int type.
@@ -62,4 +62,18 @@ func Example_intVectorMath_Wrap() {
 	vm.Wrap(&v, size)
 	fmt.Println(v)
 	// Output: (2,4)
+}
+
+// Example_intVectorMath_Wrap demonstrates how to use the Wrap method with int type.
+func Example_intVectorMath_Wrap_minus() {
+	target := geometry.NewVec(2, 2)
+	v := geometry.Vec[int]{X: -101, Y: -101}
+	size := geometry.Vec[int]{X: 10, Y: 10}
+	vm := geometry.VectorMathByType[int]()
+
+	target.AddMutable(v)
+	vm.Wrap(&target, size)
+
+	fmt.Println(target)
+	// Output: (1,1)
 }

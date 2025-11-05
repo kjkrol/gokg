@@ -9,3 +9,6 @@
    bylby tylko w Rectangle a nie w Spatial~~
 5. ~~Rectanle w obenym ujeciu jest zle pojmowana struktura. Powinien sie nazywac BoundingBox i byc czescia AABB. Prawdopodobnie powinien przynalezec do gokq i razem z AABB powedrowac do gokq !~~
 6. ~~Powinny pozostac tylko 3 rodzaje Spatials: Vec, Line, Polygon~~
+7. ~~Usunac Line i jego transformacje.~~
+8. ~~Odpuszczamy translacje shape na rzecz transformacji AABB! To AABB sa uzywane przez gokx!~~
+9.  ~~Nalezy dodac mergowanie AABB !~~

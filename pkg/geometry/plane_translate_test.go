@@ -1,150 +1,119 @@
 package geometry
 
-import (
-	"fmt"
-	"sort"
-	"strings"
-	"testing"
-)
+import "testing"
 
-func TestWrapSpatialFragments_PolygonCrossesRightEdge(t *testing.T) {
+func TestAABBTranslate_CrossesRightEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	shape := NewPolygonBuilder[int]().
-		Add(8, 4).
-		Add(12, 4).
-		Add(12, 6).
-		Add(8, 6).
-		Build()
-	fragments := plane.createShapeFragmentsIfNeeded(&shape)
-	if len(fragments) != 1 {
-		t.Fatalf("expected 1 fragment, got %d", len(fragments))
-	}
-	expectedFragments := map[string]struct{}{
-		polygonKey([]Vec[int]{
-			{X: 0, Y: 4},
-			{X: 2, Y: 4},
-			{X: 2, Y: 6},
-			{X: 0, Y: 6},
-		}): {},
-	}
-	for _, fragment := range fragments {
-		poly, ok := fragment.(*Polygon[int])
-		if !ok {
-			t.Fatalf("expected polygon fragment, got %T", fragment)
-		}
-		points := poly.Points()
-		if len(points) == 0 {
-			t.Fatal("polygon fragment has no points")
-		}
-		key := polygonKey(points)
-		if _, ok := expectedFragments[key]; !ok {
-			t.Fatalf("unexpected fragment points %+v", points)
-		}
-		delete(expectedFragments, key)
-	}
-	if len(expectedFragments) != 0 {
-		t.Fatalf("missing expected fragments: %+v", expectedFragments)
-	}
+	aabb := NewAABB(NewVec(8, 4), 4, 2)
+
+	plane.Translate(&aabb, NewVec(0, 0))
+
+	expectAABBState(t, aabb, NewVec(8, 4), NewVec(10, 6), map[BoundPosition][2]Vec[int]{
+		BOUND_RIGHT: {NewVec(0, 4), NewVec(2, 6)},
+	})
 }
 
-func TestWrapFragments_PolygonCrossesCorner(t *testing.T) {
+func TestAABBTranslate_CrossesBottomEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	shape := NewPolygon(
-		Vec[int]{X: 9, Y: 9},
-		Vec[int]{X: 12, Y: 9},
-		Vec[int]{X: 12, Y: 12},
-		Vec[int]{X: 9, Y: 12},
-	)
-	fragments := plane.createShapeFragmentsIfNeeded(&shape)
-	if len(fragments) != 3 {
-		t.Fatalf("expected 3 fragments, got %d", len(fragments))
-	}
-	expectedFragments := map[string]struct{}{
-		polygonKey([]Vec[int]{
-			{X: 0, Y: 9},
-			{X: 2, Y: 9},
-			{X: 2, Y: 10},
-			{X: 0, Y: 10},
-		}): {},
-		polygonKey([]Vec[int]{
-			{X: 9, Y: 0},
-			{X: 10, Y: 0},
-			{X: 10, Y: 2},
-			{X: 9, Y: 2},
-		}): {},
-		polygonKey([]Vec[int]{
-			{X: 0, Y: 0},
-			{X: 2, Y: 0},
-			{X: 2, Y: 2},
-			{X: 0, Y: 2},
-		}): {},
-	}
-	for _, fragment := range fragments {
-		poly, ok := fragment.(*Polygon[int])
-		if !ok {
-			t.Fatalf("expected polygon fragment, got %T", fragment)
-		}
-		points := poly.Points()
-		if len(points) == 0 {
-			t.Fatal("polygon fragment has no points")
-		}
-		key := polygonKey(points)
-		if _, ok := expectedFragments[key]; !ok {
-			t.Fatalf("unexpected fragment points %+v", points)
-		}
-		delete(expectedFragments, key)
-	}
-	if len(expectedFragments) != 0 {
-		t.Fatalf("missing expected fragments: %+v", expectedFragments)
-	}
+	aabb := NewAABB(NewVec(4, 8), 2, 4)
+
+	plane.Translate(&aabb, NewVec(0, 0))
+
+	expectAABBState(t, aabb, NewVec(4, 8), NewVec(6, 10), map[BoundPosition][2]Vec[int]{
+		BOUND_BOTTOM: {NewVec(4, 0), NewVec(6, 2)},
+	})
 }
 
-func polygonKey[T SupportedNumeric](points []Vec[T]) string {
-	if len(points) == 0 {
-		return ""
-	}
+func TestAABBTranslate_CrossesCorner(t *testing.T) {
+	plane := NewCyclicBoundedPlane(10, 10)
+	aabb := NewAABB(NewVec(9, 9), 2, 2)
 
-	sorted := make([]Vec[T], len(points))
-	copy(sorted, points)
-	sort.Slice(sorted, func(i, j int) bool {
-		if sorted[i].X == sorted[j].X {
-			return sorted[i].Y < sorted[j].Y
-		}
-		return sorted[i].X < sorted[j].X
+	plane.Translate(&aabb, NewVec(0, 0))
+
+	expectAABBState(t, aabb, NewVec(9, 9), NewVec(10, 10), map[BoundPosition][2]Vec[int]{
+		BOUND_RIGHT:        {NewVec(0, 9), NewVec(1, 10)},
+		BOUND_BOTTOM:       {NewVec(9, 0), NewVec(10, 1)},
+		BOUND_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(1, 1)},
+	})
+}
+
+func TestAABBTranslate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
+	plane := NewCyclicBoundedPlane(10, 10)
+	aabb := NewAABB(NewVec(8, 4), 4, 2)
+
+	plane.Translate(&aabb, NewVec(0, 0))
+	expectAABBState(t, aabb, NewVec(8, 4), NewVec(10, 6), map[BoundPosition][2]Vec[int]{
+		BOUND_RIGHT: {NewVec(0, 4), NewVec(2, 6)},
 	})
 
-	keys := make([]string, len(sorted))
-	for i, p := range sorted {
-		keys[i] = fmt.Sprintf("(%v,%v)", p.X, p.Y)
-	}
-	return strings.Join(keys, ";")
+	plane.Translate(&aabb, NewVec(-2, 0))
+	expectAABBState(t, aabb, NewVec(6, 4), NewVec(10, 6), nil)
 }
 
-func TestTranslate_SetsFragmentsOnSpatial(t *testing.T) {
+func TestAABBTranslate_ThroughEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	poly := NewPolygon(
-		Vec[int]{X: 9, Y: 9},
-		Vec[int]{X: 11, Y: 9},
-		Vec[int]{X: 11, Y: 11},
-		Vec[int]{X: 9, Y: 11},
-	)
-	plane.Translate(&poly, Vec[int]{X: 0, Y: 0})
-	fragments := poly.Fragments()
-	if len(fragments) != 3 {
-		t.Fatalf("expected 3 fragments set on polygon, got %d", len(fragments))
-	}
+	aabb := NewAABB(NewVec(2, 2), 2, 2)
+
+	plane.Translate(&aabb, NewVec(8, 0))
+
+	expectAABBState(t, aabb, NewVec(0, 2), NewVec(2, 4), nil)
 }
 
-func TestTranslate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
+func TestAABBTranslate_FragmentsMergeSequence(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	poly := NewPolygon(
-		Vec[int]{X: 1, Y: 1},
-		Vec[int]{X: 2, Y: 1},
-		Vec[int]{X: 2, Y: 2},
-		Vec[int]{X: 1, Y: 2},
-	)
-	plane.Translate(&poly, Vec[int]{X: 1, Y: 0})
-	if frags := poly.Fragments(); frags != nil {
-		t.Fatalf("expected no fragments for polygon inside bounds, got %d", len(frags))
+	aabb := NewAABB(NewVec(2, 2), 2, 2)
+
+	plane.Translate(&aabb, NewVec(-3, 0))
+	expectAABBState(t, aabb, NewVec(9, 2), NewVec(10, 4), map[BoundPosition][2]Vec[int]{
+		BOUND_RIGHT: {NewVec(0, 2), NewVec(1, 4)},
+	})
+
+	plane.Translate(&aabb, NewVec(0, -3))
+	expectAABBState(t, aabb, NewVec(9, 9), NewVec(10, 10), map[BoundPosition][2]Vec[int]{
+		BOUND_RIGHT:        {NewVec(0, 9), NewVec(1, 10)},
+		BOUND_BOTTOM:       {NewVec(9, 0), NewVec(10, 1)},
+		BOUND_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(1, 1)},
+	})
+
+	plane.Translate(&aabb, NewVec(3, 3))
+	expectAABBState(t, aabb, NewVec(2, 2), NewVec(4, 4), nil)
+}
+
+func expectAABBState(
+	t *testing.T,
+	b AABB[int],
+	expectedPos Vec[int],
+	expectedBottomRight Vec[int],
+	expectedFragments map[BoundPosition][2]Vec[int],
+) {
+	t.Helper()
+
+	if !b.TopLeft.Equals(expectedPos) {
+		t.Fatalf("expected bound position %v, got %v", expectedPos, b.TopLeft)
+	}
+
+	if !b.BottomRight.Equals(expectedBottomRight) {
+		t.Fatalf("expected bound bottom-right %v, got %v", expectedBottomRight, b.BottomRight)
+	}
+
+	expectAABBFragments(t, b, expectedFragments)
+}
+
+func expectAABBFragments(t *testing.T, b AABB[int], expected map[BoundPosition][2]Vec[int]) {
+	t.Helper()
+
+	if len(b.frags) != len(expected) {
+		t.Fatalf("expected %d fragments, got %d", len(expected), len(b.frags))
+	}
+
+	for pos, want := range expected {
+		frag, ok := b.frags[pos]
+		if !ok {
+			t.Fatalf("missing fragment at %d", pos)
+		}
+		if !frag.TopLeft.Equals(want[0]) || !frag.BottomRight.Equals(want[1]) {
+			t.Fatalf("fragment at %d has bounds %v..%v, expected %v..%v",
+				pos, frag.TopLeft, frag.BottomRight, want[0], want[1])
+		}
 	}
 }
