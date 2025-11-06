@@ -41,8 +41,3 @@ func (v Vec[T]) Equals(v2 Vec[T]) bool { return v.X == v2.X && v.Y == v2.Y }
 
 // String formats v as "(X,Y)".
 func (v Vec[T]) String() string { return fmt.Sprintf("(%v,%v)", v.X, v.Y) }
-
-// Bounds returns the zero-area rectangle representing the point.
-func (v Vec[T]) Bounds() AABB[T] {
-	return BuildAABB(v, 0)
-}
