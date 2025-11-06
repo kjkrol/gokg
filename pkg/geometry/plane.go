@@ -12,7 +12,7 @@ type Plane[T SupportedNumeric] struct {
 	normalize  func(*Vec[T])
 	metric     func(v1, v2 Vec[T]) T
 	name       string
-	viewport   AABB[T]
+	viewport   PlaneBox[T]
 }
 
 // -----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ func (p Plane[T]) Contains(vec Vec[T]) bool {
 }
 
 // Expand grows the bounding box by margin and normalises it to the plane.
-func (p Plane[T]) Expand(ab *AABB[T], margin T) {
+func (p Plane[T]) Expand(ab *PlaneBox[T], margin T) {
 	ab.TopLeft.AddMutable(NewVec(-margin, -margin))
 	ab.width = ab.width + 2*margin
 	ab.height = ab.height + 2*margin
@@ -38,7 +38,7 @@ func (p Plane[T]) Expand(ab *AABB[T], margin T) {
 }
 
 // Translate shifts the bounding box by delta and normalises it to the plane.
-func (p Plane[T]) Translate(ab *AABB[T], delta Vec[T]) {
+func (p Plane[T]) Translate(ab *PlaneBox[T], delta Vec[T]) {
 	ab.TopLeft.AddMutable(delta)
 
 	p.NormalizeAABB(ab)
@@ -48,7 +48,7 @@ func (p Plane[T]) Translate(ab *AABB[T], delta Vec[T]) {
 func (p Plane[T]) Normalize(vec *Vec[T]) { p.normalize(vec) }
 
 // NormalizeAABB maps ab into the plane domain, adjusting fragments for wrap-around.
-func (p Plane[T]) NormalizeAABB(ab *AABB[T]) {
+func (p Plane[T]) NormalizeAABB(ab *PlaneBox[T]) {
 
 	switch p.name {
 	case BOUNDED:
@@ -73,17 +73,11 @@ func (p Plane[T]) NormalizeAABB(ab *AABB[T]) {
 	}
 }
 
-func (p Plane[T]) relativeMetric(v1, v2 Vec[T]) T {
-	delta := v1.Sub(v2)
-	p.normalize(&delta)
-	return p.vectorMath.Length(delta)
-}
-
 // Name reports the plane mode (bounded or cyclic).
 func (p Plane[T]) Name() string { return p.name }
 
 // Viewport returns the canonical AABB covering the entire plane.
-func (p Plane[T]) Viewport() AABB[T] { return p.viewport }
+func (p Plane[T]) Viewport() PlaneBox[T] { return p.viewport }
 
 // -----------------------------------------------------------------------------
 
@@ -94,7 +88,7 @@ func NewBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 		size:       NewVec(sizeX, sizeY),
 		vectorMath: VectorMathByType[T](),
 	}
-	plane.viewport = NewAABB(NewVec[T](0, 0), plane.size.X, plane.size.Y)
+	plane.viewport = NewPlaneBox(NewVec[T](0, 0), plane.size.X, plane.size.Y)
 	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Clamp(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return max(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
 	return plane
@@ -109,10 +103,16 @@ func NewCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 		size:       NewVec(sizeX, sizeY),
 		vectorMath: VectorMathByType[T](),
 	}
-	plane.viewport = NewAABB(NewVec[T](0, 0), plane.size.X, plane.size.Y)
+	plane.viewport = NewPlaneBox(NewVec[T](0, 0), plane.size.X, plane.size.Y)
 	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Wrap(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return min(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
 	return plane
 }
 
 // -----------------------------------------------------------------------------
+
+func (p Plane[T]) relativeMetric(v1, v2 Vec[T]) T {
+	delta := v1.Sub(v2)
+	p.normalize(&delta)
+	return p.vectorMath.Length(delta)
+}

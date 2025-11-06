@@ -11,6 +11,7 @@ type VectorMath[T int | float64] interface {
 	Clamp(v1 *Vec[T], size Vec[T])
 	// Wrap folds v1 back into [0,size) using modulo semantics appropriate for T.
 	Wrap(v1 *Vec[T], size Vec[T])
+	OverlapEpsilon() T
 }
 
 var (
@@ -51,6 +52,7 @@ func (m float64VectorMath) Wrap(v *Vec[float64], size Vec[float64]) {
 	}
 	wrap(v, size, modMutable)
 }
+func (m float64VectorMath) OverlapEpsilon() float64 { return 1e-9 }
 
 // -----------------------------------------------------------------------------
 
@@ -73,6 +75,8 @@ func (m intVectorMath) Wrap(v *Vec[int], size Vec[int]) {
 	}
 	wrap(v, size, modMutable)
 }
+
+func (m intVectorMath) OverlapEpsilon() int { return 0 }
 
 //-----------------------------------------------------------------------------
 
