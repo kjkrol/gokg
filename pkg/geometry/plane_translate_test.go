@@ -2,84 +2,110 @@ package geometry
 
 import "testing"
 
-func TestAABBTranslate_CrossesRightEdge(t *testing.T) {
+func TestCyclicPlane_Translate_CrossesRightEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
 
-	expectAABBState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
+	expectPlaneBoxState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
 		FRAG_RIGHT: {NewVec(0, 4), NewVec(2, 6)},
 	})
 }
 
-func TestAABBTranslate_CrossesBottomEdge(t *testing.T) {
+func TestCyclicPlane_Translate_HugeShift(t *testing.T) {
+	plane := NewCyclicBoundedPlane(10, 10)
+	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
+
+	plane.Translate(&planeBox, NewVec(100, 100))
+	expectPlaneBoxState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
+		FRAG_RIGHT: {NewVec(0, 4), NewVec(2, 6)},
+	})
+
+	plane.Translate(&planeBox, NewVec(-100, -100))
+	expectPlaneBoxState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
+		FRAG_RIGHT: {NewVec(0, 4), NewVec(2, 6)},
+	})
+}
+
+func TestBoundedPlane_Translate_HugeShift(t *testing.T) {
+	plane := NewBoundedPlane(10, 10)
+	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
+
+	plane.Translate(&planeBox, NewVec(100, 100))
+	expectPlaneBoxState(t, planeBox, NewVec(10, 10), NewVec(10, 10), map[FragPosition][2]Vec[int]{})
+
+	plane.Translate(&planeBox, NewVec(-100, -100))
+	expectPlaneBoxState(t, planeBox, NewVec(0, 0), NewVec(0, 0), map[FragPosition][2]Vec[int]{})
+}
+
+func TestCyclicPlane_Translate_CrossesBottomEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(4, 8), 2, 4)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
 
-	expectAABBState(t, planeBox, NewVec(4, 8), NewVec(6, 10), map[FragPosition][2]Vec[int]{
+	expectPlaneBoxState(t, planeBox, NewVec(4, 8), NewVec(6, 10), map[FragPosition][2]Vec[int]{
 		FRAG_BOTTOM: {NewVec(4, 0), NewVec(6, 2)},
 	})
 }
 
-func TestAABBTranslate_CrossesCorner(t *testing.T) {
+func TestCyclicPlane_Translate_CrossesCorner(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(9, 9), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
 
-	expectAABBState(t, planeBox, NewVec(9, 9), NewVec(10, 10), map[FragPosition][2]Vec[int]{
+	expectPlaneBoxState(t, planeBox, NewVec(9, 9), NewVec(10, 10), map[FragPosition][2]Vec[int]{
 		FRAG_RIGHT:        {NewVec(0, 9), NewVec(1, 10)},
 		FRAG_BOTTOM:       {NewVec(9, 0), NewVec(10, 1)},
 		FRAG_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(1, 1)},
 	})
 }
 
-func TestAABBTranslate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
+func TestCyclicPlane_Translate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
-	expectAABBState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
+	expectPlaneBoxState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
 		FRAG_RIGHT: {NewVec(0, 4), NewVec(2, 6)},
 	})
 
 	plane.Translate(&planeBox, NewVec(-2, 0))
-	expectAABBState(t, planeBox, NewVec(6, 4), NewVec(10, 6), nil)
+	expectPlaneBoxState(t, planeBox, NewVec(6, 4), NewVec(10, 6), nil)
 }
 
-func TestAABBTranslate_ThroughEdge(t *testing.T) {
+func TestCyclicPlane_Translate_ThroughEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(2, 2), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(8, 0))
 
-	expectAABBState(t, planeBox, NewVec(0, 2), NewVec(2, 4), nil)
+	expectPlaneBoxState(t, planeBox, NewVec(0, 2), NewVec(2, 4), nil)
 }
 
-func TestAABBTranslate_FragmentsMergeSequence(t *testing.T) {
+func TestCyclicPlane_Translate_FragmentsMergeSequence(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(2, 2), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(-3, 0))
-	expectAABBState(t, planeBox, NewVec(9, 2), NewVec(10, 4), map[FragPosition][2]Vec[int]{
+	expectPlaneBoxState(t, planeBox, NewVec(9, 2), NewVec(10, 4), map[FragPosition][2]Vec[int]{
 		FRAG_RIGHT: {NewVec(0, 2), NewVec(1, 4)},
 	})
 
 	plane.Translate(&planeBox, NewVec(0, -3))
-	expectAABBState(t, planeBox, NewVec(9, 9), NewVec(10, 10), map[FragPosition][2]Vec[int]{
+	expectPlaneBoxState(t, planeBox, NewVec(9, 9), NewVec(10, 10), map[FragPosition][2]Vec[int]{
 		FRAG_RIGHT:        {NewVec(0, 9), NewVec(1, 10)},
 		FRAG_BOTTOM:       {NewVec(9, 0), NewVec(10, 1)},
 		FRAG_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(1, 1)},
 	})
 
 	plane.Translate(&planeBox, NewVec(3, 3))
-	expectAABBState(t, planeBox, NewVec(2, 2), NewVec(4, 4), nil)
+	expectPlaneBoxState(t, planeBox, NewVec(2, 2), NewVec(4, 4), nil)
 }
 
-func expectAABBState(
+func expectPlaneBoxState(
 	t *testing.T,
 	b PlaneBox[int],
 	expectedPos Vec[int],
@@ -96,10 +122,10 @@ func expectAABBState(
 		t.Fatalf("expected bound bottom-right %v, got %v", expectedBottomRight, b.BottomRight)
 	}
 
-	expectAABBFragments(t, b, expectedFragments)
+	expectPlaneBoxFragments(t, b, expectedFragments)
 }
 
-func expectAABBFragments(t *testing.T, b PlaneBox[int], expected map[FragPosition][2]Vec[int]) {
+func expectPlaneBoxFragments(t *testing.T, b PlaneBox[int], expected map[FragPosition][2]Vec[int]) {
 	t.Helper()
 
 	if len(b.frags) != len(expected) {

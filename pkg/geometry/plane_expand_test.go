@@ -8,21 +8,21 @@ func TestAABB_Expand_On_BoundedPlane(t *testing.T) {
 	plane := NewBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(2, 3), 3, 4)
 	plane.Expand(&planeBox, 2)
-	expectAABBState(t, planeBox, NewVec(0, 1), NewVec(7, 9), map[FragPosition][2]Vec[int]{})
+	expectPlaneBoxState(t, planeBox, NewVec(0, 1), NewVec(7, 9), map[FragPosition][2]Vec[int]{})
 }
 
 func TestAABB_Expand_On_BoundedPlane_CornerCase(t *testing.T) {
 	plane := NewBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(0, 0), 2, 2)
 	plane.Expand(&planeBox, 2)
-	expectAABBState(t, planeBox, NewVec(0, 0), NewVec(4, 4), map[FragPosition][2]Vec[int]{})
+	expectPlaneBoxState(t, planeBox, NewVec(0, 0), NewVec(4, 4), map[FragPosition][2]Vec[int]{})
 }
 
 func TestAABB_Expand_On_CyclicPlane_CornerCase(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 	planeBox := NewPlaneBox(NewVec(0, 0), 2, 2)
 	plane.Expand(&planeBox, 2)
-	expectAABBState(t, planeBox, NewVec(8, 8), NewVec(10, 10), map[FragPosition][2]Vec[int]{
+	expectPlaneBoxState(t, planeBox, NewVec(8, 8), NewVec(10, 10), map[FragPosition][2]Vec[int]{
 		FRAG_RIGHT:        {NewVec(0, 8), NewVec(4, 10)},
 		FRAG_BOTTOM:       {NewVec(8, 0), NewVec(10, 4)},
 		FRAG_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(4, 4)},

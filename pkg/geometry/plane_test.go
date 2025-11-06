@@ -19,7 +19,7 @@ func TestDiscreteCyclicPlaneNormalizeAfterAdd(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.Normalize(&result)
+		plane.normalize(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -61,7 +61,7 @@ func TestDiscreteBoundedPlaneNormalizeAfterAdd(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.Normalize(&result)
+		plane.normalize(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -105,7 +105,7 @@ func TestDiscreteCyclicPlaneNormalizeAfterAddFloat64(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.Normalize(&result)
+		plane.normalize(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -147,7 +147,7 @@ func TestDiscreteBoundedPlaneNormalizeAfterAddFloat64(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.Normalize(&result)
+		plane.normalize(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -178,9 +178,61 @@ func TestDiscreteBoundedPlaneMetricFloat64(t *testing.T) {
 func TestPlaneNormalize(t *testing.T) {
 	plane := NewCyclicBoundedPlane(5, 5)
 	vec := NewVec(7, -2)
-	plane.Normalize(&vec)
+	plane.normalize(&vec)
 	expected := NewVec(2, 3)
 	if vec != expected {
 		t.Errorf("expected normalized vector %v, got %v", expected, vec)
 	}
+}
+
+func TestBoundedPlane_TransformBackAndForth(t *testing.T) {
+	plane := NewBoundedPlane(10, 10)
+
+	planeBox := NewPlaneBox(NewVec(0, 0), 2, 2)
+
+	shift := NewVec(2, 2)
+	plane.Translate(&planeBox, shift)
+	expectPlaneBoxState(t, planeBox, NewVec(2, 2), NewVec(4, 4), map[FragPosition][2]Vec[int]{})
+
+	plane.Expand(&planeBox, 2)
+	expectPlaneBoxState(t, planeBox, NewVec(0, 0), NewVec(6, 6), map[FragPosition][2]Vec[int]{})
+
+	plane.Expand(&planeBox, -2)
+	expectPlaneBoxState(t, planeBox, NewVec(2, 2), NewVec(4, 4), map[FragPosition][2]Vec[int]{})
+
+	shift.Invert()
+	plane.Translate(&planeBox, shift)
+	expectPlaneBoxState(t, planeBox, NewVec(0, 0), NewVec(2, 2), map[FragPosition][2]Vec[int]{})
+}
+
+func TestCyclicPlane_TransformBackAndForth(t *testing.T) {
+	plane := NewCyclicBoundedPlane(10, 10)
+
+	planeBox := NewPlaneBox(NewVec(0, 0), 2, 2)
+
+	shift := NewVec(-1, -1)
+	plane.Translate(&planeBox, shift)
+	expectPlaneBoxState(t, planeBox, NewVec(9, 9), NewVec(10, 10), map[FragPosition][2]Vec[int]{
+		FRAG_RIGHT:        {NewVec(0, 9), NewVec(1, 10)},
+		FRAG_BOTTOM:       {NewVec(9, 0), NewVec(10, 1)},
+		FRAG_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(1, 1)},
+	})
+
+	plane.Expand(&planeBox, 2)
+	expectPlaneBoxState(t, planeBox, NewVec(7, 7), NewVec(10, 10), map[FragPosition][2]Vec[int]{
+		FRAG_RIGHT:        {NewVec(0, 7), NewVec(3, 10)},
+		FRAG_BOTTOM:       {NewVec(7, 0), NewVec(10, 3)},
+		FRAG_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(3, 3)},
+	})
+
+	plane.Expand(&planeBox, -2)
+	expectPlaneBoxState(t, planeBox, NewVec(9, 9), NewVec(10, 10), map[FragPosition][2]Vec[int]{
+		FRAG_RIGHT:        {NewVec(0, 9), NewVec(1, 10)},
+		FRAG_BOTTOM:       {NewVec(9, 0), NewVec(10, 1)},
+		FRAG_BOTTOM_RIGHT: {NewVec(0, 0), NewVec(1, 1)},
+	})
+
+	shift.Invert()
+	plane.Translate(&planeBox, shift)
+	expectPlaneBoxState(t, planeBox, NewVec(0, 0), NewVec(2, 2), map[FragPosition][2]Vec[int]{})
 }

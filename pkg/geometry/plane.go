@@ -31,34 +31,27 @@ func (p Plane[T]) Contains(vec Vec[T]) bool {
 // Expand grows the bounding box by margin and normalises it to the plane.
 func (p Plane[T]) Expand(ab *PlaneBox[T], margin T) {
 	ab.TopLeft.AddMutable(NewVec(-margin, -margin))
+	ab.BottomRight.AddMutable(NewVec(margin, margin))
 	ab.width = ab.width + 2*margin
 	ab.height = ab.height + 2*margin
 
-	p.NormalizeAABB(ab)
+	p.Normalize(ab)
 }
 
 // Translate shifts the bounding box by delta and normalises it to the plane.
 func (p Plane[T]) Translate(ab *PlaneBox[T], delta Vec[T]) {
 	ab.TopLeft.AddMutable(delta)
-
-	p.NormalizeAABB(ab)
+	ab.BottomRight.AddMutable(delta)
+	p.Normalize(ab)
 }
 
-// Normalize maps vec into the plane domain according to its boundary rules.
-func (p Plane[T]) Normalize(vec *Vec[T]) { p.normalize(vec) }
-
 // NormalizeAABB maps ab into the plane domain, adjusting fragments for wrap-around.
-func (p Plane[T]) NormalizeAABB(ab *PlaneBox[T]) {
-
+func (p Plane[T]) Normalize(ab *PlaneBox[T]) {
+	p.normalize(&ab.TopLeft)
 	switch p.name {
 	case BOUNDED:
-		prev := ab.TopLeft
-		p.normalize(&ab.TopLeft)
-		dx := prev.X - ab.TopLeft.X
-		dy := prev.Y - ab.TopLeft.Y
-		ab.BottomRight = NewVec(ab.TopLeft.X+ab.width+dx, ab.TopLeft.Y+ab.height+dy)
+		p.normalize(&ab.BottomRight)
 	case CYCLIC:
-		p.normalize(&ab.TopLeft)
 		ab.BottomRight = NewVec(ab.TopLeft.X+ab.width, ab.TopLeft.Y+ab.height)
 		dx := p.size.X - ab.TopLeft.X - ab.width
 		dy := p.size.Y - ab.TopLeft.Y - ab.height
