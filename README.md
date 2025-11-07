@@ -13,7 +13,13 @@ The focus remains purely on mathematical geometry; rendering or UI concerns live
   expansions never bleed beyond the defined world.
 - Cyclic planes automatically wrap plane boxes that cross an edge and split them into
   fragments (`Fragments()`) that continue on the opposite side, making toroidal
-  worlds easy to model.
+  worlds easy to model. Conceptually, glue the top edge of the plane to the bottom
+  edge, then the left edge to the right; this seam-stitching turns the rectangle into
+  the torus shown in the animation below.
+
+  ![Torus](doc/Torus_from_rectangle.gif)
+
+
 - The helper methods `Translate` and `Expand` renormalise plane boxes on every call,
   updating cached fragments and ensuring touch/collision queries remain accurate
   without extra bookkeeping.
