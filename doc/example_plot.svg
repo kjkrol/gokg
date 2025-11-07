@@ -1,0 +1,96 @@
+<svg width="520" height="280" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .grid { stroke: #ccc; stroke-width: 1; }
+    .main-axis { stroke: #000; stroke-width: 2; marker-end: url(#arrow); }
+    .box { fill: rgba(255,0,0,0.45); stroke: red; stroke-width: 2; }
+    .label { font-family: sans-serif; font-size: 16px; text-anchor: middle; }
+    .num { font-family: sans-serif; font-size: 10px; fill: #333; }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0,0 10,5 0,10"/>
+    </marker>
+
+    <!-- GRID TEMPLATE MOVED FULLY INTO <defs> -->
+    <g id="grid">
+      <!-- Vertical -->
+      <line x1="0" y1="0" x2="0" y2="200" class="grid"/>
+      <line x1="20" y1="0" x2="20" y2="200" class="grid"/>
+      <line x1="40" y1="0" x2="40" y2="200" class="grid"/>
+      <line x1="60" y1="0" x2="60" y2="200" class="grid"/>
+      <line x1="80" y1="0" x2="80" y2="200" class="grid"/>
+      <line x1="100" y1="0" x2="100" y2="200" class="grid"/>
+      <line x1="120" y1="0" x2="120" y2="200" class="grid"/>
+      <line x1="140" y1="0" x2="140" y2="200" class="grid"/>
+      <line x1="160" y1="0" x2="160" y2="200" class="grid"/>
+      <line x1="180" y1="0" x2="180" y2="200" class="grid"/>
+      <line x1="200" y1="0" x2="200" y2="200" class="grid"/>
+
+      <!-- Horizontal -->
+      <line x1="0" y1="0" x2="200" y2="0" class="grid"/>
+      <line x1="0" y1="20" x2="200" y2="20" class="grid"/>
+      <line x1="0" y1="40" x2="200" y2="40" class="grid"/>
+      <line x1="0" y1="60" x2="200" y2="60" class="grid"/>
+      <line x1="0" y1="80" x2="200" y2="80" class="grid"/>
+      <line x1="0" y1="100" x2="200" y2="100" class="grid"/>
+      <line x1="0" y1="120" x2="200" y2="120" class="grid"/>
+      <line x1="0" y1="140" x2="200" y2="140" class="grid"/>
+      <line x1="0" y1="160" x2="200" y2="160" class="grid"/>
+      <line x1="0" y1="180" x2="200" y2="180" class="grid"/>
+      <line x1="0" y1="200" x2="200" y2="200" class="grid"/>
+
+      <!-- Main axes -->
+      <line x1="0" y1="0" x2="200" y2="0" class="main-axis"/>
+      <line x1="0" y1="0" x2="0" y2="200" class="main-axis"/>
+
+      <!-- X labels -->
+      <g>
+        <text class="num" x="0" y="-4">0</text>
+        <text class="num" x="20" y="-4">1</text>
+        <text class="num" x="40" y="-4">2</text>
+        <text class="num" x="60" y="-4">3</text>
+        <text class="num" x="80" y="-4">4</text>
+        <text class="num" x="100" y="-4">5</text>
+        <text class="num" x="120" y="-4">6</text>
+        <text class="num" x="140" y="-4">7</text>
+        <text class="num" x="160" y="-4">8</text>
+        <text class="num" x="180" y="-4">9</text>
+        <text class="num" x="200" y="-4">10</text>
+      </g>
+
+      <!-- Y labels -->
+      <g>
+        <text class="num" x="-10" y="5">0</text>
+        <text class="num" x="-10" y="25">1</text>
+        <text class="num" x="-10" y="45">2</text>
+        <text class="num" x="-10" y="65">3</text>
+        <text class="num" x="-10" y="85">4</text>
+        <text class="num" x="-10" y="105">5</text>
+        <text class="num" x="-10" y="125">6</text>
+        <text class="num" x="-10" y="145">7</text>
+        <text class="num" x="-10" y="165">8</text>
+        <text class="num" x="-10" y="185">9</text>
+        <text class="num" x="-10" y="205">10</text>
+      </g>
+    </g>
+  </defs>
+
+  <!-- BEFORE -->
+  <g transform="translate(40,40)">
+    <use href="#grid"/>
+    <rect x="0" y="0" width="40" height="40" class="box"/>
+  </g>
+  <text x="140" y="265" class="label">Before</text>
+
+  <!-- AFTER -->
+  <g transform="translate(300,40)">
+    <use href="#grid"/>
+    <rect x="180" y="180" width="20" height="20" class="box"/>
+    <rect x="0" y="180" width="20" height="20" class="box"/>
+    <rect x="180" y="0" width="20" height="20" class="box"/>
+    <rect x="0" y="0" width="20" height="20" class="box"/>
+  </g>
+  <text x="400" y="265" class="label">After</text>
+
+</svg>

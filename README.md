@@ -20,6 +20,10 @@ The focus remains purely on mathematical geometry; rendering or UI concerns live
 
 ## Usage example
 
+This snippet shifts a contiguous `PlaneBox` by `(-1,-1)` across a 10×10 cyclic plane, so the box wraps past the right and bottom edges and automatically splits into the fragments returned by `Fragments()`. The exact situation is illustrated by the plot below.
+
+![PlaneBox wrap fragments](doc/example_plot.svg)
+
 ```go
 package main
 
@@ -67,5 +71,8 @@ For more scenarios, browse the example-based tests under `pkg/geometry`, which d
 
 ## Projects using GOKG
 
-- `gokq` — quadtree utilities that rely on `Vec`, `BoundingBox`, and `PlaneBox` operations.
-- `gokx` — graphical experiments that consume the geometric primitives from this package.
+- [`gokq`](https://github.com/kjkrol/gokq) — **GOKQ** is a quadtree utility library that relies on `Vec`, `BoundingBox`, and `PlaneBox` operations.
+- [`gokx`](https://github.com/kjkrol/gokx) — **GOKX** is a Go library that provides a lightweight experimental framework for 2D graphics applications.
+
+----
+*[Contributor Recommendations](docs/Contributor_Recommendations.md)
