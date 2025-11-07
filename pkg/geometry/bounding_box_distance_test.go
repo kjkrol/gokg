@@ -43,7 +43,7 @@ func TestBoundingBoxDistance_ReturnsZeroOnIntersection(t *testing.T) {
 	}
 }
 
-func TestBoundingBoxDistance_VectorToAABB(t *testing.T) {
+func TestBoundingBoxDistance_VectorToBox(t *testing.T) {
 	vector := NewVec(0, 0)
 	rect := NewPlaneBox(NewVec(4, 0), 2, 2)
 	plane := NewBoundedPlane(100, 100)
@@ -56,7 +56,7 @@ func TestBoundingBoxDistance_VectorToAABB(t *testing.T) {
 	}
 }
 
-func TestBoundingBoxDistance_AABBToVector(t *testing.T) {
+func TestBoundingBoxDistance_BoxToVector(t *testing.T) {
 	rect := NewPlaneBox(NewVec(0.0, 0), 2, 2)
 	vector := NewVec(5.0, 6.0)
 	plane := NewBoundedPlane(100.0, 100.0)

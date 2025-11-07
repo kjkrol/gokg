@@ -39,6 +39,9 @@ func (v *Vec[T]) SubMutable(v2 Vec[T]) { v.X -= v2.X; v.Y -= v2.Y }
 // Invert directions
 func (v *Vec[T]) Invert() { v.X = -v.X; v.Y = -v.Y }
 
+// Multiply by factor
+func (v *Vec[T]) Multiply(factor T) { v.X = v.X * factor; v.Y = v.Y * factor }
+
 // Equals reports whether v and v2 have the same components.
 func (v Vec[T]) Equals(v2 Vec[T]) bool { return v.X == v2.X && v.Y == v2.Y }
 

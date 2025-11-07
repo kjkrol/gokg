@@ -1,6 +1,6 @@
 package geometry
 
-// FragPosition identifies a fragment's position relative to its parent AABB.
+// FragPosition identifies a fragment's position relative to its parent PlaneBox (bounding-box).
 // Names follow logical cardinal directions of the parent; depending on screen
 // coordinates they may appear flipped (e.g. right on Cartesian may render left in screen space).
 type FragPosition int
@@ -18,9 +18,8 @@ const (
 // It is the Plane-aware view of a BoundingBox: Plane keeps PlaneBox instances canonical within its domain.
 type PlaneBox[T SupportedNumeric] struct {
 	BoundingBox[T]
-	width  T
-	height T
-	frags  map[FragPosition]BoundingBox[T]
+	size  Vec[T]
+	frags map[FragPosition]BoundingBox[T]
 }
 
 // NewPlaneBox builds a PlaneBox at pos with the given size, priming fragment storage for Plane operations.
@@ -30,9 +29,8 @@ func NewPlaneBox[T SupportedNumeric](pos Vec[T], width, height T) PlaneBox[T] {
 			TopLeft:     pos,
 			BottomRight: NewVec(pos.X+width, pos.Y+height),
 		},
-		width:  width,
-		height: height,
-		frags:  make(map[FragPosition]BoundingBox[T], 4),
+		size:  NewVec(width, height),
+		frags: make(map[FragPosition]BoundingBox[T], 4),
 	}
 }
 

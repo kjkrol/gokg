@@ -65,7 +65,7 @@ func (b BoundingBox[T]) Contains(other BoundingBox[T]) bool {
 		other.BottomRight.Y <= b.BottomRight.Y
 }
 
-// Intersects reports whether this AABB overlaps another bounding box.
+// Intersects reports whether this BoundingBox overlaps another bounding box.
 // It returns true both when the boxes share any interior volume
 // and when they only touch along edges or vertices.
 func (b BoundingBox[T]) Intersects(other BoundingBox[T]) bool {

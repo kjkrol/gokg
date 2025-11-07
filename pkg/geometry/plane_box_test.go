@@ -2,7 +2,7 @@ package geometry
 
 import "testing"
 
-func TestAABB_NewAABB(t *testing.T) {
+func TestPlaneBox_NewPlaneBox(t *testing.T) {
 	planeBox := NewPlaneBox(ZERO_INT_VEC, 10, 10)
 	expected := NewVec(10, 10)
 	if planeBox.BottomRight != expected {
@@ -10,7 +10,7 @@ func TestAABB_NewAABB(t *testing.T) {
 	}
 }
 
-func TestAABB_IntersectsIncludingFrags_ReturnsTrue(t *testing.T) {
+func TestPlaneBox_IntersectsIncludingFrags_ReturnsTrue(t *testing.T) {
 	base := NewPlaneBox(NewVec(0, 0), 2, 2)
 	other := NewPlaneBox(NewVec(4, 4), 1, 1)
 	other.frags[FRAG_RIGHT] = NewBoundingBox(NewVec(0, 4), NewVec(1, 5))
@@ -22,7 +22,7 @@ func TestAABB_IntersectsIncludingFrags_ReturnsTrue(t *testing.T) {
 	}
 }
 
-func TestAABB_IntersectsIncludingFrags_ReturnsFalse(t *testing.T) {
+func TestPlaneBox_IntersectsIncludingFrags_ReturnsFalse(t *testing.T) {
 	base := NewPlaneBox(NewVec(0, 0), 2, 2)
 	other := NewPlaneBox(NewVec(4, 4), 2, 2)
 	other.frags[FRAG_RIGHT] = NewBoundingBox(NewVec(0, 4), NewVec(1, 6))
@@ -32,7 +32,7 @@ func TestAABB_IntersectsIncludingFrags_ReturnsFalse(t *testing.T) {
 	}
 }
 
-func TestAABB_Contains(t *testing.T) {
+func TestPlaneBox_Contains(t *testing.T) {
 	outer := NewPlaneBox(NewVec(0, 0), 10, 10)
 	inner := NewPlaneBox(NewVec(2, 2), 6, 6)
 	onlyTopLeftInside := NewPlaneBox(NewVec(-1, -1), 4, 4)

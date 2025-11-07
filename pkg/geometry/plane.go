@@ -7,12 +7,13 @@ const (
 
 // Plane encapsulates a 2D surface with its own metric and boundary behaviour.
 type Plane[T SupportedNumeric] struct {
-	size       Vec[T]
-	vectorMath VectorMath[T]
-	normalize  func(*Vec[T])
-	metric     func(v1, v2 Vec[T]) T
-	name       string
-	viewport   PlaneBox[T]
+	size         Vec[T]
+	vectorMath   VectorMath[T]
+	normalize    func(*Vec[T])
+	normalizeBox func(*PlaneBox[T])
+	metric       func(v1, v2 Vec[T]) T
+	name         string
+	viewport     PlaneBox[T]
 }
 
 // -----------------------------------------------------------------------------
@@ -31,45 +32,26 @@ func (p Plane[T]) Contains(vec Vec[T]) bool {
 // Expand grows the bounding box by margin and normalises it to the plane.
 func (p Plane[T]) Expand(ab *PlaneBox[T], margin T) {
 	ab.TopLeft.AddMutable(NewVec(-margin, -margin))
-	ab.BottomRight.AddMutable(NewVec(margin, margin))
-	ab.width = ab.width + 2*margin
-	ab.height = ab.height + 2*margin
-
+	// ab.BottomRight.AddMutable(NewVec(margin, margin))
+	ab.size.AddMutable(NewVec(2*margin, 2*margin))
 	p.Normalize(ab)
 }
 
 // Translate shifts the bounding box by delta and normalises it to the plane.
 func (p Plane[T]) Translate(ab *PlaneBox[T], delta Vec[T]) {
 	ab.TopLeft.AddMutable(delta)
-	ab.BottomRight.AddMutable(delta)
 	p.Normalize(ab)
 }
 
-// NormalizeAABB maps ab into the plane domain, adjusting fragments for wrap-around.
+// Normalize maps PlaneBox (bounding-box) into the plane domain, adjusting fragments for wrap-around.
 func (p Plane[T]) Normalize(ab *PlaneBox[T]) {
-	p.normalize(&ab.TopLeft)
-	switch p.name {
-	case BOUNDED:
-		p.normalize(&ab.BottomRight)
-	case CYCLIC:
-		ab.BottomRight = NewVec(ab.TopLeft.X+ab.width, ab.TopLeft.Y+ab.height)
-		dx := p.size.X - ab.TopLeft.X - ab.width
-		dy := p.size.Y - ab.TopLeft.Y - ab.height
-
-		if dx < 0 {
-			ab.BottomRight.X = p.size.X
-		}
-		if dy < 0 {
-			ab.BottomRight.Y = p.size.Y
-		}
-		ab.fragmentation(dx, dy)
-	}
+	p.normalizeBox(ab)
 }
 
 // Name reports the plane mode (bounded or cyclic).
 func (p Plane[T]) Name() string { return p.name }
 
-// Viewport returns the canonical AABB covering the entire plane.
+// Viewport returns the canonical PlaneBox (bounding-box) covering the entire plane.
 func (p Plane[T]) Viewport() PlaneBox[T] { return p.viewport }
 
 // -----------------------------------------------------------------------------
@@ -84,6 +66,11 @@ func NewBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 	plane.viewport = NewPlaneBox(NewVec[T](0, 0), plane.size.X, plane.size.Y)
 	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Clamp(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return max(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
+	plane.normalizeBox = func(pb *PlaneBox[T]) {
+		pb.BottomRight = pb.TopLeft.Add(pb.size)
+		plane.vectorMath.Clamp(&pb.BottomRight, plane.size)
+		plane.normalize(&pb.TopLeft)
+	}
 	return plane
 }
 
@@ -99,6 +86,15 @@ func NewCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 	plane.viewport = NewPlaneBox(NewVec[T](0, 0), plane.size.X, plane.size.Y)
 	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Wrap(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return min(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
+	plane.normalizeBox = func(pb *PlaneBox[T]) {
+		plane.normalize(&pb.TopLeft)
+
+		pb.BottomRight = pb.TopLeft.Add(pb.size)
+		plane.vectorMath.Clamp(&pb.BottomRight, plane.size)
+
+		d := plane.size.Sub(pb.TopLeft).Sub(pb.size)
+		pb.fragmentation(d.X, d.Y)
+	}
 	return plane
 }
 
