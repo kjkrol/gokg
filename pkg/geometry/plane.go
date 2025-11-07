@@ -32,7 +32,6 @@ func (p Plane[T]) Contains(vec Vec[T]) bool {
 // Expand grows the bounding box by margin and normalises it to the plane.
 func (p Plane[T]) Expand(ab *PlaneBox[T], margin T) {
 	ab.TopLeft.AddMutable(NewVec(-margin, -margin))
-	// ab.BottomRight.AddMutable(NewVec(margin, margin))
 	ab.size.AddMutable(NewVec(2*margin, 2*margin))
 	p.Normalize(ab)
 }
