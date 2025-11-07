@@ -3,13 +3,9 @@
 *aka "Golang kjkrol Geometry"*
 
 **GOKG** is a Go toolkit focused on practical 2D computational geometry.  
-It centres on two core primitives — `Vec` for points and directions, and axis-aligned
-bounding boxes (`BoundingBox`) — together with a plane-aware overlay (`PlaneBox`) that
-transforms, combines, and analyses them.  
-The library also models both finite and infinite planes, providing operations that
-help classify, intersect, and project geometric entities.  
-The focus remains purely on mathematical geometry; rendering or UI concerns live in
-neighbouring packages.
+It centres on two core primitives — `Vec` for points/directions and axis-aligned bounding boxes (`BoundingBox`) — plus a plane-aware wrapper (`PlaneBox`) that keeps those boxes canonical to a selected plane. `PlaneBox` stores size, fragments, and helper logic so translations, wraps, and clamps obey the plane’s rules without forcing the caller to reimplement them.  
+The library also models both finite and cyclic/“infinite” planes, providing operations that classify, intersect, and reconcile geometric entities under each boundary model.  
+The focus remains purely on mathematical geometry; rendering or UI concerns live in neighbouring packages.
 
 ## PlaneBox boundary handling
 
@@ -33,20 +29,39 @@ import (
 	"github.com/kjkrol/gokg/pkg/geometry"
 )
 
+// Demonstrates how shifting a contiguous box beyond the cyclic plane boundary
+// causes it to fragment into multiple wrapped pieces and prints those fragments.
 func main() {
-	position := geometry.NewVec(3.0, 4.0)
-	velocity := geometry.NewVec(1.5, -0.5)
+	cyclicPlane := geometry.NewCyclicBoundedPlane(10, 10)
 
-	next := position.Add(velocity)
+	planeBox := geometry.NewPlaneBoxFromBox(
+		geometry.NewBoundingBoxAt(geometry.NewVec(0, 0), 2, 2),
+	)
 
-	region := geometry.NewPlaneBox(position, 2.0, 2.0)
+	shift := geometry.NewVec(-1, -1)
+	cyclicPlane.Translate(&planeBox, shift)
 
-	plane := geometry.NewBoundedPlane[float64](100, 100)
-	plane.Translate(&region, velocity)
+	fragments := planeBox.Fragments()
+	if len(fragments) < 3 {
+		fmt.Printf("Unexpected fragment count (%d)\n", len(fragments))
+		return
+	}
 
-	fmt.Printf("next position: %v\n", next)
-	pointRegion := geometry.NewPlaneBox(next, 0, 0)
-	fmt.Printf("region contains next? %v\n", region.Contains(pointRegion))
+	fmt.Printf("New position: %s\n", planeBox)
+	if fragment, ok := fragments[geometry.FRAG_RIGHT]; ok {
+		fmt.Printf("- Fragment %d: %s\n", geometry.FRAG_RIGHT, fragment)
+	}
+	if fragment, ok := fragments[geometry.FRAG_BOTTOM]; ok {
+		fmt.Printf("- Fragment %d: %s\n", geometry.FRAG_BOTTOM, fragment)
+	}
+	if fragment, ok := fragments[geometry.FRAG_BOTTOM_RIGHT]; ok {
+		fmt.Printf("- Fragment %d: %s\n", geometry.FRAG_BOTTOM_RIGHT, fragment)
+	}
+	// Output:
+	// New position: {(9,9) (10,10)}
+	// - Fragment 0: {(0,9) (1,10)}
+	// - Fragment 1: {(9,0) (10,1)}
+	// - Fragment 2: {(0,0) (1,1)}
 }
 ```
 
