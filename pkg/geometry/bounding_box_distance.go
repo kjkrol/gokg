@@ -5,15 +5,9 @@ type Distance[T SupportedNumeric] func(a, b BoundingBox[T]) T
 
 // BoundingBoxDistanceForPlane builds a Distance strategy that measures gaps between
 // axis-aligned bounding boxes using the metric defined by the provided plane.
-func BoundingBoxDistanceForPlane[T SupportedNumeric](plane Plane[T]) Distance[T] {
-	return BoundingBoxDistance(plane.Metric)
-}
-
-// BoundingBoxDistance returns a Distance strategy evaluating the separation between
-// objects via their axis-aligned bounding boxes and the supplied metric.
-func BoundingBoxDistance[T SupportedNumeric](metric func(Vec[T], Vec[T]) T) Distance[T] {
+func BoundingBoxDistance[T SupportedNumeric](plane Plane[T]) Distance[T] {
 	return func(a, b BoundingBox[T]) T {
-		return boundingBoxDistance(a, b, metric)
+		return boundingBoxDistance(a, b, plane.metric)
 	}
 }
 

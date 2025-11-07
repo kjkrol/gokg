@@ -22,8 +22,8 @@ type PlaneBox[T SupportedNumeric] struct {
 	frags map[FragPosition]BoundingBox[T]
 }
 
-// NewPlaneBox builds a PlaneBox at pos with the given size, priming fragment storage for Plane operations.
-func NewPlaneBox[T SupportedNumeric](pos Vec[T], width, height T) PlaneBox[T] {
+// newPlaneBox builds a PlaneBox at pos with the given size, priming fragment storage for Plane operations.
+func newPlaneBox[T SupportedNumeric](pos Vec[T], width, height T) PlaneBox[T] {
 	return PlaneBox[T]{
 		BoundingBox: BoundingBox[T]{
 			TopLeft:     pos,
@@ -32,13 +32,6 @@ func NewPlaneBox[T SupportedNumeric](pos Vec[T], width, height T) PlaneBox[T] {
 		size:  NewVec(width, height),
 		frags: make(map[FragPosition]BoundingBox[T], 4),
 	}
-}
-
-// NewPlaneBoxFromBox lifts an existing BoundingBox into the Plane-aware PlaneBox wrapper.
-func NewPlaneBoxFromBox[T SupportedNumeric](box BoundingBox[T]) PlaneBox[T] {
-	width := box.BottomRight.X - box.TopLeft.X
-	height := box.BottomRight.Y - box.TopLeft.Y
-	return NewPlaneBox(box.TopLeft, width, height)
 }
 
 // --------------------------------------------------------------------------
@@ -54,53 +47,12 @@ func (ab PlaneBox[T]) Equals(other PlaneBox[T]) bool {
 }
 
 func (ab PlaneBox[T]) Contains(other PlaneBox[T]) bool {
-	if ab.BoundingBox.Contains(other.BoundingBox) {
-		return true
-	}
-	for _, frag := range other.frags {
-		if ab.BoundingBox.Contains(frag) {
-			return true
-		}
-	}
-	for _, frag := range ab.frags {
-		if other.BoundingBox.Contains(frag) {
-			return true
-		}
-	}
-	for _, left := range ab.frags {
-		for _, right := range other.frags {
-			if left.Contains(right) {
-				return true
-			}
-		}
-	}
-	return false
+	return ab.compareWithFrags(other, BoundingBox[T].Contains)
 }
 
-// Intersects reports whether ab intersects other or any of its fragments.
+// Intersects reports whether ab Intersects other or any of its fragments.
 func (ab PlaneBox[T]) Intersects(other PlaneBox[T]) bool {
-	if ab.BoundingBox.Intersects(other.BoundingBox) {
-		return true
-	}
-	for _, frag := range other.frags {
-		if ab.BoundingBox.Intersects(frag) {
-			return true
-		}
-	}
-	for _, frag := range ab.frags {
-		if other.BoundingBox.Intersects(frag) {
-			return true
-		}
-	}
-	for _, left := range ab.frags {
-		for _, right := range other.frags {
-			if left.Intersects(right) {
-				return true
-			}
-		}
-	}
-
-	return false
+	return ab.compareWithFrags(other, BoundingBox[T].Intersects)
 }
 
 // Fragments returns lazily computed fragments keyed by bound position.
@@ -122,4 +74,29 @@ func (ab *PlaneBox[T]) fragmentation(dx, dy T) {
 	} else {
 		delete(ab.frags, FRAG_BOTTOM_RIGHT)
 	}
+}
+
+func (ab PlaneBox[T]) compareWithFrags(other PlaneBox[T], compareFn func(BoundingBox[T], BoundingBox[T]) bool) bool {
+	if compareFn(ab.BoundingBox, other.BoundingBox) {
+		return true
+	}
+	for _, frag := range other.frags {
+		if compareFn(ab.BoundingBox, frag) {
+			return true
+		}
+	}
+	for _, frag := range ab.frags {
+		if compareFn(other.BoundingBox, frag) {
+			return true
+		}
+	}
+	for _, left := range ab.frags {
+		for _, right := range other.frags {
+			if compareFn(left, right) {
+				return true
+			}
+		}
+	}
+
+	return false
 }

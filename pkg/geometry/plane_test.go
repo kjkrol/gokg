@@ -188,7 +188,7 @@ func TestPlaneNormalize(t *testing.T) {
 func TestBoundedPlane_TransformBackAndForth(t *testing.T) {
 	plane := NewBoundedPlane(10, 10)
 
-	planeBox := NewPlaneBox(NewVec(0, 0), 2, 2)
+	planeBox := newPlaneBox(NewVec(0, 0), 2, 2)
 
 	shift := NewVec(2, 2)
 	plane.Translate(&planeBox, shift)
@@ -208,7 +208,7 @@ func TestBoundedPlane_TransformBackAndForth(t *testing.T) {
 func TestCyclicPlane_TransformBackAndForth(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
 
-	planeBox := NewPlaneBox(NewVec(0, 0), 2, 2)
+	planeBox := newPlaneBox(NewVec(0, 0), 2, 2)
 
 	shift := NewVec(-1, -1)
 	plane.Translate(&planeBox, shift)

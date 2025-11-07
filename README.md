@@ -38,7 +38,7 @@ import (
 func main() {
 	cyclicPlane := geometry.NewCyclicBoundedPlane(10, 10)
     box := geometry.NewBoundingBoxAt(geometry.NewVec(0, 0), 2, 2)
-	planeBox := geometry.NewPlaneBoxFromBox(box)
+	planeBox := cyclicPlane.WrapBoundingBox(box)
 
 	shift := geometry.NewVec(-1, -1)
 	cyclicPlane.Translate(&planeBox, shift)

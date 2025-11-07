@@ -112,3 +112,79 @@ func TestBox_Intersects(t *testing.T) {
 		}
 	}
 }
+
+func TestSortBoxesBy(t *testing.T) {
+	mk := func(x1, y1, x2, y2 int) BoundingBox[int] {
+		return NewBoundingBox(NewVec(x1, y1), NewVec(x2, y2))
+	}
+
+	byLeftX := func(box BoundingBox[int]) int { return box.TopLeft.X }
+	byLeftY := func(box BoundingBox[int]) int { return box.TopLeft.Y }
+	byWidth := func(box BoundingBox[int]) int { return box.BottomRight.X - box.TopLeft.X }
+
+	testCases := []struct {
+		name       string
+		a, b       BoundingBox[int]
+		keyFns     []func(BoundingBox[int]) int
+		wantFirst  BoundingBox[int]
+		wantSecond BoundingBox[int]
+	}{
+		{
+			name:       "ordersByFirstKey",
+			a:          mk(0, 0, 2, 2),
+			b:          mk(5, 0, 7, 2),
+			keyFns:     []func(BoundingBox[int]) int{byLeftX},
+			wantFirst:  mk(0, 0, 2, 2),
+			wantSecond: mk(5, 0, 7, 2),
+		},
+		{
+			name:       "reversesWhenFirstGreater",
+			a:          mk(10, 0, 12, 2),
+			b:          mk(3, 0, 5, 2),
+			keyFns:     []func(BoundingBox[int]) int{byLeftX},
+			wantFirst:  mk(3, 0, 5, 2),
+			wantSecond: mk(10, 0, 12, 2),
+		},
+		{
+			name: "fallsBackToNextKey",
+			a:    mk(1, 5, 3, 7),
+			b:    mk(1, 2, 3, 4),
+			keyFns: []func(BoundingBox[int]) int{
+				byLeftX,
+				byLeftY,
+			},
+			wantFirst:  mk(1, 2, 3, 4),
+			wantSecond: mk(1, 5, 3, 7),
+		},
+		{
+			name: "keepsOriginalWhenAllKeysEqual",
+			a:    mk(0, 0, 2, 2),
+			b:    mk(0, 0, 2, 2),
+			keyFns: []func(BoundingBox[int]) int{
+				byLeftX,
+				byWidth,
+			},
+			wantFirst:  mk(0, 0, 2, 2),
+			wantSecond: mk(0, 0, 2, 2),
+		},
+		{
+			name:       "noKeysKeepsOriginal",
+			a:          mk(2, 2, 4, 4),
+			b:          mk(1, 1, 3, 3),
+			wantFirst:  mk(2, 2, 4, 4),
+			wantSecond: mk(1, 1, 3, 3),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			first, second := SortBoxesBy(tc.a, tc.b, tc.keyFns...)
+			if first != tc.wantFirst {
+				t.Fatalf("first box mismatch: got %v want %v", first, tc.wantFirst)
+			}
+			if second != tc.wantSecond {
+				t.Fatalf("second box mismatch: got %v want %v", second, tc.wantSecond)
+			}
+		})
+	}
+}

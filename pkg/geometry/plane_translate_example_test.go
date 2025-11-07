@@ -11,9 +11,8 @@ import (
 func ExamplePlane_Translate() {
 	cyclicPlane := geometry.NewCyclicBoundedPlane(10, 10)
 
-	planeBox := geometry.NewPlaneBoxFromBox(
-		geometry.NewBoundingBoxAt(geometry.NewVec(0, 0), 2, 2),
-	)
+	box := geometry.NewBoundingBoxAt(geometry.NewVec(0, 0), 2, 2)
+	planeBox := cyclicPlane.WrapBoundingBox(box)
 
 	shift := geometry.NewVec(-1, -1)
 	cyclicPlane.Translate(&planeBox, shift)

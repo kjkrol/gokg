@@ -4,7 +4,7 @@ import "testing"
 
 func TestCyclicPlane_Translate_CrossesRightEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
+	planeBox := newPlaneBox(NewVec(8, 4), 4, 2)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
 
@@ -15,7 +15,7 @@ func TestCyclicPlane_Translate_CrossesRightEdge(t *testing.T) {
 
 func TestCyclicPlane_Translate_HugeShift(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
+	planeBox := newPlaneBox(NewVec(8, 4), 4, 2)
 
 	plane.Translate(&planeBox, NewVec(100, 100))
 	expectPlaneBoxState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
@@ -30,7 +30,7 @@ func TestCyclicPlane_Translate_HugeShift(t *testing.T) {
 
 func TestBoundedPlane_Translate_HugeShift(t *testing.T) {
 	plane := NewBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
+	planeBox := newPlaneBox(NewVec(8, 4), 4, 2)
 
 	plane.Translate(&planeBox, NewVec(100, 100))
 	expectPlaneBoxState(t, planeBox, NewVec(10, 10), NewVec(10, 10), map[FragPosition][2]Vec[int]{})
@@ -40,7 +40,7 @@ func TestBoundedPlane_Translate_HugeShift(t *testing.T) {
 }
 func TestBoundedPlane_Translate_BackAndForth(t *testing.T) {
 	plane := NewBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(8, 8), 2, 2)
+	planeBox := newPlaneBox(NewVec(8, 8), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(5, 5))
 	expectPlaneBoxState(t, planeBox, NewVec(10, 10), NewVec(10, 10), map[FragPosition][2]Vec[int]{})
@@ -51,7 +51,7 @@ func TestBoundedPlane_Translate_BackAndForth(t *testing.T) {
 
 func TestCyclicPlane_Translate_BackAndForth(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(8, 8), 2, 2)
+	planeBox := newPlaneBox(NewVec(8, 8), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(5, 5))
 	expectPlaneBoxState(t, planeBox, NewVec(3, 3), NewVec(5, 5), map[FragPosition][2]Vec[int]{})
@@ -62,7 +62,7 @@ func TestCyclicPlane_Translate_BackAndForth(t *testing.T) {
 
 func TestCyclicPlane_Translate_CrossesBottomEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(4, 8), 2, 4)
+	planeBox := newPlaneBox(NewVec(4, 8), 2, 4)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
 
@@ -73,7 +73,7 @@ func TestCyclicPlane_Translate_CrossesBottomEdge(t *testing.T) {
 
 func TestCyclicPlane_Translate_CrossesCorner(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(9, 9), 2, 2)
+	planeBox := newPlaneBox(NewVec(9, 9), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
 
@@ -86,7 +86,7 @@ func TestCyclicPlane_Translate_CrossesCorner(t *testing.T) {
 
 func TestCyclicPlane_Translate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(8, 4), 4, 2)
+	planeBox := newPlaneBox(NewVec(8, 4), 4, 2)
 
 	plane.Translate(&planeBox, NewVec(0, 0))
 	expectPlaneBoxState(t, planeBox, NewVec(8, 4), NewVec(10, 6), map[FragPosition][2]Vec[int]{
@@ -99,7 +99,7 @@ func TestCyclicPlane_Translate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
 
 func TestCyclicPlane_Translate_ThroughEdge(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(2, 2), 2, 2)
+	planeBox := newPlaneBox(NewVec(2, 2), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(8, 0))
 
@@ -108,7 +108,7 @@ func TestCyclicPlane_Translate_ThroughEdge(t *testing.T) {
 
 func TestCyclicPlane_Translate_FragmentsMergeSequence(t *testing.T) {
 	plane := NewCyclicBoundedPlane(10, 10)
-	planeBox := NewPlaneBox(NewVec(2, 2), 2, 2)
+	planeBox := newPlaneBox(NewVec(2, 2), 2, 2)
 
 	plane.Translate(&planeBox, NewVec(-3, 0))
 	expectPlaneBoxState(t, planeBox, NewVec(9, 2), NewVec(10, 4), map[FragPosition][2]Vec[int]{
