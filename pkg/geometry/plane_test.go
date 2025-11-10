@@ -40,7 +40,7 @@ func TestDiscreteCyclicPlaneMetric(t *testing.T) {
 		{NewVec(0, 0), NewVec(8, 8), 2},
 		{NewVec(0, 0), NewVec(9, 9), 0}, // vec(9,9) has been wrapped to vec(0,0)
 	} {
-		if output := plane.Metric(test.arg1, test.arg2); output != test.expected {
+		if output := plane.metric(test.arg1, test.arg2); output != test.expected {
 			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
 		}
 	}
@@ -82,7 +82,7 @@ func TestDiscreteBoundedPlaneMetric(t *testing.T) {
 		{NewVec(0, 0), NewVec(8, 8), 12},
 		{NewVec(0, 0), NewVec(9, 9), 13}, // vec(9,9) stays on the boundary
 	} {
-		if output := plane.Metric(test.arg1, test.arg2); output != test.expected {
+		if output := plane.metric(test.arg1, test.arg2); output != test.expected {
 			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
 		}
 	}
@@ -126,7 +126,7 @@ func TestDiscreteCyclicPlaneMetricFloat64(t *testing.T) {
 		{NewVec(0.0, 0.0), NewVec(8.0, 8.0), 1.4142135623730951},
 		{NewVec(0.0, 0.0), NewVec(9.0, 9.0), 0.0}, // vec(9,9) has been wrapped to vec(0,0)
 	} {
-		if output := plane.Metric(test.arg1, test.arg2); output != test.expected {
+		if output := plane.metric(test.arg1, test.arg2); output != test.expected {
 			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
 		}
 	}
@@ -169,7 +169,7 @@ func TestDiscreteBoundedPlaneMetricFloat64(t *testing.T) {
 		{NewVec(0.0, 0.0), NewVec(9.0, 9.0), 12.727922061357855}, // Vec(9,9) stays on the boundary
 		{NewVec(0.0, 0.0), NewVec(8.5, 0.0), 8.5},
 	} {
-		if output := plane.Metric(test.arg1, test.arg2); output != test.expected {
+		if output := plane.metric(test.arg1, test.arg2); output != test.expected {
 			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
 		}
 	}

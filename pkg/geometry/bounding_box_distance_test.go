@@ -24,9 +24,9 @@ func TestBoundingBoxDistance_ForBoundedPlane(t *testing.T) {
 	rectB := newPlaneBox(NewVec(4, 5), 2, 2)
 
 	plane := NewBoundedPlane(20, 20)
-	distance := BoundingBoxDistance(plane)(rectA.BoundingBox, rectB.BoundingBox)
+	distance := plane.BoundingBoxDistance(rectA.BoundingBox, rectB.BoundingBox)
 
-	expected := plane.Metric(Vec[int]{X: 2, Y: 3}, ZERO_INT_VEC)
+	expected := plane.metric(Vec[int]{X: 2, Y: 3}, ZERO_INT_VEC)
 	if distance != expected {
 		t.Errorf("expected distance %v, got %v", expected, distance)
 	}
@@ -37,7 +37,7 @@ func TestBoundingBoxDistance_ReturnsZeroOnIntersection(t *testing.T) {
 	rectB := newPlaneBox(NewVec(2, 2), 4, 4)
 
 	plane := NewBoundedPlane(20, 20)
-	distance := BoundingBoxDistance(plane)(rectA.BoundingBox, rectB.BoundingBox)
+	distance := plane.BoundingBoxDistance(rectA.BoundingBox, rectB.BoundingBox)
 	if distance != 0 {
 		t.Errorf("expected distance 0 for intersecting rectangles, got %v", distance)
 	}
@@ -49,8 +49,8 @@ func TestBoundingBoxDistance_VectorToBox(t *testing.T) {
 	plane := NewBoundedPlane(100, 100)
 	vectorBox := NewBoundingBoxAt(vector, 0, 0)
 
-	distance := BoundingBoxDistance(plane)(vectorBox, rect.BoundingBox)
-	expected := plane.Metric(NewVec(4, 0), ZERO_INT_VEC)
+	distance := plane.BoundingBoxDistance(vectorBox, rect.BoundingBox)
+	expected := plane.metric(NewVec(4, 0), ZERO_INT_VEC)
 	if distance != expected {
 		t.Errorf("expected distance %v, got %v", expected, distance)
 	}
@@ -62,8 +62,8 @@ func TestBoundingBoxDistance_BoxToVector(t *testing.T) {
 	plane := NewBoundedPlane(100.0, 100.0)
 	vectorBox := NewBoundingBoxAt(vector, 0, 0)
 
-	distance := BoundingBoxDistance(plane)(rect.BoundingBox, vectorBox)
-	expected := plane.Metric(Vec[float64]{X: 3, Y: 4}, ZERO_FLOAT_VEC)
+	distance := plane.BoundingBoxDistance(rect.BoundingBox, vectorBox)
+	expected := plane.metric(Vec[float64]{X: 3, Y: 4}, ZERO_FLOAT_VEC)
 	if distance != expected {
 		t.Errorf("expected distance %v, got %v", expected, distance)
 	}
