@@ -67,7 +67,7 @@ func (p Plane[T]) Viewport() BoundingBox[T] { return p.viewport }
 
 // NewBoundedPlane constructs a plane that clamps vectors to the given width and height.
 func NewBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
-	return newBoundedPlane(BOUNDED, sizeX, sizeY, func(p *Plane[T]) {
+	return newPlane(BOUNDED, sizeX, sizeY, func(p *Plane[T]) {
 		p.normalizeVec = func(v *Vec[T]) { p.vectorMath.Clamp(v, p.size) }
 		p.normalizeBox = func(pb *PlaneBox[T]) {
 			p.normalizePlaneBoxBottomRight(pb)
@@ -81,7 +81,7 @@ func NewBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 
 // NewCyclicBoundedPlane constructs a plane with wrap-around behaviour on both axes.
 func NewCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
-	return newBoundedPlane(CYCLIC, sizeX, sizeY, func(p *Plane[T]) {
+	return newPlane(CYCLIC, sizeX, sizeY, func(p *Plane[T]) {
 		p.normalizeVec = func(v *Vec[T]) { p.vectorMath.Wrap(v, p.size) }
 		p.normalizeBox = func(pb *PlaneBox[T]) {
 			p.normalizePlaneBoxTopLeft(pb)
@@ -96,7 +96,7 @@ func NewCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 
 // -----------------------------------------------------------------------------
 
-func newBoundedPlane[T SupportedNumeric](name string, sizeX, sizeY T, setup func(p *Plane[T])) Plane[T] {
+func newPlane[T SupportedNumeric](name string, sizeX, sizeY T, setup func(p *Plane[T])) Plane[T] {
 	plane := Plane[T]{
 		name:       name,
 		size:       NewVec(sizeX, sizeY),
