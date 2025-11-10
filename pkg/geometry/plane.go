@@ -9,7 +9,7 @@ const (
 type Plane[T SupportedNumeric] struct {
 	size         Vec[T]
 	vectorMath   VectorMath[T]
-	normalize    func(*Vec[T])
+	normalizeVec func(*Vec[T])
 	normalizeBox func(*PlaneBox[T])
 	metric       func(v1, v2 Vec[T]) T
 	name         string
@@ -68,12 +68,11 @@ func NewBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 		vectorMath: VectorMathByType[T](),
 	}
 	plane.viewport = NewBoundingBoxAt(NewVec[T](0, 0), plane.size.X, plane.size.Y)
-	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Clamp(v, plane.size) }
+	plane.normalizeVec = func(v *Vec[T]) { plane.vectorMath.Clamp(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return max(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
 	plane.normalizeBox = func(pb *PlaneBox[T]) {
-		pb.BottomRight = pb.TopLeft.Add(pb.size)
-		plane.vectorMath.Clamp(&pb.BottomRight, plane.size)
-		plane.normalize(&pb.TopLeft)
+		plane.normalizePlaneBoxBottomRight(pb)
+		plane.normalizePlaneBoxTopLeft(pb)
 	}
 	return plane
 }
@@ -88,16 +87,14 @@ func NewCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 		vectorMath: VectorMathByType[T](),
 	}
 	plane.viewport = NewBoundingBoxAt(NewVec[T](0, 0), plane.size.X, plane.size.Y)
-	plane.normalize = func(v *Vec[T]) { plane.vectorMath.Wrap(v, plane.size) }
+	plane.normalizeVec = func(v *Vec[T]) { plane.vectorMath.Wrap(v, plane.size) }
 	plane.metric = func(v1, v2 Vec[T]) T { return min(plane.relativeMetric(v1, v2), plane.relativeMetric(v2, v1)) }
 	plane.normalizeBox = func(pb *PlaneBox[T]) {
-		plane.normalize(&pb.TopLeft)
-
-		pb.BottomRight = pb.TopLeft.Add(pb.size)
-		plane.vectorMath.Clamp(&pb.BottomRight, plane.size)
-
-		d := plane.size.Sub(pb.TopLeft).Sub(pb.size)
-		pb.fragmentation(d.X, d.Y)
+		plane.normalizePlaneBoxTopLeft(pb)
+		if plane.normalizePlaneBoxBottomRight(pb) {
+			d := plane.size.Sub(pb.TopLeft).Sub(pb.size)
+			pb.fragmentation(d.X, d.Y)
+		}
 	}
 	return plane
 }
@@ -106,6 +103,21 @@ func NewCyclicBoundedPlane[T SupportedNumeric](sizeX, sizeY T) Plane[T] {
 
 func (p Plane[T]) relativeMetric(v1, v2 Vec[T]) T {
 	delta := v1.Sub(v2)
-	p.normalize(&delta)
+	p.normalizeVec(&delta)
 	return p.vectorMath.Length(delta)
+}
+
+func (p Plane[T]) normalizePlaneBoxTopLeft(pb *PlaneBox[T]) {
+	if !p.Viewport().ContainsVec(pb.BoundingBox.TopLeft) {
+		p.normalizeVec(&pb.TopLeft)
+	}
+}
+
+func (p Plane[T]) normalizePlaneBoxBottomRight(pb *PlaneBox[T]) bool {
+	pb.BottomRight = pb.TopLeft.Add(pb.size)
+	if !p.Viewport().ContainsVec(pb.BoundingBox.BottomRight) {
+		p.vectorMath.Clamp(&pb.BottomRight, p.size)
+		return true
+	}
+	return false
 }

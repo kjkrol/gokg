@@ -19,7 +19,7 @@ func TestDiscreteCyclicPlaneNormalizeAfterAdd(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.normalize(&result)
+		plane.normalizeVec(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -61,7 +61,7 @@ func TestDiscreteBoundedPlaneNormalizeAfterAdd(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.normalize(&result)
+		plane.normalizeVec(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -105,7 +105,7 @@ func TestDiscreteCyclicPlaneNormalizeAfterAddFloat64(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.normalize(&result)
+		plane.normalizeVec(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -147,7 +147,7 @@ func TestDiscreteBoundedPlaneNormalizeAfterAddFloat64(t *testing.T) {
 	} {
 		result := test.arg1
 		result.AddMutable(test.arg2)
-		plane.normalize(&result)
+		plane.normalizeVec(&result)
 		if !result.Equals(test.expected) {
 			t.Errorf("result %v not equal to expected %v", result, test.expected)
 		}
@@ -178,7 +178,7 @@ func TestDiscreteBoundedPlaneMetricFloat64(t *testing.T) {
 func TestPlaneNormalize(t *testing.T) {
 	plane := NewCyclicBoundedPlane(5, 5)
 	vec := NewVec(7, -2)
-	plane.normalize(&vec)
+	plane.normalizeVec(&vec)
 	expected := NewVec(2, 3)
 	if vec != expected {
 		t.Errorf("expected normalized vector %v, got %v", expected, vec)

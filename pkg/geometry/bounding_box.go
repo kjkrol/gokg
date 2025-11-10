@@ -65,6 +65,11 @@ func (b BoundingBox[T]) Contains(other BoundingBox[T]) bool {
 		other.BottomRight.Y <= b.BottomRight.Y
 }
 
+func (b BoundingBox[T]) ContainsVec(vec Vec[T]) bool {
+	return vec.X < b.BottomRight.X && vec.X > b.TopLeft.X &&
+		vec.Y < b.TopLeft.Y && vec.Y > b.BottomRight.Y
+}
+
 // Intersects reports whether this BoundingBox overlaps another bounding box.
 // It returns true both when the boxes share any interior volume
 // and when they only touch along edges or vertices.

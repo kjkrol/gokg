@@ -10,7 +10,7 @@ func ExampleNewBoundedPlane_int() {
 	vec := NewVec(5, 5)
 	delta := NewVec(3, 4)
 	vec.AddMutable(delta)
-	plane.normalize(&vec)
+	plane.normalizeVec(&vec)
 	fmt.Println(vec)
 	// Output: (8,9)
 }
@@ -21,7 +21,7 @@ func ExampleNewBoundedPlane_float64() {
 	vec := NewVec(5., 5)
 	delta := NewVec(3., 4)
 	vec.AddMutable(delta)
-	plane.normalize(&vec)
+	plane.normalizeVec(&vec)
 	fmt.Println(vec)
 	// Output: (8,9)
 }
@@ -32,7 +32,7 @@ func ExampleNewCyclicBoundedPlane_int() {
 	vec := NewVec(9, 9)
 	delta := NewVec(3, 4)
 	vec.AddMutable(delta)
-	plane.normalize(&vec)
+	plane.normalizeVec(&vec)
 	fmt.Println(vec)
 	// Output: (2,3)
 }
@@ -43,7 +43,7 @@ func ExampleNewCyclicBoundedPlane_float64() {
 	vec := NewVec(9., 9)
 	delta := NewVec(3., 4)
 	vec.AddMutable(delta)
-	plane.normalize(&vec)
+	plane.normalizeVec(&vec)
 	fmt.Println(vec)
 	// Output: (2,3)
 }
