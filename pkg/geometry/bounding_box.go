@@ -57,12 +57,12 @@ func (b BoundingBox[T]) center() Vec[T] {
 	return Vec[T]{X: centerX, Y: centerY}
 }
 
-// Contains reports whether other lies entirely within ab.
+// Contains reports whether other lies entirely within bounding-box.
 func (b BoundingBox[T]) Contains(other BoundingBox[T]) bool {
-	return other.TopLeft.X >= b.TopLeft.X &&
-		other.TopLeft.Y >= b.TopLeft.Y &&
-		other.BottomRight.X <= b.BottomRight.X &&
-		other.BottomRight.Y <= b.BottomRight.Y
+	return b.TopLeft.X <= other.TopLeft.X &&
+		b.TopLeft.Y <= other.TopLeft.Y &&
+		b.BottomRight.X >= other.BottomRight.X &&
+		b.BottomRight.Y >= other.BottomRight.Y
 }
 
 func (b BoundingBox[T]) ContainsVec(vec Vec[T]) bool {

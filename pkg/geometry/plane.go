@@ -9,35 +9,16 @@ type Metric[T SupportedNumeric] func(v1, v2 Vec[T]) T
 
 // Plane encapsulates a 2D surface with its own metric and boundary behaviour.
 type Plane[T SupportedNumeric] struct {
-	size                Vec[T]
-	vectorMath          VectorMath[T]
-	normalizeVec        func(*Vec[T])
-	normalizeBox        func(*PlaneBox[T])
-	metric              Metric[T]
-	name                string
-	viewport            BoundingBox[T]
-	boundingBoxDistance BoundingBoxDistance[T]
+	size         Vec[T]
+	vectorMath   VectorMath[T]
+	normalizeVec func(*Vec[T])
+	normalizeBox func(*PlaneBox[T])
+	metric       Metric[T]
+	name         string
+	viewport     BoundingBox[T]
 }
 
 // -----------------------------------------------------------------------------
-
-// Expand grows the bounding box by margin and normalises it to the plane.
-func (p Plane[T]) Expand(ab *PlaneBox[T], margin T) {
-	ab.TopLeft.AddMutable(NewVec(-margin, -margin))
-	ab.size.AddMutable(NewVec(2*margin, 2*margin))
-	p.normalizeBox(ab)
-}
-
-// Translate shifts the bounding box by delta and normalises it to the plane.
-func (p Plane[T]) Translate(ab *PlaneBox[T], delta Vec[T]) {
-	ab.TopLeft.AddMutable(delta)
-	p.normalizeBox(ab)
-}
-
-// BoundingBoxDistance measures the distance between aa and bb using the plane-specific metric.
-func (p Plane[T]) BoundingBoxDistance(aa, bb BoundingBox[T]) T {
-	return p.boundingBoxDistance(aa, bb)
-}
 
 // WrapBoundingBox converts a world-space BoundingBox into a PlaneBox normalized to this Plane.
 func (p Plane[T]) WrapBoundingBox(box BoundingBox[T]) PlaneBox[T] {
@@ -54,11 +35,26 @@ func (p Plane[T]) WrapVec(vec Vec[T]) PlaneBox[T] {
 	return p.WrapBoundingBox(box)
 }
 
+// Expand grows the bounding box by margin and normalises it to the plane.
+func (p Plane[T]) Expand(ab *PlaneBox[T], margin T) {
+	ab.TopLeft.AddMutable(NewVec(-margin, -margin))
+	ab.size.AddMutable(NewVec(2*margin, 2*margin))
+	p.normalizeBox(ab)
+}
+
+// Translate shifts the bounding box by delta and normalises it to the plane.
+func (p Plane[T]) Translate(ab *PlaneBox[T], delta Vec[T]) {
+	ab.TopLeft.AddMutable(delta)
+	p.normalizeBox(ab)
+}
+
+// BoundingBoxDistance measures the distance between aa and bb using the plane-specific metric.
+func (p Plane[T]) BoundingBoxDistance() BoundingBoxDistance[T] {
+	return newBoundingBoxDistance(p.metric)
+}
+
 // Name reports the plane mode (bounded or cyclic).
 func (p Plane[T]) Name() string { return p.name }
-
-// Size returns the plane width and height as a vector.
-func (p Plane[T]) Size() Vec[T] { return p.size }
 
 // Viewport returns the canonical PlaneBox (bounding-box) covering the entire plane.
 func (p Plane[T]) Viewport() BoundingBox[T] { return p.viewport }
@@ -104,7 +100,6 @@ func newPlane[T SupportedNumeric](name string, sizeX, sizeY T, setup func(p *Pla
 		viewport:   NewBoundingBoxAt(NewVec[T](0, 0), sizeX, sizeY),
 	}
 	setup(&plane)
-	plane.boundingBoxDistance = newBoundingBoxDistance(plane.metric)
 	return plane
 }
 
