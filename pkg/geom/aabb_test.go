@@ -2,189 +2,187 @@ package geom
 
 import "testing"
 
-func AABB_Split(t *testing.T) {
-	parent := NewAABBAt(NewVec(0, 0), 10, 10)
-	splitted := parent.Split()
-
-	expected := [4]AABB[int]{
-		NewAABBAt(NewVec(0, 0), 5, 5),
-		NewAABBAt(NewVec(5, 0), 5, 5),
-		NewAABBAt(NewVec(0, 5), 5, 5),
-		NewAABBAt(NewVec(5, 5), 5, 5),
-	}
-	for i := range 4 {
-		if !splitted[i].Equals(expected[i]) {
-			t.Errorf("split %v not equal to expected %v", splitted[i], expected[i])
-		}
-	}
+func TestAABB_Split(t *testing.T) {
+	runAABBSplitTest[int](t, "int")
+	runAABBSplitTest[uint32](t, "uint32")
+	runAABBSplitTest[float64](t, "float64")
 }
 
-func AABB_NewAABBAround(t *testing.T) {
-	center := NewVec(5, 5)
-	box := NewAABBAround(center, 2)
-	expectedTopLeft := NewVec(3, 3)
-	expectedBottomRight := NewVec(7, 7)
-	if box.TopLeft != expectedTopLeft {
-		t.Errorf("topLeft %v not equal to expected %v", box.TopLeft, expectedTopLeft)
-	}
-	if box.BottomRight != expectedBottomRight {
-		t.Errorf("bottomRight %v not equal to expected %v", box.BottomRight, expectedBottomRight)
-	}
+func runAABBSplitTest[T Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		parent := NewAABBAt(NewVec(T(0), T(0)), T(10), T(10))
+		splitted := parent.Split()
+
+		expected := [4]AABB[T]{
+			NewAABBAt(NewVec(T(0), T(0)), T(5), T(5)),
+			NewAABBAt(NewVec(T(5), T(0)), T(5), T(5)),
+			NewAABBAt(NewVec(T(0), T(5)), T(5), T(5)),
+			NewAABBAt(NewVec(T(5), T(5)), T(5), T(5)),
+		}
+
+		for i := range expected {
+			if !splitted[i].Equals(expected[i]) {
+				t.Errorf("split %v not equal to expected %v", splitted[i], expected[i])
+			}
+		}
+	})
 }
 
-func AABB_Intersects(t *testing.T) {
-	intersects := []struct{ box1, box2 AABB[int] }{
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 4, Y: 2}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 2, Y: 4}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 4, Y: 4}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 2, Y: 4}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 2, Y: 5}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 5, Y: 2}, 2, 2),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 5, Y: 2}, 2, 2),
-		},
-	}
+func TestAABB_NewAABBAround(t *testing.T) {
+	runAABBAroundTest[int](t, "int")
+	runAABBAroundTest[uint32](t, "uint32")
+	runAABBAroundTest[float64](t, "float64")
+}
 
-	for _, intersection := range intersects {
-		if !intersection.box1.Intersects(intersection.box2) {
-			t.Errorf("box1 %v should intersect with box2 %v", intersection.box1, intersection.box2)
-		}
-		if !intersection.box2.Intersects(intersection.box1) {
-			t.Errorf("box2 %v should intersect with box1 %v", intersection.box2, intersection.box1)
-		}
-	}
+func runAABBAroundTest[T Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		center := NewVec(T(5), T(5))
+		box := NewAABBAround(center, T(2))
+		expectedTopLeft := NewVec(T(3), T(3))
+		expectedBottomRight := NewVec(T(7), T(7))
 
-	notIntersects := []struct{ box1, box2 AABB[int] }{
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 1, Y: 1}, 1, 1),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 6, Y: 0}, 3, 9),
-		},
-		{
-			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewAABBAt(Vec[int]{X: 0, Y: 6}, 9, 3),
-		},
-	}
-	for _, intersection := range notIntersects {
-		if intersection.box1.Intersects(intersection.box2) {
-			t.Errorf("box1 %v should not intersect with box2 %v", intersection.box1, intersection.box2)
+		if box.TopLeft != expectedTopLeft {
+			t.Errorf("topLeft %v not equal to expected %v", box.TopLeft, expectedTopLeft)
 		}
-		if intersection.box2.Intersects(intersection.box1) {
-			t.Errorf("box2 %v should not intersect with box1 %v", intersection.box2, intersection.box1)
+		if box.BottomRight != expectedBottomRight {
+			t.Errorf("bottomRight %v not equal to expected %v", box.BottomRight, expectedBottomRight)
 		}
-	}
+	})
+}
+
+func TestAABB_Intersects(t *testing.T) {
+	runAABBIntersectsTest[int](t, "int")
+	runAABBIntersectsTest[uint32](t, "uint32")
+	runAABBIntersectsTest[float64](t, "float64")
+}
+
+func runAABBIntersectsTest[T Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		mk := func(x, y, w, h T) AABB[T] {
+			return NewAABBAt(NewVec(x, y), w, h)
+		}
+
+		base := mk(T(3), T(3), T(2), T(2))
+		testCases := []struct {
+			name       string
+			box1, box2 AABB[T]
+			want       bool
+		}{
+			{name: "identical", box1: base, box2: base, want: true},
+			{name: "overlapLeft", box1: base, box2: mk(T(2), T(3), T(2), T(2)), want: true},
+			{name: "overlapRight", box1: base, box2: mk(T(4), T(3), T(2), T(2)), want: true},
+			{name: "overlapTop", box1: base, box2: mk(T(3), T(2), T(2), T(2)), want: true},
+			{name: "overlapBottom", box1: base, box2: mk(T(3), T(4), T(2), T(2)), want: true},
+			{name: "containsOther", box1: base, box2: mk(T(3), T(3), T(1), T(1)), want: true},
+			{name: "containedInOther", box1: base, box2: mk(T(2), T(2), T(4), T(4)), want: true},
+			{name: "touchLeftEdge", box1: base, box2: mk(T(1), T(3), T(2), T(2)), want: true},
+			{name: "touchRightEdge", box1: base, box2: mk(T(5), T(3), T(2), T(2)), want: true},
+			{name: "touchTopEdge", box1: base, box2: mk(T(3), T(1), T(2), T(2)), want: true},
+			{name: "touchBottomEdge", box1: base, box2: mk(T(3), T(5), T(2), T(2)), want: true},
+			{name: "touchTopLeftCorner", box1: base, box2: mk(T(1), T(1), T(2), T(2)), want: true},
+			{name: "touchTopRightCorner", box1: base, box2: mk(T(5), T(1), T(2), T(2)), want: true},
+			{name: "touchBottomLeftCorner", box1: base, box2: mk(T(1), T(5), T(2), T(2)), want: true},
+			{name: "touchBottomRightCorner", box1: base, box2: mk(T(5), T(5), T(2), T(2)), want: true},
+			{name: "separateLeft", box1: base, box2: mk(T(0), T(3), T(2), T(2)), want: false},
+			{name: "separateRight", box1: base, box2: mk(T(6), T(3), T(2), T(2)), want: false},
+			{name: "separateAbove", box1: base, box2: mk(T(3), T(0), T(2), T(2)), want: false},
+			{name: "separateBelow", box1: base, box2: mk(T(3), T(6), T(2), T(2)), want: false},
+			{name: "separateDiagonal", box1: base, box2: mk(T(0), T(0), T(2), T(2)), want: false},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if got := tc.box1.Intersects(tc.box2); got != tc.want {
+					t.Fatalf("box1 %v intersects box2 %v = %v, want %v", tc.box1, tc.box2, got, tc.want)
+				}
+				if got := tc.box2.Intersects(tc.box1); got != tc.want {
+					t.Fatalf("box2 %v intersects box1 %v = %v, want %v", tc.box2, tc.box1, got, tc.want)
+				}
+			})
+		}
+	})
 }
 
 func TestSortAABBsBy(t *testing.T) {
-	mk := func(x1, y1, x2, y2 int) AABB[int] {
-		return NewAABB(NewVec(x1, y1), NewVec(x2, y2))
-	}
+	runSortAABBsByTest[int](t, "int")
+	runSortAABBsByTest[uint32](t, "uint32")
+	runSortAABBsByTest[float64](t, "float64")
+}
 
-	byLeftX := func(box AABB[int]) int { return box.TopLeft.X }
-	byLeftY := func(box AABB[int]) int { return box.TopLeft.Y }
-	byWidth := func(box AABB[int]) int { return box.BottomRight.X - box.TopLeft.X }
+func runSortAABBsByTest[T Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		mk := func(x1, y1, x2, y2 T) AABB[T] {
+			return NewAABB(NewVec(x1, y1), NewVec(x2, y2))
+		}
 
-	testCases := []struct {
-		name       string
-		a, b       AABB[int]
-		keyFns     []func(AABB[int]) int
-		wantFirst  AABB[int]
-		wantSecond AABB[int]
-	}{
-		{
-			name:       "ordersByFirstKey",
-			a:          mk(0, 0, 2, 2),
-			b:          mk(5, 0, 7, 2),
-			keyFns:     []func(AABB[int]) int{byLeftX},
-			wantFirst:  mk(0, 0, 2, 2),
-			wantSecond: mk(5, 0, 7, 2),
-		},
-		{
-			name:       "reversesWhenFirstGreater",
-			a:          mk(10, 0, 12, 2),
-			b:          mk(3, 0, 5, 2),
-			keyFns:     []func(AABB[int]) int{byLeftX},
-			wantFirst:  mk(3, 0, 5, 2),
-			wantSecond: mk(10, 0, 12, 2),
-		},
-		{
-			name: "fallsBackToNextKey",
-			a:    mk(1, 5, 3, 7),
-			b:    mk(1, 2, 3, 4),
-			keyFns: []func(AABB[int]) int{
-				byLeftX,
-				byLeftY,
+		byLeftX := func(box AABB[T]) T { return box.TopLeft.X }
+		byLeftY := func(box AABB[T]) T { return box.TopLeft.Y }
+		byWidth := func(box AABB[T]) T { return box.BottomRight.X - box.TopLeft.X }
+
+		testCases := []struct {
+			name       string
+			a, b       AABB[T]
+			keyFns     []func(AABB[T]) T
+			wantFirst  AABB[T]
+			wantSecond AABB[T]
+		}{
+			{
+				name:       "ordersByFirstKey",
+				a:          mk(T(0), T(0), T(2), T(2)),
+				b:          mk(T(5), T(0), T(7), T(2)),
+				keyFns:     []func(AABB[T]) T{byLeftX},
+				wantFirst:  mk(T(0), T(0), T(2), T(2)),
+				wantSecond: mk(T(5), T(0), T(7), T(2)),
 			},
-			wantFirst:  mk(1, 2, 3, 4),
-			wantSecond: mk(1, 5, 3, 7),
-		},
-		{
-			name: "keepsOriginalWhenAllKeysEqual",
-			a:    mk(0, 0, 2, 2),
-			b:    mk(0, 0, 2, 2),
-			keyFns: []func(AABB[int]) int{
-				byLeftX,
-				byWidth,
+			{
+				name:       "reversesWhenFirstGreater",
+				a:          mk(T(10), T(0), T(12), T(2)),
+				b:          mk(T(3), T(0), T(5), T(2)),
+				keyFns:     []func(AABB[T]) T{byLeftX},
+				wantFirst:  mk(T(3), T(0), T(5), T(2)),
+				wantSecond: mk(T(10), T(0), T(12), T(2)),
 			},
-			wantFirst:  mk(0, 0, 2, 2),
-			wantSecond: mk(0, 0, 2, 2),
-		},
-		{
-			name:       "noKeysKeepsOriginal",
-			a:          mk(2, 2, 4, 4),
-			b:          mk(1, 1, 3, 3),
-			wantFirst:  mk(2, 2, 4, 4),
-			wantSecond: mk(1, 1, 3, 3),
-		},
-	}
+			{
+				name: "fallsBackToNextKey",
+				a:    mk(T(1), T(5), T(3), T(7)),
+				b:    mk(T(1), T(2), T(3), T(4)),
+				keyFns: []func(AABB[T]) T{
+					byLeftX,
+					byLeftY,
+				},
+				wantFirst:  mk(T(1), T(2), T(3), T(4)),
+				wantSecond: mk(T(1), T(5), T(3), T(7)),
+			},
+			{
+				name: "keepsOriginalWhenAllKeysEqual",
+				a:    mk(T(0), T(0), T(2), T(2)),
+				b:    mk(T(0), T(0), T(2), T(2)),
+				keyFns: []func(AABB[T]) T{
+					byLeftX,
+					byWidth,
+				},
+				wantFirst:  mk(T(0), T(0), T(2), T(2)),
+				wantSecond: mk(T(0), T(0), T(2), T(2)),
+			},
+			{
+				name:       "noKeysKeepsOriginal",
+				a:          mk(T(2), T(2), T(4), T(4)),
+				b:          mk(T(1), T(1), T(3), T(3)),
+				wantFirst:  mk(T(2), T(2), T(4), T(4)),
+				wantSecond: mk(T(1), T(1), T(3), T(3)),
+			},
+		}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			first, second := SortAABBsBy(tc.a, tc.b, tc.keyFns...)
-			if first != tc.wantFirst {
-				t.Fatalf("first box mismatch: got %v want %v", first, tc.wantFirst)
-			}
-			if second != tc.wantSecond {
-				t.Fatalf("second box mismatch: got %v want %v", second, tc.wantSecond)
-			}
-		})
-	}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				first, second := SortAABBsBy(tc.a, tc.b, tc.keyFns...)
+				if first != tc.wantFirst {
+					t.Fatalf("first box mismatch: got %v want %v", first, tc.wantFirst)
+				}
+				if second != tc.wantSecond {
+					t.Fatalf("second box mismatch: got %v want %v", second, tc.wantSecond)
+				}
+			})
+		}
+	})
 }
