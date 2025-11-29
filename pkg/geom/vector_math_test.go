@@ -4,84 +4,68 @@ import (
 	"testing"
 )
 
-func TestFloat64VectorMath_Length(t *testing.T) {
-	v := NewVec(3.0, 4.0)
-	expected := 5.0
-	result := FLOAT_64_VEC_MATH.Length(v)
-	if result != expected {
-		t.Errorf("expected %v, got %v", expected, result)
-	}
+func TestVectorMath_Length(t *testing.T) {
+	runLengthTest(t, "int", INT_VEC_MATH)
+	runLengthTest(t, "uint32", UINT32_VEC_MATH)
+	runLengthTest(t, "float64", FLOAT_64_VEC_MATH)
 }
 
-func TestIntVectorMath_Length(t *testing.T) {
-	v := NewVec(3, 4)
-	expected := 5
-	result := INT_VEC_MATH.Length(v)
-	if result != expected {
-		t.Errorf("expected %v, got %v", expected, result)
-	}
-}
+func runLengthTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
+	t.Run(name, func(t *testing.T) {
+		v := NewVec(T(3), T(4))
+		expected := T(5)
 
-func TestFloat64VectorMath_Clamp(t *testing.T) {
-	v := NewVec(5.0, 7.0)
-	bounds := NewVec(4.0, 6.0)
-	expected := NewVec(4.0, 6.0)
-	FLOAT_64_VEC_MATH.Clamp(&v, bounds)
-	if v != expected {
-		t.Errorf("expected %v, got %v", expected, v)
-	}
-}
-
-func TestIntVectorMath_Clamp(t *testing.T) {
-	v := NewVec(5, 7)
-	bounds := NewVec(4, 6)
-	expected := NewVec(4, 6)
-	INT_VEC_MATH.Clamp(&v, bounds)
-	if v != expected {
-		t.Errorf("expected %v, got %v", expected, v)
-	}
-}
-
-func TestFloat64VectorMath_Wrap(t *testing.T) {
-	v := NewVec(5.0, 7.0)
-	bounds := NewVec(4.0, 4.0)
-	cases := []struct {
-		offset   Vec[float64]
-		expected Vec[float64]
-	}{
-		{NewVec(4.0, 6.0), NewVec(1.0, 1.0)},
-		{NewVec(bounds.X, 0.0), NewVec(1.0, 7.0)},
-		{NewVec(0.0, bounds.Y), NewVec(5.0, 3.0)},
-		{NewVec(bounds.X, bounds.Y), NewVec(1.0, 3.0)},
-	}
-
-	for _, c := range cases {
-		vec := NewVec(v.X, v.Y)
-		FLOAT_64_VEC_MATH.Wrap(&vec, c.offset)
-		if vec != c.expected {
-			t.Errorf("expected %v, got %v", c.expected, vec)
+		if result := math.Length(v); result != expected {
+			t.Errorf("expected %v, got %v", expected, result)
 		}
-	}
+	})
 }
 
-func TestIntVectorMath_Wrap(t *testing.T) {
-	v := NewVec(5, 7)
-	bounds := NewVec(4, 4)
-	cases := []struct {
-		offset   Vec[int]
-		expected Vec[int]
-	}{
-		{NewVec(4, 6), NewVec(1, 1)},
-		{NewVec(bounds.X, 0), NewVec(1, 7)},
-		{NewVec(0, bounds.Y), NewVec(5, 3)},
-		{NewVec(bounds.X, bounds.Y), NewVec(1, 3)},
-	}
+func TestVectorMath_Clamp(t *testing.T) {
+	runClampTest(t, "int", INT_VEC_MATH)
+	runClampTest(t, "uint32", UINT32_VEC_MATH)
+	runClampTest(t, "float64", FLOAT_64_VEC_MATH)
+}
 
-	for _, c := range cases {
-		vec := NewVec(v.X, v.Y)
-		INT_VEC_MATH.Wrap(&vec, c.offset)
-		if vec != c.expected {
-			t.Errorf("expected %v, got %v", c.expected, vec)
+func runClampTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
+	t.Run(name, func(t *testing.T) {
+		v := NewVec(T(5), T(7))
+		bounds := NewVec(T(4), T(6))
+		expected := NewVec(T(4), T(6))
+
+		math.Clamp(&v, bounds)
+		if v != expected {
+			t.Errorf("expected %v, got %v", expected, v)
 		}
-	}
+	})
+}
+
+func TestVectorMath_Wrap(t *testing.T) {
+	runWrapTest(t, "int", INT_VEC_MATH)
+	runWrapTest(t, "uint32", UINT32_VEC_MATH)
+	runWrapTest(t, "float64", FLOAT_64_VEC_MATH)
+}
+
+func runWrapTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
+	t.Run(name, func(t *testing.T) {
+		v := NewVec(T(5), T(7))
+		bounds := NewVec(T(4), T(4))
+		cases := []struct {
+			offset   Vec[T]
+			expected Vec[T]
+		}{
+			{NewVec(T(4), T(6)), NewVec(T(1), T(1))},
+			{NewVec(bounds.X, 0), NewVec(T(1), T(7))},
+			{NewVec(0, bounds.Y), NewVec(T(5), T(3))},
+			{NewVec(bounds.X, bounds.Y), NewVec(T(1), T(3))},
+		}
+
+		for _, c := range cases {
+			vec := NewVec(v.X, v.Y)
+			math.Wrap(&vec, c.offset)
+			if vec != c.expected {
+				t.Errorf("expected %v, got %v", c.expected, vec)
+			}
+		}
+	})
 }
