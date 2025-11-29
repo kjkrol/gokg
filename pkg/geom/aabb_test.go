@@ -2,7 +2,7 @@ package geom
 
 import "testing"
 
-func TestBox_Split(t *testing.T) {
+func AABB_Split(t *testing.T) {
 	parent := NewAABBAt(NewVec(0, 0), 10, 10)
 	splitted := parent.Split()
 
@@ -12,14 +12,14 @@ func TestBox_Split(t *testing.T) {
 		NewAABBAt(NewVec(0, 5), 5, 5),
 		NewAABBAt(NewVec(5, 5), 5, 5),
 	}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if !splitted[i].Equals(expected[i]) {
 			t.Errorf("split %v not equal to expected %v", splitted[i], expected[i])
 		}
 	}
 }
 
-func TestBox_BoxAround(t *testing.T) {
+func AABB_NewAABBAround(t *testing.T) {
 	center := NewVec(5, 5)
 	box := NewAABBAround(center, 2)
 	expectedTopLeft := NewVec(3, 3)
@@ -32,7 +32,7 @@ func TestBox_BoxAround(t *testing.T) {
 	}
 }
 
-func TestBox_Intersects(t *testing.T) {
+func AABB_Intersects(t *testing.T) {
 	intersects := []struct{ box1, box2 AABB[int] }{
 		{
 			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
@@ -113,7 +113,7 @@ func TestBox_Intersects(t *testing.T) {
 	}
 }
 
-func TestSortBoxesBy(t *testing.T) {
+func TestSortAABBsBy(t *testing.T) {
 	mk := func(x1, y1, x2, y2 int) AABB[int] {
 		return NewAABB(NewVec(x1, y1), NewVec(x2, y2))
 	}
@@ -178,7 +178,7 @@ func TestSortBoxesBy(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			first, second := SortBoxesBy(tc.a, tc.b, tc.keyFns...)
+			first, second := SortAABBsBy(tc.a, tc.b, tc.keyFns...)
 			if first != tc.wantFirst {
 				t.Fatalf("first box mismatch: got %v want %v", first, tc.wantFirst)
 			}

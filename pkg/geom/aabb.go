@@ -94,7 +94,7 @@ func (b AABB[T]) AxisDistanceTo(
 	other AABB[T],
 	axisValue func(Vec[T]) T,
 ) T {
-	b, other = SortBoxesBy(
+	b, other = SortAABBsBy(
 		b, other,
 		func(box AABB[T]) T { return axisValue(box.TopLeft) },
 		func(box AABB[T]) T { return axisValue(box.BottomRight) },
@@ -106,8 +106,8 @@ func (b AABB[T]) AxisDistanceTo(
 	return axisValue(other.TopLeft) - axisValue(b.BottomRight)
 }
 
-// SortBoxesBy orders two boxes using the provided key functions and returns them as (min,max).
-func SortBoxesBy[T Numeric](a, b AABB[T], keyFns ...func(AABB[T]) T) (aa, bb AABB[T]) {
+// SortAABBsBy orders two boxes using the provided key functions and returns them as (min,max).
+func SortAABBsBy[T Numeric](a, b AABB[T], keyFns ...func(AABB[T]) T) (aa, bb AABB[T]) {
 	for _, keyFn := range keyFns {
 		av, bv := keyFn(a), keyFn(b)
 		if av < bv {
