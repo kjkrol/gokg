@@ -1,190 +1,165 @@
 package plane
 
 import (
+	"math"
 	"testing"
 
 	"github.com/kjkrol/gokg/pkg/geom"
 )
 
-func TestTorusNormalizeVec_int(t *testing.T) {
-	torus := NewTorus(5, 5)
-	for _, test := range []struct {
-		arg1     geom.Vec[int]
-		arg2     geom.Vec[int]
-		expected geom.Vec[int]
-	}{
-		{geom.NewVec(2, 3), geom.NewVec(-1, -2), geom.NewVec(1, 1)},
-		{geom.NewVec(1, 2), geom.NewVec(-1, -2), geom.NewVec(0, 0)},
-		{geom.NewVec(0, 0), geom.NewVec(-4, -4), geom.NewVec(1, 1)},
-		{geom.NewVec(4, 0), geom.NewVec(-1, -0), geom.NewVec(3, 0)},
-		{geom.NewVec(1, 0), geom.NewVec(-4, -0), geom.NewVec(2, 0)},
-	} {
-		result := test.arg1
-		result.AddMutable(test.arg2)
-		torus.(space2d[int]).normalizeVec(&result)
-		if !result.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", result, test.expected)
-		}
-	}
+func TestTorusNormalizeVec(t *testing.T) {
+	runTorusNormalizeVecTest[int](t, "int")
+	runTorusNormalizeVecTest[uint32](t, "uint32")
+	runTorusNormalizeVecTest[float64](t, "float64")
 }
 
-func TestTorusMetric_int(t *testing.T) {
-	torus := NewTorus(9, 9)
-	for _, test := range []struct {
-		arg1     geom.Vec[int]
-		arg2     geom.Vec[int]
-		expected int
-	}{
-		{geom.NewVec(1, 2), geom.NewVec(2, 3), 2},
-		{geom.NewVec(1, 2), geom.NewVec(1, 2), 0},
-		{geom.NewVec(0, 0), geom.NewVec(1, 1), 2},
-		{geom.NewVec(0, 0), geom.NewVec(2, 2), 3},
-		{geom.NewVec(0, 0), geom.NewVec(8, 8), 2},
-		{geom.NewVec(0, 0), geom.NewVec(9, 9), 0}, // vec(9,9) has been wrapped to vec(0,0)
-	} {
-		if output := torus.(space2d[int]).metric(test.arg1, test.arg2); output != test.expected {
-			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
+func runTorusNormalizeVecTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		torus := NewTorus(T(5), T(5))
+		for _, test := range []struct {
+			arg1     geom.Vec[T]
+			arg2     geom.Vec[T]
+			expected geom.Vec[T]
+		}{
+			{vec[T](2, 3), vec[T](4, 4), vec[T](1, 2)},
+			{vec[T](1, 2), vec[T](0, 0), vec[T](1, 2)},
+			{vec[T](0, 0), vec[T](6, 6), vec[T](1, 1)},
+			{vec[T](4, 0), vec[T](3, 0), vec[T](2, 0)},
+			{vec[T](3, 4), vec[T](7, 1), vec[T](0, 0)},
+		} {
+			result := test.arg1
+			result.AddMutable(test.arg2)
+			torus.(space2d[T]).normalizeVec(&result)
+			if !result.Equals(test.expected) {
+				t.Errorf("result %v not equal to expected %v", result, test.expected)
+			}
 		}
-	}
+	})
 }
 
-func TestCartesianNormalizedVec_int(t *testing.T) {
-	cartesian := NewCartesian(9, 9)
-	for _, test := range []struct {
-		arg1     geom.Vec[int]
-		arg2     geom.Vec[int]
-		expected geom.Vec[int]
-	}{
-		{geom.NewVec(2, 3), geom.NewVec(-1, -2), geom.NewVec(1, 1)},
-		{geom.NewVec(1, 2), geom.NewVec(-1, -2), geom.NewVec(0, 0)},
-		{geom.NewVec(0, 0), geom.NewVec(-4, -4), geom.NewVec(0, 0)},
-		{geom.NewVec(4, 0), geom.NewVec(-1, -0), geom.NewVec(3, 0)},
-		{geom.NewVec(6, 0), geom.NewVec(-4, -0), geom.NewVec(2, 0)},
-	} {
-		result := test.arg1
-		result.AddMutable(test.arg2)
-		cartesian.(space2d[int]).normalizeVec(&result)
-		if !result.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", result, test.expected)
-		}
-	}
+func TestTorusMetric(t *testing.T) {
+	runTorusMetricTest[int](t, "int")
+	runTorusMetricTest[uint32](t, "uint32")
+	runTorusMetricTest[float64](t, "float64")
 }
 
-func TestCartesianMetric_int(t *testing.T) {
-	cartesian := NewCartesian(9, 9)
-	for _, test := range []struct {
-		arg1     geom.Vec[int]
-		arg2     geom.Vec[int]
-		expected int
-	}{
-		{geom.NewVec(1, 2), geom.NewVec(2, 3), 2},
-		{geom.NewVec(1, 2), geom.NewVec(1, 2), 0},
-		{geom.NewVec(0, 0), geom.NewVec(1, 1), 2},
-		{geom.NewVec(0, 0), geom.NewVec(2, 2), 3},
-		{geom.NewVec(0, 0), geom.NewVec(8, 8), 12},
-		{geom.NewVec(0, 0), geom.NewVec(9, 9), 13}, // vec(9,9) stays on the boundary
-	} {
-		if output := cartesian.(space2d[int]).metric(test.arg1, test.arg2); output != test.expected {
-			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
+func runTorusMetricTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		torus := NewTorus(T(9), T(9))
+		for _, test := range []struct {
+			arg1, arg2   [2]int
+			wantInt      int
+			wantUnsigned int
+			wantFloat    float64 // math.Sqrt2 is the constant value of sqrt(2)
+		}{
+			{arg1: [2]int{1, 2}, arg2: [2]int{2, 3}, wantInt: 2, wantUnsigned: 2, wantFloat: math.Sqrt2},
+			{arg1: [2]int{1, 2}, arg2: [2]int{1, 2}, wantInt: 0, wantUnsigned: 0, wantFloat: 0},
+			{arg1: [2]int{0, 0}, arg2: [2]int{8, 8}, wantInt: 2, wantUnsigned: 8, wantFloat: math.Sqrt2},
+			{arg1: [2]int{0, 0}, arg2: [2]int{9, 9}, wantInt: 0, wantUnsigned: 0, wantFloat: 0}, // vec(9,9) has been wrapped to vec(0,0)
+		} {
+			expected := chooseExpected[T](test.wantInt, test.wantUnsigned, test.wantFloat)
+			arg1 := vec[T](test.arg1[0], test.arg1[1])
+			arg2 := vec[T](test.arg2[0], test.arg2[1])
+			if output := torus.(space2d[T]).metric(arg1, arg2); output != expected {
+				t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", arg1, arg2, output, expected)
+			}
 		}
-	}
+	})
 }
 
-// -----------------------------------------------------------------------------
-
-func TestTorusNormalizedVec_float(t *testing.T) {
-	torus := NewTorus(5.0, 5.0)
-	for _, test := range []struct {
-		arg1     geom.Vec[float64]
-		arg2     geom.Vec[float64]
-		expected geom.Vec[float64]
-	}{
-		{geom.NewVec(2.0, 3.0), geom.NewVec(-1.0, -2.0), geom.NewVec(1.0, 1.0)},
-		{geom.NewVec(1.0, 2.0), geom.NewVec(-1.0, -2.0), geom.NewVec(0.0, 0.0)},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(-4.0, -4.0), geom.NewVec(1.0, 1.0)},
-		{geom.NewVec(4.0, 0.0), geom.NewVec(-1.0, 0.0), geom.NewVec(3.0, 0.0)},
-		{geom.NewVec(1.0, 0.0), geom.NewVec(-4.0, 0.0), geom.NewVec(2.0, 0.0)},
-	} {
-		result := test.arg1
-		result.AddMutable(test.arg2)
-		torus.(space2d[float64]).normalizeVec(&result)
-		if !result.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", result, test.expected)
-		}
-	}
+func TestCartesianNormalizeVec(t *testing.T) {
+	runCartesianNormalizeVecTest[int](t, "int")
+	runCartesianNormalizeVecTest[uint32](t, "uint32")
+	runCartesianNormalizeVecTest[float64](t, "float64")
 }
 
-func TestTorusMetric_float(t *testing.T) {
-	torus := NewTorus(9.0, 9.0)
-	for _, test := range []struct {
-		arg1     geom.Vec[float64]
-		arg2     geom.Vec[float64]
-		expected float64
-	}{
-		{geom.NewVec(1.0, 2.0), geom.NewVec(2.0, 3.0), 1.4142135623730951},
-		{geom.NewVec(1.0, 2.0), geom.NewVec(1.0, 2.0), 0.0},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(1.0, 1.0), 1.4142135623730951},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(2.0, 2.0), 2.8284271247461903},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(8.0, 8.0), 1.4142135623730951},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(9.0, 9.0), 0.0}, // vec(9,9) has been wrapped to vec(0,0)
-	} {
-		if output := torus.(space2d[float64]).metric(test.arg1, test.arg2); output != test.expected {
-			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
+func runCartesianNormalizeVecTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		cartesian := NewCartesian(T(9), T(9))
+		for _, test := range []struct {
+			arg1     geom.Vec[T]
+			arg2     geom.Vec[T]
+			expected geom.Vec[T]
+		}{
+			{vec[T](2, 3), vec[T](4, 4), vec[T](6, 7)},
+			{vec[T](1, 2), vec[T](0, 0), vec[T](1, 2)},
+			{vec[T](0, 0), vec[T](15, 15), vec[T](9, 9)},
+			{vec[T](4, 0), vec[T](9, 0), vec[T](9, 0)},
+			{vec[T](6, 1), vec[T](3, 10), vec[T](9, 9)},
+		} {
+			result := test.arg1
+			result.AddMutable(test.arg2)
+			cartesian.(space2d[T]).normalizeVec(&result)
+			if !result.Equals(test.expected) {
+				t.Errorf("result %v not equal to expected %v", result, test.expected)
+			}
 		}
-	}
+	})
 }
 
-func TestCartesianNormalizeVec_float(t *testing.T) {
-	cartesian := NewCartesian(9.0, 9.0)
-	for _, test := range []struct {
-		arg1     geom.Vec[float64]
-		arg2     geom.Vec[float64]
-		expected geom.Vec[float64]
-	}{
-		{geom.NewVec(2.0, 3.0), geom.NewVec(-1.0, -2.0), geom.NewVec(1.0, 1.0)},
-		{geom.NewVec(1.0, 2.0), geom.NewVec(-1.0, -2.0), geom.NewVec(0.0, 0.0)},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(-4.0, -4.0), geom.NewVec(0.0, 0.0)},
-		{geom.NewVec(4.0, 0.0), geom.NewVec(-1.0, 0.0), geom.NewVec(3.0, 0.0)},
-		{geom.NewVec(6.0, 0.0), geom.NewVec(-4.0, 0.0), geom.NewVec(2.0, 0.0)},
-	} {
-		result := test.arg1
-		result.AddMutable(test.arg2)
-		cartesian.(space2d[float64]).normalizeVec(&result)
-		if !result.Equals(test.expected) {
-			t.Errorf("result %v not equal to expected %v", result, test.expected)
-		}
-	}
+func TestCartesianMetric(t *testing.T) {
+	runCartesianMetricTest[int](t, "int")
+	runCartesianMetricTest[uint32](t, "uint32")
+	runCartesianMetricTest[float64](t, "float64")
 }
 
-func TestCartesianMetric_float(t *testing.T) {
-	cartesian := NewCartesian(9.0, 9.0)
-	for _, test := range []struct {
-		arg1     geom.Vec[float64]
-		arg2     geom.Vec[float64]
-		expected float64
-	}{
-		{geom.NewVec(1.0, 2.0), geom.NewVec(2.0, 3.0), 1.4142135623730951},
-		{geom.NewVec(1.0, 2.0), geom.NewVec(1.0, 2.0), 0.0},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(1.0, 1.0), 1.4142135623730951},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(2.0, 2.0), 2.8284271247461903},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(8.0, 8.0), 11.313708498984761},
-		{geom.NewVec(0.0, 0.0), geom.NewVec(9.0, 9.0), 12.727922061357855}, // Vec(9,9) stays on the boundary
-		{geom.NewVec(0.0, 0.0), geom.NewVec(8.5, 0.0), 8.5},
-	} {
-		if output := cartesian.(space2d[float64]).metric(test.arg1, test.arg2); output != test.expected {
-			t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", test.arg1, test.arg2, output, test.expected)
+func runCartesianMetricTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		cartesian := NewCartesian(T(9), T(9))
+		for _, test := range []struct {
+			arg1, arg2   [2]int
+			wantInt      int
+			wantUnsigned int
+			wantFloat    float64
+		}{
+			{arg1: [2]int{1, 2}, arg2: [2]int{2, 3}, wantInt: 2, wantUnsigned: 13, wantFloat: math.Sqrt2},
+			{arg1: [2]int{1, 2}, arg2: [2]int{1, 2}, wantInt: 0, wantUnsigned: 0, wantFloat: 0},
+			{arg1: [2]int{0, 0}, arg2: [2]int{8, 8}, wantInt: 12, wantUnsigned: 13, wantFloat: 11.313708498984761},
+			{arg1: [2]int{0, 0}, arg2: [2]int{9, 9}, wantInt: 13, wantUnsigned: 13, wantFloat: 12.727922061357855}, // Vec(9,9) stays on the boundary
+			{arg1: [2]int{0, 0}, arg2: [2]int{5, 0}, wantInt: 5, wantUnsigned: 9, wantFloat: 5},
+		} {
+			expected := chooseExpected[T](test.wantInt, test.wantUnsigned, test.wantFloat)
+			arg1 := vec[T](test.arg1[0], test.arg1[1])
+			arg2 := vec[T](test.arg2[0], test.arg2[1])
+			if output := cartesian.(space2d[T]).metric(arg1, arg2); output != expected {
+				t.Errorf("vectors: %v, %v, metric %v not equal to expected %v", arg1, arg2, output, expected)
+			}
 		}
-	}
+	})
 }
 
 func TestSpace2dNormalizeVec(t *testing.T) {
-	plane := NewTorus(5, 5)
-	vec := geom.NewVec(7, -2)
-	plane.(space2d[int]).normalizeVec(&vec)
-	expected := geom.NewVec(2, 3)
-	if vec != expected {
-		t.Errorf("expected normalized vector %v, got %v", expected, vec)
+	runSpace2dNormalizeVecTest[int](t, "int")
+	runSpace2dNormalizeVecTest[uint32](t, "uint32")
+	runSpace2dNormalizeVecTest[float64](t, "float64")
+}
+
+func runSpace2dNormalizeVecTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		plane := NewTorus(T(5), T(5))
+		v := vec[T](7, 13)
+		plane.(space2d[T]).normalizeVec(&v)
+		expected := vec[T](2, 3)
+		if v != expected {
+			t.Errorf("expected normalized vector %v, got %v", expected, v)
+		}
+	})
+}
+
+func chooseExpected[T geom.Numeric](wantInt, wantUnsigned int, wantFloat float64) T {
+	var zero T
+	switch any(zero).(type) {
+	case float64:
+		return T(wantFloat)
+	case uint32:
+		return T(wantUnsigned)
+	default:
+		return T(wantInt)
 	}
+}
+
+func vec[T geom.Numeric](x, y int) geom.Vec[T] {
+	return geom.NewVec(T(x), T(y))
 }
 
 func TestBoundedPlane_TransformBackAndForth(t *testing.T) {
