@@ -1,16 +1,16 @@
-package geometry
+package geom
 
 import "testing"
 
 func TestBox_Split(t *testing.T) {
-	parent := NewBoundingBoxAt(ZERO_INT_VEC, 10, 10)
+	parent := NewAABBAt(NewVec(0, 0), 10, 10)
 	splitted := parent.Split()
 
-	expected := [4]BoundingBox[int]{
-		NewBoundingBoxAt(ZERO_INT_VEC, 5, 5),
-		NewBoundingBoxAt(NewVec(5, 0), 5, 5),
-		NewBoundingBoxAt(NewVec(0, 5), 5, 5),
-		NewBoundingBoxAt(NewVec(5, 5), 5, 5),
+	expected := [4]AABB[int]{
+		NewAABBAt(NewVec(0, 0), 5, 5),
+		NewAABBAt(NewVec(5, 0), 5, 5),
+		NewAABBAt(NewVec(0, 5), 5, 5),
+		NewAABBAt(NewVec(5, 5), 5, 5),
 	}
 	for i := 0; i < 4; i++ {
 		if !splitted[i].Equals(expected[i]) {
@@ -21,7 +21,7 @@ func TestBox_Split(t *testing.T) {
 
 func TestBox_BoxAround(t *testing.T) {
 	center := NewVec(5, 5)
-	box := NewBoundingBoxAround(center, 2)
+	box := NewAABBAround(center, 2)
 	expectedTopLeft := NewVec(3, 3)
 	expectedBottomRight := NewVec(7, 7)
 	if box.TopLeft != expectedTopLeft {
@@ -33,50 +33,50 @@ func TestBox_BoxAround(t *testing.T) {
 }
 
 func TestBox_Intersects(t *testing.T) {
-	intersects := []struct{ box1, box2 BoundingBox[int] }{
+	intersects := []struct{ box1, box2 AABB[int] }{
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 2, Y: 2}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 4, Y: 2}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 4, Y: 2}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 2, Y: 4}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 2, Y: 4}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 4, Y: 4}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 4, Y: 4}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 2, Y: 2}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 2, Y: 2}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 2, Y: 4}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 2, Y: 4}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 2, Y: 2}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 2, Y: 2}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 2, Y: 5}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 2, Y: 5}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 5, Y: 2}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 5, Y: 2}, 2, 2),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 5, Y: 2}, 2, 2),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 5, Y: 2}, 2, 2),
 		},
 	}
 
@@ -89,18 +89,18 @@ func TestBox_Intersects(t *testing.T) {
 		}
 	}
 
-	notIntersects := []struct{ box1, box2 BoundingBox[int] }{
+	notIntersects := []struct{ box1, box2 AABB[int] }{
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 1, Y: 1}, 1, 1),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 1, Y: 1}, 1, 1),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 6, Y: 0}, 3, 9),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 6, Y: 0}, 3, 9),
 		},
 		{
-			box1: NewBoundingBoxAt(Vec[int]{X: 3, Y: 3}, 2, 2),
-			box2: NewBoundingBoxAt(Vec[int]{X: 0, Y: 6}, 9, 3),
+			box1: NewAABBAt(Vec[int]{X: 3, Y: 3}, 2, 2),
+			box2: NewAABBAt(Vec[int]{X: 0, Y: 6}, 9, 3),
 		},
 	}
 	for _, intersection := range notIntersects {
@@ -114,26 +114,26 @@ func TestBox_Intersects(t *testing.T) {
 }
 
 func TestSortBoxesBy(t *testing.T) {
-	mk := func(x1, y1, x2, y2 int) BoundingBox[int] {
-		return NewBoundingBox(NewVec(x1, y1), NewVec(x2, y2))
+	mk := func(x1, y1, x2, y2 int) AABB[int] {
+		return NewAABB(NewVec(x1, y1), NewVec(x2, y2))
 	}
 
-	byLeftX := func(box BoundingBox[int]) int { return box.TopLeft.X }
-	byLeftY := func(box BoundingBox[int]) int { return box.TopLeft.Y }
-	byWidth := func(box BoundingBox[int]) int { return box.BottomRight.X - box.TopLeft.X }
+	byLeftX := func(box AABB[int]) int { return box.TopLeft.X }
+	byLeftY := func(box AABB[int]) int { return box.TopLeft.Y }
+	byWidth := func(box AABB[int]) int { return box.BottomRight.X - box.TopLeft.X }
 
 	testCases := []struct {
 		name       string
-		a, b       BoundingBox[int]
-		keyFns     []func(BoundingBox[int]) int
-		wantFirst  BoundingBox[int]
-		wantSecond BoundingBox[int]
+		a, b       AABB[int]
+		keyFns     []func(AABB[int]) int
+		wantFirst  AABB[int]
+		wantSecond AABB[int]
 	}{
 		{
 			name:       "ordersByFirstKey",
 			a:          mk(0, 0, 2, 2),
 			b:          mk(5, 0, 7, 2),
-			keyFns:     []func(BoundingBox[int]) int{byLeftX},
+			keyFns:     []func(AABB[int]) int{byLeftX},
 			wantFirst:  mk(0, 0, 2, 2),
 			wantSecond: mk(5, 0, 7, 2),
 		},
@@ -141,7 +141,7 @@ func TestSortBoxesBy(t *testing.T) {
 			name:       "reversesWhenFirstGreater",
 			a:          mk(10, 0, 12, 2),
 			b:          mk(3, 0, 5, 2),
-			keyFns:     []func(BoundingBox[int]) int{byLeftX},
+			keyFns:     []func(AABB[int]) int{byLeftX},
 			wantFirst:  mk(3, 0, 5, 2),
 			wantSecond: mk(10, 0, 12, 2),
 		},
@@ -149,7 +149,7 @@ func TestSortBoxesBy(t *testing.T) {
 			name: "fallsBackToNextKey",
 			a:    mk(1, 5, 3, 7),
 			b:    mk(1, 2, 3, 4),
-			keyFns: []func(BoundingBox[int]) int{
+			keyFns: []func(AABB[int]) int{
 				byLeftX,
 				byLeftY,
 			},
@@ -160,7 +160,7 @@ func TestSortBoxesBy(t *testing.T) {
 			name: "keepsOriginalWhenAllKeysEqual",
 			a:    mk(0, 0, 2, 2),
 			b:    mk(0, 0, 2, 2),
-			keyFns: []func(BoundingBox[int]) int{
+			keyFns: []func(AABB[int]) int{
 				byLeftX,
 				byWidth,
 			},

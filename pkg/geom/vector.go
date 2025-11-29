@@ -1,26 +1,26 @@
 // Package geometry provides a set of operations for 2D graphics
-package geometry
+package geom
 
 import (
 	"fmt"
 )
 
 type (
-	SupportedNumeric interface{ int | float64 }
+	SignedInt   interface{ ~int | ~int64 }
+	UnsignedInt interface{ ~uint32 }
+	Floating    interface{ ~float32 | ~float64 }
+	Numeric     interface {
+		SignedInt | UnsignedInt | Floating
+	}
 
 	// Vec is a generic 2D vector with components X and Y.
 	//
 	// Type Parameters:
 	//   - T: A numeric type that satisfies the Number constraint.
-	Vec[T SupportedNumeric] struct{ X, Y T }
+	Vec[T Numeric] struct{ X, Y T }
 )
 
-var (
-	ZERO_INT_VEC   = Vec[int]{0, 0}
-	ZERO_FLOAT_VEC = Vec[float64]{0, 0}
-)
-
-func NewVec[T SupportedNumeric](X, Y T) Vec[T] {
+func NewVec[T Numeric](X, Y T) Vec[T] {
 	return Vec[T]{X, Y}
 }
 
