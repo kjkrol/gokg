@@ -85,8 +85,8 @@ func (b AABB[T]) Intersects(other AABB[T]) bool {
 }
 
 func (b AABB[T]) axisIntersection(other AABB[T], axisValue func(Vec[T]) T) bool {
-	eps := VectorMathByType[T]().OverlapEpsilon()
-	return b.AxisDistanceTo(other, axisValue) <= eps
+	d := b.AxisDistanceTo(other, axisValue)
+	return float64(d) <= eps
 }
 
 // AxisDistanceTo returns the gap between ab and other on the axis selected by axisValue.

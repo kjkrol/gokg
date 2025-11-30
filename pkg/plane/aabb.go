@@ -2,7 +2,7 @@ package plane
 
 import "github.com/kjkrol/gokg/pkg/geom"
 
-// FragPosition identifies a fragment's position relative to its parent PlaneBox (bounding-box).
+// FragPosition identifies a fragment's position relative to its parent AABB (align axis bounding-box).
 // Names follow logical cardinal directions of the parent; depending on screen
 // coordinates they may appear flipped (e.g. right on Cartesian may render left in screen space).
 type FragPosition int
@@ -16,15 +16,15 @@ const (
 	FRAG_BOTTOM_RIGHT
 )
 
-// AABB extends geom.AABB with cached width, height, and boundary fragments used by Plane normalisation.
-// It is the Plane-aware view of a AABB: Plane keeps AABB instances canonical within its domain.
+// AABB extends geom.AABB with cached width, height, and boundary fragments used by Space normalisation.
+// It is the Space-aware view of a AABB: Space keeps AABB instances canonical within its domain.
 type AABB[T geom.Numeric] struct {
 	geom.AABB[T]
 	size  geom.Vec[T]
 	frags map[FragPosition]geom.AABB[T]
 }
 
-// newAABB builds a PlaneBox at pos with the given size, priming fragment storage for Plane operations.
+// newAABB builds a AABB at pos with the given size, priming fragment storage for Space operations.
 func newAABB[T geom.Numeric](pos geom.Vec[T], width, height T) AABB[T] {
 	return AABB[T]{
 		AABB: geom.AABB[T]{

@@ -5,21 +5,6 @@ import (
 	"fmt"
 )
 
-type (
-	SignedInt   interface{ ~int | ~int64 }
-	UnsignedInt interface{ ~uint32 }
-	Floating    interface{ ~float32 | ~float64 }
-	Numeric     interface {
-		SignedInt | UnsignedInt | Floating
-	}
-
-	// Vec is a generic 2D vector with components X and Y.
-	//
-	// Type Parameters:
-	//   - T: A numeric type that satisfies the Number constraint.
-	Vec[T Numeric] struct{ X, Y T }
-)
-
 func NewVec[T Numeric](X, Y T) Vec[T] {
 	return Vec[T]{X, Y}
 }

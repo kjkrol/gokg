@@ -54,7 +54,7 @@ func runTorusMetricTest[T geom.Numeric](t *testing.T, name string) {
 		}{
 			{arg1: [2]int{1, 2}, arg2: [2]int{2, 3}, wantInt: 2, wantUnsigned: 2, wantFloat: math.Sqrt2},
 			{arg1: [2]int{1, 2}, arg2: [2]int{1, 2}, wantInt: 0, wantUnsigned: 0, wantFloat: 0},
-			{arg1: [2]int{0, 0}, arg2: [2]int{8, 8}, wantInt: 2, wantUnsigned: 8, wantFloat: math.Sqrt2},
+			{arg1: [2]int{0, 0}, arg2: [2]int{8, 8}, wantInt: 2, wantUnsigned: 2, wantFloat: math.Sqrt2},
 			{arg1: [2]int{0, 0}, arg2: [2]int{9, 9}, wantInt: 0, wantUnsigned: 0, wantFloat: 0}, // vec(9,9) has been wrapped to vec(0,0)
 		} {
 			expected := chooseExpected[T](test.wantInt, test.wantUnsigned, test.wantFloat)
@@ -112,11 +112,11 @@ func runCartesianMetricTest[T geom.Numeric](t *testing.T, name string) {
 			wantUnsigned int
 			wantFloat    float64
 		}{
-			{arg1: [2]int{1, 2}, arg2: [2]int{2, 3}, wantInt: 2, wantUnsigned: 13, wantFloat: math.Sqrt2},
+			{arg1: [2]int{1, 2}, arg2: [2]int{2, 3}, wantInt: 2, wantUnsigned: 2, wantFloat: math.Sqrt2},
 			{arg1: [2]int{1, 2}, arg2: [2]int{1, 2}, wantInt: 0, wantUnsigned: 0, wantFloat: 0},
-			{arg1: [2]int{0, 0}, arg2: [2]int{8, 8}, wantInt: 12, wantUnsigned: 13, wantFloat: 11.313708498984761},
+			{arg1: [2]int{0, 0}, arg2: [2]int{8, 8}, wantInt: 12, wantUnsigned: 12, wantFloat: 11.313708498984761},
 			{arg1: [2]int{0, 0}, arg2: [2]int{9, 9}, wantInt: 13, wantUnsigned: 13, wantFloat: 12.727922061357855}, // Vec(9,9) stays on the boundary
-			{arg1: [2]int{0, 0}, arg2: [2]int{5, 0}, wantInt: 5, wantUnsigned: 9, wantFloat: 5},
+			{arg1: [2]int{0, 0}, arg2: [2]int{5, 0}, wantInt: 5, wantUnsigned: 5, wantFloat: 5},
 		} {
 			expected := chooseExpected[T](test.wantInt, test.wantUnsigned, test.wantFloat)
 			arg1 := vec[T](test.arg1[0], test.arg1[1])
@@ -169,17 +169,17 @@ func TestBoundedPlane_TransformBackAndForth(t *testing.T) {
 
 	shift := geom.NewVec(2, 2)
 	plane.Translate(&planeBox, shift)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(2, 2), geom.NewVec(4, 4), map[FragPosition][2]geom.Vec[int]{})
+	expectAABBState(t, planeBox, geom.NewVec(2, 2), geom.NewVec(4, 4), map[FragPosition][2]geom.Vec[int]{})
 
 	plane.Expand(&planeBox, 2)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(0, 0), geom.NewVec(6, 6), map[FragPosition][2]geom.Vec[int]{})
+	expectAABBState(t, planeBox, geom.NewVec(0, 0), geom.NewVec(6, 6), map[FragPosition][2]geom.Vec[int]{})
 
 	plane.Expand(&planeBox, -2)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(2, 2), geom.NewVec(4, 4), map[FragPosition][2]geom.Vec[int]{})
+	expectAABBState(t, planeBox, geom.NewVec(2, 2), geom.NewVec(4, 4), map[FragPosition][2]geom.Vec[int]{})
 
 	shift.Invert()
 	plane.Translate(&planeBox, shift)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(0, 0), geom.NewVec(2, 2), map[FragPosition][2]geom.Vec[int]{})
+	expectAABBState(t, planeBox, geom.NewVec(0, 0), geom.NewVec(2, 2), map[FragPosition][2]geom.Vec[int]{})
 }
 
 func TestCyclicPlane_TransformBackAndForth(t *testing.T) {
@@ -189,21 +189,21 @@ func TestCyclicPlane_TransformBackAndForth(t *testing.T) {
 
 	shift := geom.NewVec(-1, -1)
 	plane.Translate(&planeBox, shift)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(9, 9), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
+	expectAABBState(t, planeBox, geom.NewVec(9, 9), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
 		FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
 		FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
 		FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
 	})
 
 	plane.Expand(&planeBox, 2)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(7, 7), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
+	expectAABBState(t, planeBox, geom.NewVec(7, 7), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
 		FRAG_RIGHT:        {geom.NewVec(0, 7), geom.NewVec(3, 10)},
 		FRAG_BOTTOM:       {geom.NewVec(7, 0), geom.NewVec(10, 3)},
 		FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(3, 3)},
 	})
 
 	plane.Expand(&planeBox, -2)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(9, 9), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
+	expectAABBState(t, planeBox, geom.NewVec(9, 9), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
 		FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
 		FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
 		FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
@@ -211,5 +211,5 @@ func TestCyclicPlane_TransformBackAndForth(t *testing.T) {
 
 	shift.Invert()
 	plane.Translate(&planeBox, shift)
-	expectPlaneBoxState(t, planeBox, geom.NewVec(0, 0), geom.NewVec(2, 2), map[FragPosition][2]geom.Vec[int]{})
+	expectAABBState(t, planeBox, geom.NewVec(0, 0), geom.NewVec(2, 2), map[FragPosition][2]geom.Vec[int]{})
 }

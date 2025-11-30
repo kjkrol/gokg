@@ -5,9 +5,9 @@ import (
 )
 
 func TestVectorMath_Length(t *testing.T) {
-	runLengthTest(t, "int", INT_VEC_MATH)
-	runLengthTest(t, "uint32", UINT32_VEC_MATH)
-	runLengthTest(t, "float64", FLOAT_64_VEC_MATH)
+	runLengthTest(t, "int", SignedIntVectorMath[int]{})
+	runLengthTest(t, "uint32", UnsignedIntVectorMath[uint32]{})
+	runLengthTest(t, "float64", FloatVectorMath[float64]{})
 }
 
 func runLengthTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
@@ -22,46 +22,66 @@ func runLengthTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
 }
 
 func TestVectorMath_Clamp(t *testing.T) {
-	runClampTest(t, "int", INT_VEC_MATH)
-	runClampTest(t, "uint32", UINT32_VEC_MATH)
-	runClampTest(t, "float64", FLOAT_64_VEC_MATH)
+	runClampTest(t, "int", SignedIntVectorMath[int]{})
+	runClampTest(t, "uint32", UnsignedIntVectorMath[uint32]{})
+	runClampTest(t, "float64", FloatVectorMath[float64]{})
 }
 
 func runClampTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
 	t.Run(name, func(t *testing.T) {
-		v := NewVec(T(5), T(7))
 		bounds := NewVec(T(4), T(6))
-		expected := NewVec(T(4), T(6))
+		negX := int32(-3)
+		negY := int32(-1)
+		negStart := NewVec(T(negX), T(negY))
+		cases := []struct {
+			start    Vec[T]
+			expected Vec[T]
+		}{
+			{NewVec(T(5), T(7)), NewVec(T(4), T(6))},
+			{negStart, NewVec(T(0), T(0))}, // ujemne wartości muszą zostać przycięte do 0 także dla uint32
+		}
 
-		math.Clamp(&v, bounds)
-		if v != expected {
-			t.Errorf("expected %v, got %v", expected, v)
+		for _, c := range cases {
+			vec := NewVec(c.start.X, c.start.Y)
+			math.Clamp(&vec, bounds)
+			if vec != c.expected {
+				t.Errorf("expected %v, got %v", c.expected, vec)
+			}
 		}
 	})
 }
 
 func TestVectorMath_Wrap(t *testing.T) {
-	runWrapTest(t, "int", INT_VEC_MATH)
-	runWrapTest(t, "uint32", UINT32_VEC_MATH)
-	runWrapTest(t, "float64", FLOAT_64_VEC_MATH)
+	runWrapTest(t, "int", SignedIntVectorMath[int]{})
+	runWrapTest(t, "uint32", UnsignedIntVectorMath[uint32]{})
+	runWrapTest(t, "float64", FloatVectorMath[float64]{})
 }
 
 func runWrapTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
 	t.Run(name, func(t *testing.T) {
 		v := NewVec(T(5), T(7))
 		bounds := NewVec(T(4), T(4))
+		negX := int32(-3)
+		negY := int32(-1)
+		negStart := NewVec(T(negX), T(negY))
 		cases := []struct {
 			offset   Vec[T]
 			expected Vec[T]
+			start    Vec[T]
 		}{
-			{NewVec(T(4), T(6)), NewVec(T(1), T(1))},
-			{NewVec(bounds.X, 0), NewVec(T(1), T(7))},
-			{NewVec(0, bounds.Y), NewVec(T(5), T(3))},
-			{NewVec(bounds.X, bounds.Y), NewVec(T(1), T(3))},
+			{NewVec(T(4), T(6)), NewVec(T(1), T(1)), Vec[T]{}},
+			{NewVec(bounds.X, 0), NewVec(T(1), T(7)), Vec[T]{}},
+			{NewVec(0, bounds.Y), NewVec(T(5), T(3)), Vec[T]{}},
+			{NewVec(bounds.X, bounds.Y), NewVec(T(1), T(3)), Vec[T]{}},
+			// ujemne wejście powinno się prawidłowo zawinąć dla wszystkich typów
+			{bounds, NewVec(T(1), T(3)), negStart},
 		}
 
 		for _, c := range cases {
 			vec := NewVec(v.X, v.Y)
+			if c.start != (Vec[T]{}) {
+				vec = c.start
+			}
 			math.Wrap(&vec, c.offset)
 			if vec != c.expected {
 				t.Errorf("expected %v, got %v", c.expected, vec)
