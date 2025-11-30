@@ -6,41 +6,73 @@ import (
 	"github.com/kjkrol/gokg/pkg/geom"
 )
 
-func TestCartesian_Expand(t *testing.T) {
-	cartesian := NewCartesian(10, 10)
-	aabb := newAABB(geom.NewVec(2, 3), 3, 4)
-	cartesian.Expand(&aabb, 2)
-	expectAABBState(t, aabb, geom.NewVec(0, 1), geom.NewVec(7, 9), map[FragPosition][2]geom.Vec[int]{})
+func TestCartesianExpand(t *testing.T) {
+	runCartesianExpandTest[int](t, "int")
+	runCartesianExpandTest[uint32](t, "uint32")
+	runCartesianExpandTest[float64](t, "float64")
 }
 
-func TestCartesian_Expand_CornerCase(t *testing.T) {
-	cartesian := NewCartesian(10, 10)
-	aabb := newAABB(geom.NewVec(0, 0), 2, 2)
-	cartesian.Expand(&aabb, 2)
-	expectAABBState(t, aabb, geom.NewVec(0, 0), geom.NewVec(4, 4), map[FragPosition][2]geom.Vec[int]{})
-}
-
-func TestTorus_Expand_CornerCase(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(0, 0), 2, 2)
-	torus.Expand(&aabb, 2)
-	expectAABBState(t, aabb, geom.NewVec(8, 8), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT:        {geom.NewVec(0, 8), geom.NewVec(4, 10)},
-		FRAG_BOTTOM:       {geom.NewVec(8, 0), geom.NewVec(10, 4)},
-		FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(4, 4)},
+func runCartesianExpandTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		cartesian := NewCartesian(T(10), T(10))
+		aabb := newAABB(vec[T](2, 3), T(3), T(4))
+		cartesian.Expand(&aabb, T(2))
+		expectAABBState(t, aabb, vec[T](0, 1), vec[T](7, 9), map[FragPosition][2]geom.Vec[T]{})
 	})
 }
 
-func TestTorus_Exapnad_ThenIntersects(t *testing.T) {
-	torus := NewTorus(100, 100)
+func TestCartesianExpandCornerCase(t *testing.T) {
+	runCartesianExpandCornerCase[int](t, "int")
+	runCartesianExpandCornerCase[uint32](t, "uint32")
+	runCartesianExpandCornerCase[float64](t, "float64")
+}
 
-	aabb1 := newAABB(geom.NewVec(5, 5), 10, 10)
-	aabb2 := newAABB(geom.NewVec(96, 96), 10, 10)
+func runCartesianExpandCornerCase[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		cartesian := NewCartesian(T(10), T(10))
+		aabb := newAABB(vec[T](0, 0), T(2), T(2))
+		cartesian.Expand(&aabb, T(2))
+		expectAABBState(t, aabb, vec[T](0, 0), vec[T](4, 4), map[FragPosition][2]geom.Vec[T]{})
+	})
+}
 
-	torus.Expand(&aabb2, 0)
+func TestTorusExpandCornerCase(t *testing.T) {
+	runTorusExpandCornerCase[int](t, "int")
+	runTorusExpandCornerCase[uint32](t, "uint32")
+	runTorusExpandCornerCase[float64](t, "float64")
+}
 
-	if !aabb1.Intersects(aabb2) {
-		t.Errorf("rect1 %v should intersect with rect2 %v", aabb1, aabb2)
-	}
+func runTorusExpandCornerCase[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		torus := NewTorus(T(10), T(10))
+		aabb := newAABB(vec[T](0, 0), T(2), T(2))
+		torus.Expand(&aabb, T(2))
+		expectAABBState(t, aabb, vec[T](8, 8), vec[T](10, 10), fragmentsForType(convertFragments[T](map[FragPosition][2]geom.Vec[int]{
+			FRAG_RIGHT:        {geom.NewVec(0, 8), geom.NewVec(4, 10)},
+			FRAG_BOTTOM:       {geom.NewVec(8, 0), geom.NewVec(10, 4)},
+			FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(4, 4)},
+		})))
+	})
+}
 
+func TestTorusExpandThenIntersects(t *testing.T) {
+	runTorusExpandThenIntersects[int](t, "int")
+	runTorusExpandThenIntersects[uint32](t, "uint32")
+	runTorusExpandThenIntersects[float64](t, "float64")
+}
+
+func runTorusExpandThenIntersects[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		torus := NewTorus(T(100), T(100))
+
+		aabb1 := newAABB(vec[T](5, 5), T(10), T(10))
+		aabb2 := newAABB(vec[T](96, 96), T(10), T(10))
+
+		torus.Expand(&aabb2, T(0))
+
+		expectedIntersection := supportsNegatives[T]()
+		if intersects := aabb1.Intersects(aabb2); intersects != expectedIntersection {
+			t.Errorf("unexpected intersection result. got %t, want %t for boxes %v and %v", intersects, expectedIntersection, aabb1, aabb2)
+		}
+	})
 }
