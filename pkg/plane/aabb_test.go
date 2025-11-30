@@ -7,48 +7,97 @@ import (
 )
 
 func TestAABB_NewAABB(t *testing.T) {
-	aabb := newAABB(geom.NewVec(0, 0), 10, 10)
-	expected := geom.NewVec(10, 10)
-	if aabb.BottomRight != expected {
-		t.Errorf("center %v not equal to expected %v", aabb.BottomRight, expected)
-	}
+	runAABBNewTest[int](t, "int")
+	runAABBNewTest[uint32](t, "uint32")
+	runAABBNewTest[float64](t, "float64")
 }
 
-func TestAABB_IntersectsIncludingFrags_ReturnsTrue(t *testing.T) {
-	aabb1 := newAABB(geom.NewVec(0, 0), 2, 2)
-	aabb2 := newAABB(geom.NewVec(4, 4), 1, 1)
-	aabb2.frags[FRAG_RIGHT] = geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(1, 5))
-	aabb2.frags[FRAG_BOTTOM] = geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(5, 1))
-	aabb2.frags[FRAG_BOTTOM_RIGHT] = geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(1, 1))
-
-	if !aabb1.Intersects(aabb2) {
-		t.Errorf("expected IntersectsAny to return true, but got false")
-	}
+func runAABBNewTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		aabb := newAABB[T](vec[T](0, 0), T(10), T(10))
+		expected := vec[T](10, 10)
+		if aabb.BottomRight != expected {
+			t.Errorf("center %v not equal to expected %v", aabb.BottomRight, expected)
+		}
+	})
 }
 
-func TestAABB_IntersectsIncludingFrags_ReturnsFalse(t *testing.T) {
-	aabb1 := newAABB(geom.NewVec(0, 0), 2, 2)
-	aabb2 := newAABB(geom.NewVec(4, 4), 2, 2)
-	aabb2.frags[FRAG_RIGHT] = geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(1, 6))
+func TestAABB_IntersectsIncludingFrags(t *testing.T) {
+	runAABBIntersectsIncludingFragsTest[int](t, "int")
+	runAABBIntersectsIncludingFragsTest[uint32](t, "uint32")
+	runAABBIntersectsIncludingFragsTest[float64](t, "float64")
+}
 
-	if aabb1.Intersects(aabb2) {
-		t.Errorf("expected IntersectsAny to return false, but got true")
-	}
+func runAABBIntersectsIncludingFragsTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		testCases := []struct {
+			name  string
+			aabb1 AABB[T]
+			aabb2 AABB[T]
+			frags map[FragPosition]geom.AABB[T]
+			want  bool
+		}{
+			{
+				name:  "returnsTrueWhenAnyFragmentsIntersect",
+				aabb1: newAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
+				aabb2: newAABB(geom.NewVec(T(4), T(4)), T(1), T(1)),
+				frags: map[FragPosition]geom.AABB[T]{
+					FRAG_RIGHT:        geom.NewAABB(geom.NewVec(T(0), T(4)), geom.NewVec(T(1), T(5))),
+					FRAG_BOTTOM:       geom.NewAABB(geom.NewVec(T(4), T(0)), geom.NewVec(T(5), T(1))),
+					FRAG_BOTTOM_RIGHT: geom.NewAABB(geom.NewVec(T(0), T(0)), geom.NewVec(T(1), T(1))),
+				},
+				want: true,
+			},
+			{
+				name:  "returnsFalseWhenNoFragmentsIntersect",
+				aabb1: newAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
+				aabb2: newAABB(geom.NewVec(T(4), T(4)), T(2), T(2)),
+				frags: map[FragPosition]geom.AABB[T]{
+					FRAG_RIGHT: geom.NewAABB(geom.NewVec(T(0), T(4)), geom.NewVec(T(1), T(6))),
+				},
+				want: false,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				for pos, coords := range tc.frags {
+					tc.aabb2.frags[pos] = coords
+				}
+
+				if got := tc.aabb1.Intersects(tc.aabb2); got != tc.want {
+					t.Errorf("expected Intersects to return %v, but got %v", tc.want, got)
+				}
+			})
+		}
+	})
 }
 
 func TestAABB_Contains(t *testing.T) {
-	outer := newAABB(geom.NewVec(0, 0), 10, 10)
-	inner := newAABB(geom.NewVec(2, 2), 6, 6)
-	onlyTopLeftInside := newAABB(geom.NewVec(-1, -1), 4, 4)
-	onlyBottomRightInside := newAABB(geom.NewVec(5, 5), 7, 7)
+	runAABBContainsTest[int](t, "int")
+	runAABBContainsTest[uint32](t, "uint32")
+	runAABBContainsTest[float64](t, "float64")
+}
 
-	if !outer.Contains(inner) {
-		t.Errorf("expected outer to contain inner")
-	}
-	if outer.Contains(onlyTopLeftInside) {
-		t.Errorf("expected outer not to contain rectangle with outside top-left")
-	}
-	if outer.Contains(onlyBottomRightInside) {
-		t.Errorf("expected outer not to contain rectangle with outside bottom-right")
-	}
+func runAABBContainsTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		outer := newAABB(geom.NewVec(T(0), T(0)), T(10), T(10))
+		testCases := []struct {
+			name   string
+			target AABB[T]
+			want   bool
+		}{
+			{name: "containsInner", target: newAABB(geom.NewVec(T(2), T(2)), T(6), T(6)), want: true},
+			{name: "rejectsBoxStartingOutside", target: newAABB(geom.NewVec(T(11), T(11)), T(1), T(1)), want: false},
+			{name: "rejectsBoxExtendingBeyondBounds", target: newAABB(geom.NewVec(T(5), T(5)), T(7), T(7)), want: false},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if got := outer.Contains(tc.target); got != tc.want {
+					t.Errorf("expected Contains to return %v, got %v", tc.want, got)
+				}
+			})
+		}
+	})
 }
