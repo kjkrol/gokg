@@ -19,7 +19,7 @@ func runCartesianNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 		for _, tc := range cartesianNormalizeScenarios[T]() {
 			t.Run(tc.name, func(t *testing.T) {
 				aabb := newAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
-				cartesian.(space2d[T]).normalizeBox(&aabb)
+				cartesian.(space2d[T]).normalizeAABB(&aabb)
 				expectAABBState(t, aabb,
 					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
 					vec[T](tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
@@ -138,7 +138,7 @@ func runTorusNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 		for _, tc := range torusNormalizeScenarios[T]() {
 			t.Run(tc.name, func(t *testing.T) {
 				aabb := newAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
-				torus.(space2d[T]).normalizeBox(&aabb)
+				torus.(space2d[T]).normalizeAABB(&aabb)
 				expectAABBState(t, aabb,
 					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
 					vec[T](tc.expectedBottomRight.X, tc.expectedBottomRight.Y),

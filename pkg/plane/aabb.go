@@ -2,7 +2,7 @@ package plane
 
 import "github.com/kjkrol/gokg/pkg/geom"
 
-// FragPosition identifies a fragment's position relative to its parent AABB (align axis bounding-box).
+// FragPosition identifies a fragment's position relative to its parent AABB (axis-aligned bounding box).
 // Names follow logical cardinal directions of the parent; depending on screen
 // coordinates they may appear flipped (e.g. right on Cartesian may render left in screen space).
 type FragPosition int
@@ -38,7 +38,7 @@ func newAABB[T geom.Numeric](pos geom.Vec[T], width, height T) AABB[T] {
 
 // --------------------------------------------------------------------------
 
-// String formats the box using its top-left and bottom-right corners.
+// String formats the aabb using its top-left and bottom-right corners.
 func (ab AABB[T]) String() string {
 	return ab.AABB.String()
 }

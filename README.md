@@ -3,32 +3,23 @@
 *aka "Golang kjkrol Geometry"*
 
 **GOKG** is a Go toolkit focused on practical 2D computational geometry.  
-It centres on two core primitives — `Vec` for points/directions and axis-aligned bounding boxes (`BoundingBox`) — plus a plane-aware wrapper (`PlaneBox`) that keeps those boxes canonical to a selected plane. `PlaneBox` stores size, fragments, and helper logic so translations, wraps, and clamps obey the plane’s rules without forcing the caller to reimplement them.  
-The library also models both finite and cyclic/“infinite” planes, providing operations that classify, intersect, and reconcile geometric entities under each boundary model.  
-The focus remains purely on mathematical geometry; rendering or UI concerns live in neighbouring packages.
+It splits into two packages: `geom` supplies numeric vectors (`Vec`), axis-aligned bounding boxes (`AABB`), and vector math; `plane` wraps those primitives in boundary-aware `Space` implementations (cartesian and torus) that keep boxes canonical to a surface. `plane.AABB` caches size and fragments so translations, wraps, and clamps obey the space’s rules without duplicating bookkeeping.  
+The library stays focused on mathematical geometry; rendering or UI concerns live in neighbouring packages.
 
-## PlaneBox boundary handling
+## Space boundary handling
 
-- Finite planes clamp plane boxes to the viewport while keeping their size consistent, so
-  expansions never bleed beyond the defined world.
-- Cyclic planes automatically wrap plane boxes that cross an edge and split them into
-  fragments (`Fragments()`) that continue on the opposite side, making toroidal
-  worlds easy to model. Conceptually, glue the top edge of the plane to the bottom
-  edge, then the left edge to the right; this seam-stitching turns the rectangle into
-  the torus shown in the animation below.
+- Cartesian spaces clamp boxes to the viewport while keeping their size consistent, so expansions never bleed beyond the defined world.
+- Torus spaces automatically wrap boxes that cross an edge and split them into fragments that continue on the opposite side, making toroidal worlds easy to model. Conceptually, glue the top edge of the plane to the bottom edge, then the left edge to the right; this seam-stitching turns the rectangle into the torus shown in the animation below.
 
   ![Torus](doc/Torus_from_rectangle.gif)
 
-
-- The helper methods `Translate` and `Expand` renormalise plane boxes on every call,
-  updating cached fragments and ensuring touch/collision queries remain accurate
-  without extra bookkeeping.
+- The helper methods `Translate` and `Expand` renormalise boxes on every call, updating cached fragments and ensuring touch/collision queries remain accurate without extra bookkeeping.
 
 ## Usage example
 
-This snippet shifts a contiguous `PlaneBox` by `(-1,-1)` across a 10×10 cyclic plane, so the box wraps past the right and bottom edges and automatically splits into the fragments returned by `Fragments()`. The exact situation is illustrated by the plot below.
+This snippet shifts a contiguous `plane.AABB` by `(-1,-1)` across a 10×10 torus `Space`, so the box wraps past the right and bottom edges and automatically splits into the fragments returned by `Fragments()`. The exact situation is illustrated by the plot below.
 
-![PlaneBox wrap fragments](doc/example_plot.svg)
+![Wrapped AABB fragments](doc/example_plot.svg)
 
 ```go
 package main
@@ -36,34 +27,36 @@ package main
 import (
 	"fmt"
 
-	"github.com/kjkrol/gokg/pkg/geometry"
+	"github.com/kjkrol/gokg/pkg/geom"
+	"github.com/kjkrol/gokg/pkg/plane"
 )
 
-// Demonstrates how shifting a contiguous box beyond the cyclic plane boundary
+// Demonstrates how shifting a contiguous aabb beyond the torus plane boundary
 // causes it to fragment into multiple wrapped pieces and prints those fragments.
 func main() {
-	cyclicPlane := geometry.NewCyclicBoundedPlane(10, 10)
-    box := geometry.NewBoundingBoxAt(geometry.NewVec(0, 0), 2, 2)
-	planeBox := cyclicPlane.WrapBoundingBox(box)
+	torus := plane.NewTorus(10, 10)
 
-	shift := geometry.NewVec(-1, -1)
-	cyclicPlane.Translate(&planeBox, shift)
+	box := geom.NewAABBAt(geom.NewVec(0, 0), 2, 2)
+	aabb := torus.WrapAABB(box)
 
-	fragments := planeBox.Fragments()
+	shift := geom.NewVec(-1, -1)
+	torus.Translate(&aabb, shift)
+
+	fragments := aabb.Fragments()
 	if len(fragments) < 3 {
 		fmt.Printf("Unexpected fragment count (%d)\n", len(fragments))
 		return
 	}
 
-	fmt.Printf("New position: %s\n", planeBox)
-	if fragment, ok := fragments[geometry.FRAG_RIGHT]; ok {
-		fmt.Printf("- Fragment %d: %s\n", geometry.FRAG_RIGHT, fragment)
+	fmt.Printf("New position: %s\n", aabb)
+	if fragment, ok := fragments[plane.FRAG_RIGHT]; ok {
+		fmt.Printf("- Fragment %d: %s\n", plane.FRAG_RIGHT, fragment)
 	}
-	if fragment, ok := fragments[geometry.FRAG_BOTTOM]; ok {
-		fmt.Printf("- Fragment %d: %s\n", geometry.FRAG_BOTTOM, fragment)
+	if fragment, ok := fragments[plane.FRAG_BOTTOM]; ok {
+		fmt.Printf("- Fragment %d: %s\n", plane.FRAG_BOTTOM, fragment)
 	}
-	if fragment, ok := fragments[geometry.FRAG_BOTTOM_RIGHT]; ok {
-		fmt.Printf("- Fragment %d: %s\n", geometry.FRAG_BOTTOM_RIGHT, fragment)
+	if fragment, ok := fragments[plane.FRAG_BOTTOM_RIGHT]; ok {
+		fmt.Printf("- Fragment %d: %s\n", plane.FRAG_BOTTOM_RIGHT, fragment)
 	}
 	// Output:
 	// New position: {(9,9) (10,10)}
@@ -73,12 +66,12 @@ func main() {
 }
 ```
 
-For more scenarios, browse the example-based tests under `pkg/geometry`, which double as runnable documentation.
+For more scenarios, browse the example-based tests under `pkg/plane` and `pkg/geom`, which double as runnable documentation.
 
 ## Projects using GOKG
 
-- [`gokq`](https://github.com/kjkrol/gokq) — **GOKQ** is a quadtree utility library that relies on `Vec`, `BoundingBox`, and `PlaneBox` operations.
+- [`gokq`](https://github.com/kjkrol/gokq) — **GOKQ** is a quadtree utility library that relies on `geom.Vec`, `geom.AABB`, and `plane.AABB` operations.
 - [`gokx`](https://github.com/kjkrol/gokx) — **GOKX** is a Go library that provides a lightweight experimental framework for 2D graphics applications.
 
 ----
-*[Contributor Recommendations](docs/Contributor_Recommendations.md)
+*[Contributor Recommendations](doc/Contributor_Recommendations.md)

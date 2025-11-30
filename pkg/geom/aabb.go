@@ -8,7 +8,7 @@ type AABB[T Numeric] struct {
 	BottomRight Vec[T]
 }
 
-// NewAABB constructs a AABB from explicit corner vectors.
+// NewAABB constructs a axis-aligned bounding box from explicit corner vectors.
 func NewAABB[T Numeric](topLeft, bottomRight Vec[T]) AABB[T] {
 	return AABB[T]{
 		TopLeft:     topLeft,
@@ -29,13 +29,13 @@ func NewAABBAround[T Numeric](center Vec[T], d T) AABB[T] {
 }
 
 // Equals reports whether ab and other share the same corners.
-func (b AABB[T]) Equals(other AABB[T]) bool {
-	return b.TopLeft == other.TopLeft && b.BottomRight == other.BottomRight
+func (ab AABB[T]) Equals(other AABB[T]) bool {
+	return ab.TopLeft == other.TopLeft && ab.BottomRight == other.BottomRight
 }
 
 // String formats the box using its top-left and bottom-right corners.
-func (b AABB[T]) String() string {
-	return fmt.Sprintf("{%v %v}", b.TopLeft, b.BottomRight)
+func (ab AABB[T]) String() string {
+	return fmt.Sprintf("{%v %v}", ab.TopLeft, ab.BottomRight)
 }
 
 // Split divides the box into four equal quadrants around its center.
@@ -51,62 +51,62 @@ func (ab *AABB[T]) Split() [4]AABB[T] {
 	}
 }
 
-func (b AABB[T]) center() Vec[T] {
-	centerX := (b.TopLeft.X + b.BottomRight.X) / 2
-	centerY := (b.TopLeft.Y + b.BottomRight.Y) / 2
+func (ab AABB[T]) center() Vec[T] {
+	centerX := (ab.TopLeft.X + ab.BottomRight.X) / 2
+	centerY := (ab.TopLeft.Y + ab.BottomRight.Y) / 2
 	return Vec[T]{X: centerX, Y: centerY}
 }
 
-// Contains reports whether other lies entirely within bounding-box.
-func (b AABB[T]) Contains(other AABB[T]) bool {
-	return b.TopLeft.X <= other.TopLeft.X &&
-		b.TopLeft.Y <= other.TopLeft.Y &&
-		b.BottomRight.X >= other.BottomRight.X &&
-		b.BottomRight.Y >= other.BottomRight.Y
+// Contains reports whether other lies entirely within axis-aligned bounding box.
+func (ab AABB[T]) Contains(other AABB[T]) bool {
+	return ab.TopLeft.X <= other.TopLeft.X &&
+		ab.TopLeft.Y <= other.TopLeft.Y &&
+		ab.BottomRight.X >= other.BottomRight.X &&
+		ab.BottomRight.Y >= other.BottomRight.Y
 }
 
-func (b AABB[T]) ContainsVec(vec Vec[T]) bool {
-	return vec.X < b.BottomRight.X && vec.X > b.TopLeft.X &&
-		vec.Y < b.TopLeft.Y && vec.Y > b.BottomRight.Y
+func (ab AABB[T]) ContainsVec(vec Vec[T]) bool {
+	return vec.X < ab.BottomRight.X && vec.X > ab.TopLeft.X &&
+		vec.Y < ab.TopLeft.Y && vec.Y > ab.BottomRight.Y
 }
 
-// Intersects reports whether this AABB overlaps another bounding box.
-// It returns true both when the boxes share any interior volume
+// Intersects reports whether this AABB overlaps another axis-aligned bounding box.
+// It returns true both when the AABBs share any interior volume
 // and when they only touch along edges or vertices.
-func (b AABB[T]) Intersects(other AABB[T]) bool {
+func (ab AABB[T]) Intersects(other AABB[T]) bool {
 	// x axis check
-	xIntersects := b.axisIntersection(other, func(v Vec[T]) T { return v.X })
+	xIntersects := ab.axisIntersection(other, func(v Vec[T]) T { return v.X })
 	if !xIntersects {
 		return false
 	}
 	// y axis check
-	yIntersects := b.axisIntersection(other, func(v Vec[T]) T { return v.Y })
+	yIntersects := ab.axisIntersection(other, func(v Vec[T]) T { return v.Y })
 	return yIntersects
 }
 
-func (b AABB[T]) axisIntersection(other AABB[T], axisValue func(Vec[T]) T) bool {
-	d := b.AxisDistanceTo(other, axisValue)
+func (ab AABB[T]) axisIntersection(other AABB[T], axisValue func(Vec[T]) T) bool {
+	d := ab.AxisDistanceTo(other, axisValue)
 	return float64(d) <= eps
 }
 
-// AxisDistanceTo returns the gap between ab and other on the axis selected by axisValue.
-func (b AABB[T]) AxisDistanceTo(
+// AxisDistanceTo returns the gap between tow given AABBs on the axis selected by axisValue.
+func (ab AABB[T]) AxisDistanceTo(
 	other AABB[T],
 	axisValue func(Vec[T]) T,
 ) T {
-	b, other = SortAABBsBy(
-		b, other,
+	ab, other = SortAABBsBy(
+		ab, other,
 		func(box AABB[T]) T { return axisValue(box.TopLeft) },
 		func(box AABB[T]) T { return axisValue(box.BottomRight) },
 	)
 
-	if axisValue(b.BottomRight) >= axisValue(other.TopLeft) {
+	if axisValue(ab.BottomRight) >= axisValue(other.TopLeft) {
 		return 0
 	}
-	return axisValue(other.TopLeft) - axisValue(b.BottomRight)
+	return axisValue(other.TopLeft) - axisValue(ab.BottomRight)
 }
 
-// SortAABBsBy orders two boxes using the provided key functions and returns them as (min,max).
+// SortAABBsBy orders two AABBs using the provided key functions and returns them as (min,max).
 func SortAABBsBy[T Numeric](a, b AABB[T], keyFns ...func(AABB[T]) T) (aa, bb AABB[T]) {
 	for _, keyFn := range keyFns {
 		av, bv := keyFn(a), keyFn(b)
