@@ -6,136 +6,172 @@ import (
 	"github.com/kjkrol/gokg/pkg/geom"
 )
 
-func TestTorus_Translate_CrossesRightEdge(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(8, 4), 4, 2)
+func TestTorusTranslate(t *testing.T) {
+	runTorusTranslateTest[int](t, "int")
+	runTorusTranslateTest[uint32](t, "uint32")
+	runTorusTranslateTest[float64](t, "float64")
+}
 
-	torus.Translate(&aabb, geom.NewVec(0, 0))
+func runTorusTranslateTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		t.Run("CrossesRightEdge", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](8, 4), T(4), T(2))
 
-	expectAABBState(t, aabb, geom.NewVec(8, 4), geom.NewVec(10, 6), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT: {geom.NewVec(0, 4), geom.NewVec(2, 6)},
+			torus.Translate(&aabb, vec[T](0, 0))
+
+			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
+			}))
+		})
+
+		t.Run("HugeShift", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](8, 4), T(4), T(2))
+
+			torus.Translate(&aabb, vec[T](100, 100))
+			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
+			}))
+
+			torus.Translate(&aabb, vec[T](100, 100))
+			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
+			}))
+		})
+
+		t.Run("BackAndForth", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](8, 8), T(2), T(2))
+
+			torus.Translate(&aabb, vec[T](5, 5))
+			expectAABBState(t, aabb, vec[T](3, 3), vec[T](5, 5), map[FragPosition][2]geom.Vec[T]{})
+
+			torus.Translate(&aabb, vec[T](5, 5))
+			expectAABBState(t, aabb, vec[T](8, 8), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{})
+		})
+
+		t.Run("CrossesBottomEdge", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](4, 8), T(2), T(4))
+
+			torus.Translate(&aabb, vec[T](0, 0))
+
+			expectAABBState(t, aabb, vec[T](4, 8), vec[T](6, 10), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_BOTTOM: {vec[T](4, 0), vec[T](6, 2)},
+			}))
+		})
+
+		t.Run("CrossesCorner", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](9, 9), T(2), T(2))
+
+			torus.Translate(&aabb, vec[T](0, 0))
+
+			expectAABBState(t, aabb, vec[T](9, 9), vec[T](10, 10), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_RIGHT:        {vec[T](0, 9), vec[T](1, 10)},
+				FRAG_BOTTOM:       {vec[T](9, 0), vec[T](10, 1)},
+				FRAG_BOTTOM_RIGHT: {vec[T](0, 0), vec[T](1, 1)},
+			}))
+		})
+
+		t.Run("ClearsFragmentsWhenNotWrapping", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](8, 4), T(4), T(2))
+
+			torus.Translate(&aabb, vec[T](0, 0))
+			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
+			}))
+
+			torus.Translate(&aabb, vec[T](8, 0))
+			expectAABBState(t, aabb, vec[T](6, 4), vec[T](10, 6), map[FragPosition][2]geom.Vec[T]{})
+		})
+
+		t.Run("ThroughEdge", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](2, 2), T(2), T(2))
+
+			torus.Translate(&aabb, vec[T](8, 0))
+
+			expectAABBState(t, aabb, vec[T](0, 2), vec[T](2, 4), map[FragPosition][2]geom.Vec[T]{})
+		})
+
+		t.Run("FragmentsMergeSequence", func(t *testing.T) {
+			torus := NewTorus(T(10), T(10))
+			aabb := newAABB(vec[T](2, 2), T(2), T(2))
+
+			torus.Translate(&aabb, vec[T](7, 0))
+			expectAABBState(t, aabb, vec[T](9, 2), vec[T](10, 4), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_RIGHT: {vec[T](0, 2), vec[T](1, 4)},
+			}))
+
+			torus.Translate(&aabb, vec[T](0, 7))
+			expectAABBState(t, aabb, vec[T](9, 9), vec[T](10, 10), fragmentsForType(map[FragPosition][2]geom.Vec[T]{
+				FRAG_RIGHT:        {vec[T](0, 9), vec[T](1, 10)},
+				FRAG_BOTTOM:       {vec[T](9, 0), vec[T](10, 1)},
+				FRAG_BOTTOM_RIGHT: {vec[T](0, 0), vec[T](1, 1)},
+			}))
+
+			torus.Translate(&aabb, vec[T](3, 3))
+			expectAABBState(t, aabb, vec[T](2, 2), vec[T](4, 4), map[FragPosition][2]geom.Vec[T]{})
+		})
 	})
 }
 
-func TestTorus_Translate_HugeShift(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(8, 4), 4, 2)
-
-	torus.Translate(&aabb, geom.NewVec(100, 100))
-	expectAABBState(t, aabb, geom.NewVec(8, 4), geom.NewVec(10, 6), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT: {geom.NewVec(0, 4), geom.NewVec(2, 6)},
-	})
-
-	torus.Translate(&aabb, geom.NewVec(-100, -100))
-	expectAABBState(t, aabb, geom.NewVec(8, 4), geom.NewVec(10, 6), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT: {geom.NewVec(0, 4), geom.NewVec(2, 6)},
-	})
+func TestCartesianTranslate(t *testing.T) {
+	runCartesianTranslateTest[int](t, "int")
+	runCartesianTranslateTest[uint32](t, "uint32")
+	runCartesianTranslateTest[float64](t, "float64")
 }
 
-func TestCartesian_Translate_HugeShift(t *testing.T) {
-	cartesian := NewCartesian(10, 10)
-	aabb := newAABB(geom.NewVec(8, 4), 4, 2)
+func runCartesianTranslateTest[T geom.Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		t.Run("HugeShift", func(t *testing.T) {
+			cartesian := NewCartesian(T(10), T(10))
+			aabb := newAABB(vec[T](8, 4), T(4), T(2))
 
-	cartesian.Translate(&aabb, geom.NewVec(100, 100))
-	expectAABBState(t, aabb, geom.NewVec(10, 10), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{})
+			cartesian.Translate(&aabb, vec[T](100, 100))
+			expectAABBState(t, aabb, vec[T](10, 10), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{})
+		})
 
-	cartesian.Translate(&aabb, geom.NewVec(-100, -100))
-	expectAABBState(t, aabb, geom.NewVec(0, 0), geom.NewVec(0, 0), map[FragPosition][2]geom.Vec[int]{})
-}
-func TestCartesian_Translate_BackAndForth(t *testing.T) {
-	cartesian := NewCartesian(10, 10)
-	aabb := newAABB(geom.NewVec(8, 8), 2, 2)
+		t.Run("TranslateWithinBounds", func(t *testing.T) {
+			cartesian := NewCartesian(T(10), T(10))
+			aabb := newAABB(vec[T](1, 1), T(2), T(2))
 
-	cartesian.Translate(&aabb, geom.NewVec(5, 5))
-	expectAABBState(t, aabb, geom.NewVec(10, 10), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{})
+			cartesian.Translate(&aabb, vec[T](2, 2))
+			expectAABBState(t, aabb, vec[T](3, 3), vec[T](5, 5), map[FragPosition][2]geom.Vec[T]{})
+		})
 
-	cartesian.Translate(&aabb, geom.NewVec(-5, -5))
-	expectAABBState(t, aabb, geom.NewVec(5, 5), geom.NewVec(7, 7), map[FragPosition][2]geom.Vec[int]{})
-}
+		t.Run("ClampAtBoundary", func(t *testing.T) {
+			cartesian := NewCartesian(T(10), T(10))
+			aabb := newAABB(vec[T](9, 9), T(3), T(3))
 
-func TestTorus_Translate_BackAndForth(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(8, 8), 2, 2)
-
-	torus.Translate(&aabb, geom.NewVec(5, 5))
-	expectAABBState(t, aabb, geom.NewVec(3, 3), geom.NewVec(5, 5), map[FragPosition][2]geom.Vec[int]{})
-
-	torus.Translate(&aabb, geom.NewVec(-5, -5))
-	expectAABBState(t, aabb, geom.NewVec(8, 8), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{})
-}
-
-func TestTorus_Translate_CrossesBottomEdge(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(4, 8), 2, 4)
-
-	torus.Translate(&aabb, geom.NewVec(0, 0))
-
-	expectAABBState(t, aabb, geom.NewVec(4, 8), geom.NewVec(6, 10), map[FragPosition][2]geom.Vec[int]{
-		FRAG_BOTTOM: {geom.NewVec(4, 0), geom.NewVec(6, 2)},
+			cartesian.Translate(&aabb, vec[T](2, 2))
+			expectAABBState(t, aabb, vec[T](10, 10), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{})
+		})
 	})
 }
 
-func TestTorus_Translate_CrossesCorner(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(9, 9), 2, 2)
+func fragmentsForType[T geom.Numeric](frags map[FragPosition][2]geom.Vec[T]) map[FragPosition][2]geom.Vec[T] {
+	if frags == nil {
+		return nil
+	}
 
-	torus.Translate(&aabb, geom.NewVec(0, 0))
+	var zero T
+	if _, ok := any(zero).(uint32); ok {
+		return map[FragPosition][2]geom.Vec[T]{}
+	}
 
-	expectAABBState(t, aabb, geom.NewVec(9, 9), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
-		FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
-		FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
-	})
+	return frags
 }
 
-func TestTorus_Translate_ClearsFragmentsWhenNotWrapping(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(8, 4), 4, 2)
-
-	torus.Translate(&aabb, geom.NewVec(0, 0))
-	expectAABBState(t, aabb, geom.NewVec(8, 4), geom.NewVec(10, 6), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT: {geom.NewVec(0, 4), geom.NewVec(2, 6)},
-	})
-
-	torus.Translate(&aabb, geom.NewVec(-2, 0))
-	expectAABBState(t, aabb, geom.NewVec(6, 4), geom.NewVec(10, 6), nil)
-}
-
-func TestTorus_Translate_ThroughEdge(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(2, 2), 2, 2)
-
-	torus.Translate(&aabb, geom.NewVec(8, 0))
-
-	expectAABBState(t, aabb, geom.NewVec(0, 2), geom.NewVec(2, 4), nil)
-}
-
-func TestTorus_Translate_FragmentsMergeSequence(t *testing.T) {
-	torus := NewTorus(10, 10)
-	aabb := newAABB(geom.NewVec(2, 2), 2, 2)
-
-	torus.Translate(&aabb, geom.NewVec(-3, 0))
-	expectAABBState(t, aabb, geom.NewVec(9, 2), geom.NewVec(10, 4), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT: {geom.NewVec(0, 2), geom.NewVec(1, 4)},
-	})
-
-	torus.Translate(&aabb, geom.NewVec(0, -3))
-	expectAABBState(t, aabb, geom.NewVec(9, 9), geom.NewVec(10, 10), map[FragPosition][2]geom.Vec[int]{
-		FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
-		FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
-		FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
-	})
-
-	torus.Translate(&aabb, geom.NewVec(3, 3))
-	expectAABBState(t, aabb, geom.NewVec(2, 2), geom.NewVec(4, 4), nil)
-}
-
-func expectAABBState(
+func expectAABBState[T geom.Numeric](
 	t *testing.T,
-	b AABB[int],
-	expectedPos geom.Vec[int],
-	expectedBottomRight geom.Vec[int],
-	expectedFragments map[FragPosition][2]geom.Vec[int],
+	b AABB[T],
+	expectedPos geom.Vec[T],
+	expectedBottomRight geom.Vec[T],
+	expectedFragments map[FragPosition][2]geom.Vec[T],
 ) {
 	t.Helper()
 
@@ -150,7 +186,7 @@ func expectAABBState(
 	expectAABBFragments(t, b, expectedFragments)
 }
 
-func expectAABBFragments(t *testing.T, b AABB[int], expected map[FragPosition][2]geom.Vec[int]) {
+func expectAABBFragments[T geom.Numeric](t *testing.T, b AABB[T], expected map[FragPosition][2]geom.Vec[T]) {
 	t.Helper()
 
 	if len(b.frags) != len(expected) {
