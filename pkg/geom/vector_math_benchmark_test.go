@@ -11,7 +11,7 @@ var (
 	unsignedLengthSink uint32
 )
 
-func BenchmarkClampUnsignedInt(b *testing.B) {
+func Benchmark_Clamp_UnsignedInt(b *testing.B) {
 	vm := UnsignedIntVectorMath[uint32]{}
 	v := NewVec(uint32(0xFFFFFFF0), uint32(0xFFFFFFF8))
 	size := NewVec(uint32(1024), uint32(1024))
@@ -22,7 +22,7 @@ func BenchmarkClampUnsignedInt(b *testing.B) {
 	}
 }
 
-func BenchmarkClampSignedInt(b *testing.B) {
+func Benchmark_ClampSigned_Int(b *testing.B) {
 	vm := SignedIntVectorMath[int]{}
 	v := NewVec(15, -3)
 	size := NewVec(10, 10)
@@ -33,7 +33,7 @@ func BenchmarkClampSignedInt(b *testing.B) {
 	}
 }
 
-func BenchmarkClampFloat(b *testing.B) {
+func Benchmark_Clamp_Floating(b *testing.B) {
 	vm := FloatVectorMath[float64]{}
 	v := NewVec(12.5, -3.25)
 	size := NewVec(10.0, 10.0)
@@ -44,7 +44,7 @@ func BenchmarkClampFloat(b *testing.B) {
 	}
 }
 
-func BenchmarkWrapSignedInt(b *testing.B) {
+func Benchmark_Wrap_SignedInt(b *testing.B) {
 	vm := SignedIntVectorMath[int]{}
 	v := NewVec(37, -9)
 	size := NewVec(16, 16)
@@ -55,7 +55,7 @@ func BenchmarkWrapSignedInt(b *testing.B) {
 	}
 }
 
-func BenchmarkWrapUnsignedInt(b *testing.B) {
+func Benchmark_Wrap_UnsignedInt(b *testing.B) {
 	vm := UnsignedIntVectorMath[uint32]{}
 	v := NewVec(uint32(0xFFFFFFF0), uint32(0xFFFFFFF8))
 	size := NewVec(uint32(1024), uint32(1024))
@@ -66,7 +66,7 @@ func BenchmarkWrapUnsignedInt(b *testing.B) {
 	}
 }
 
-func BenchmarkWrapFloat(b *testing.B) {
+func Benchmark_Wrap_Floating(b *testing.B) {
 	vm := FloatVectorMath[float64]{}
 	v := NewVec(37.5, -9.25)
 	size := NewVec(16.0, 16.0)
@@ -77,17 +77,17 @@ func BenchmarkWrapFloat(b *testing.B) {
 	}
 }
 
-func BenchmarkLengthFloat(b *testing.B) {
+func Benchmark_Length_Floating(b *testing.B) {
 	vm := FloatVectorMath[float64]{}
 	v := NewVec(3.14, 2.71)
 
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		float64Sink = vm.Length(v)
 	}
 }
 
-func BenchmarkLengthSignedInt(b *testing.B) {
+func Benchmark_Length_SignedInt(b *testing.B) {
 	vm := SignedIntVectorMath[int]{}
 	v := NewVec(9, 12)
 
@@ -97,7 +97,7 @@ func BenchmarkLengthSignedInt(b *testing.B) {
 	}
 }
 
-func BenchmarkLengthUnsignedInt(b *testing.B) {
+func Benchmark_Length_UnsignedInt(b *testing.B) {
 	vm := UnsignedIntVectorMath[uint32]{}
 	v := NewVec(uint32(9), uint32(12))
 

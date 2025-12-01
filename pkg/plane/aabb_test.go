@@ -65,7 +65,7 @@ func runAABBIntersectsIncludingFragsTest[T geom.Numeric](t *testing.T, name stri
 					tc.aabb2.setFragment(pos, coords)
 				}
 
-				if got := tc.aabb1.Intersects(tc.aabb2); got != tc.want {
+				if got := tc.aabb1.IntersectsWithFrags(tc.aabb2); got != tc.want {
 					t.Errorf("expected Intersects to return %v, but got %v", tc.want, got)
 				}
 			})
@@ -94,7 +94,7 @@ func runAABBContainsTest[T geom.Numeric](t *testing.T, name string) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				if got := outer.Contains(tc.target); got != tc.want {
+				if got := outer.ContainsWithFrags(tc.target); got != tc.want {
 					t.Errorf("expected Contains to return %v, got %v", tc.want, got)
 				}
 			})

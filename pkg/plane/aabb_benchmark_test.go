@@ -11,44 +11,48 @@ var (
 	containsSink   bool
 )
 
-func BenchmarkAABBIntersects(b *testing.B) {
-	baseTemplate := newAABB(geom.NewVec(0, 0), 5, 5)
-	targetTemplate := newAABB(geom.NewVec(4, 4), 3, 3)
+func Benchmark_AABB_Intersects(b *testing.B) {
+	base := newAABB(geom.NewVec(0, 0), 5, 5)
+	target := newAABB(geom.NewVec(4, 4), 3, 3)
 
 	b.ReportAllocs()
-	var base, target AABB[int]
-	for i := 0; i < b.N; i++ {
-		base = baseTemplate
-		target = targetTemplate
-		intersectsSink = base.Intersects(target)
+	for b.Loop() {
+		intersectsSink = base.Intersects(target.AABB)
 	}
 }
 
-func BenchmarkAABBIntersectsWithFrags(b *testing.B) {
-	baseTemplate := newAABB(geom.NewVec(0, 0), 5, 5)
-	targetTemplate := newAABB(geom.NewVec(4, 4), 3, 3)
-	targetTemplate.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(2, 7)))
-	targetTemplate.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(7, 2)))
-	targetTemplate.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(2, 2)))
+func Benchmark_AABB_IntersectsWithFrags(b *testing.B) {
+	base := newAABB(geom.NewVec(0, 0), 5, 5)
+	target := newAABB(geom.NewVec(4, 4), 3, 3)
+	target.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(2, 7)))
+	target.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(7, 2)))
+	target.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(2, 2)))
 
 	b.ReportAllocs()
-	var base, target AABB[int]
-	for i := 0; i < b.N; i++ {
-		base = baseTemplate
-		target = targetTemplate
-		intersectsSink = base.Intersects(target)
+	for b.Loop() {
+		intersectsSink = base.IntersectsWithFrags(target)
 	}
 }
 
-func BenchmarkAABBContains(b *testing.B) {
-	outerTemplate := newAABB(geom.NewVec(0, 0), 10, 10)
-	innerTemplate := newAABB(geom.NewVec(3, 3), 2, 2)
+func Benchmark_AABB_Contains(b *testing.B) {
+	outer := newAABB(geom.NewVec(0, 0), 10, 10)
+	inner := newAABB(geom.NewVec(3, 3), 2, 2)
 
 	b.ReportAllocs()
-	var outer, inner AABB[int]
-	for i := 0; i < b.N; i++ {
-		outer = outerTemplate
-		inner = innerTemplate
-		containsSink = outer.Contains(inner)
+	for b.Loop() {
+		containsSink = outer.Contains(inner.AABB)
+	}
+}
+
+func Benchmark_AABB_ContainsWithFrags(b *testing.B) {
+	base := newAABB(geom.NewVec(0, 0), 5, 5)
+	target := newAABB(geom.NewVec(4, 4), 3, 3)
+	target.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(2, 7)))
+	target.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(7, 2)))
+	target.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(2, 2)))
+
+	b.ReportAllocs()
+	for b.Loop() {
+		intersectsSink = base.ContainsWithFrags(target)
 	}
 }

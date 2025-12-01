@@ -58,9 +58,7 @@ func (s toroidal2d[T]) normalizeAABB(aabb *AABB[T]) {
 }
 
 func (s toroidal2d[T]) normalizeAABBTopLeft(aabb *AABB[T]) {
-	if !s.Viewport().ContainsVec(aabb.AABB.TopLeft) {
-		aabb.TopLeft = s.normalizeVec(aabb.TopLeft)
-	}
+	aabb.TopLeft = s.normalizeVec(aabb.TopLeft)
 }
 
 func (s toroidal2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) (dx T, dy T) {

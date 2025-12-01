@@ -70,7 +70,7 @@ func runToroidal2DExpandThenIntersects[T geom.Numeric](t *testing.T, name string
 
 		toroidal.Expand(&aabb2, T(0))
 
-		if intersects := aabb1.Intersects(aabb2); intersects != true {
+		if intersects := aabb1.IntersectsWithFrags(aabb2); intersects != true {
 			t.Errorf("unexpected intersection result. got %t, want %t for boxes %v and %v", intersects, true, aabb1, aabb2)
 		}
 	})

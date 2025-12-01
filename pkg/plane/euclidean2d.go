@@ -57,23 +57,12 @@ func (s euclidean2d[T]) normalizeAABB(aabb *AABB[T]) {
 }
 
 func (s euclidean2d[T]) normalizeAABBTopLeft(aabb *AABB[T]) {
-	if !s.Viewport().ContainsVec(aabb.AABB.TopLeft) {
-		aabb.TopLeft = s.normalizeVec(aabb.TopLeft)
-	}
+	aabb.TopLeft = s.normalizeVec(aabb.TopLeft)
 }
 
-func (s euclidean2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) (dx T, dy T) {
+func (s euclidean2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) {
 	aabb.BottomRight = aabb.TopLeft.Add(aabb.size)
-	dx = T(0)
-	dy = T(0)
-	if aabb.BottomRight.X > s.size.X {
-		dx = aabb.BottomRight.X - s.size.X
-	}
-	if aabb.BottomRight.Y > s.size.Y {
-		dy = aabb.BottomRight.Y - s.size.Y
-	}
 	aabb.BottomRight = s.vectorMath.Clamp(aabb.BottomRight, s.size)
-	return
 }
 
 func (s euclidean2d[T]) metric(vec1, vec2 geom.Vec[T]) T {
