@@ -62,7 +62,7 @@ func runAABBIntersectsIncludingFragsTest[T geom.Numeric](t *testing.T, name stri
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				for pos, coords := range tc.frags {
-					tc.aabb2.frags[pos] = coords
+					tc.aabb2.setFragment(pos, coords)
 				}
 
 				if got := tc.aabb1.Intersects(tc.aabb2); got != tc.want {

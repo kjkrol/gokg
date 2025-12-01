@@ -18,7 +18,11 @@ func ExampleSpace_Translate() {
 	shift := geom.NewVec(-1, -1)
 	cyclicPlane.Translate(&planeBox, shift)
 
-	fragments := planeBox.Fragments()
+	fragments := map[plane.FragPosition]geom.AABB[int]{}
+	planeBox.VisitFragments(func(pos plane.FragPosition, box geom.AABB[int]) bool {
+		fragments[pos] = box
+		return true
+	})
 	if len(fragments) < 3 {
 		fmt.Printf("Unexpected fragment count (%d)\n", len(fragments))
 		return

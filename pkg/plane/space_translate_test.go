@@ -176,18 +176,24 @@ func expectAABBState[T geom.Numeric](
 func expectAABBFragments[T geom.Numeric](t *testing.T, b AABB[T], expected map[FragPosition][2]geom.Vec[T]) {
 	t.Helper()
 
-	if len(b.frags) != len(expected) {
-		t.Fatalf("expected %d fragments, got %d", len(expected), len(b.frags))
+	actual := map[FragPosition][2]geom.Vec[T]{}
+	(&b).VisitFragments(func(pos FragPosition, box geom.AABB[T]) bool {
+		actual[pos] = [2]geom.Vec[T]{box.TopLeft, box.BottomRight}
+		return true
+	})
+
+	if len(actual) != len(expected) {
+		t.Fatalf("expected %d fragments, got %d", len(expected), len(actual))
 	}
 
 	for pos, want := range expected {
-		frag, ok := b.frags[pos]
+		frag, ok := actual[pos]
 		if !ok {
 			t.Fatalf("missing fragment at %d", pos)
 		}
-		if !frag.TopLeft.Equals(want[0]) || !frag.BottomRight.Equals(want[1]) {
+		if !frag[0].Equals(want[0]) || !frag[1].Equals(want[1]) {
 			t.Fatalf("fragment at %d has bounds %v..%v, expected %v..%v",
-				pos, frag.TopLeft, frag.BottomRight, want[0], want[1])
+				pos, frag[0], frag[1], want[0], want[1])
 		}
 	}
 }
