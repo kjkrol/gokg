@@ -17,8 +17,8 @@ func runAxisDistanceTest[T geom.Numeric](t *testing.T, name string) {
 		aa := newAABB(geom.NewVec(T(0), T(0)), T(2), T(2))
 		bb := newAABB(geom.NewVec(T(5), T(0)), T(2), T(2))
 
-		dx := aa.AxisDistanceTo(bb.AABB, func(v geom.Vec[T]) T { return v.X })
-		dy := aa.AxisDistanceTo(bb.AABB, func(v geom.Vec[T]) T { return v.Y })
+		dx := aa.AxisDistanceX(bb.AABB)
+		dy := aa.AxisDistanceY(bb.AABB)
 
 		if dx != T(3) {
 			t.Errorf("expected dx=3, got %v", dx)

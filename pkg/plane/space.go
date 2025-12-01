@@ -45,13 +45,8 @@ func NewTorus[T geom.Numeric](sizeX, sizeY T) Space[T] {
 		space.normalizeVec = func(vec *geom.Vec[T]) { space.vectorMath.Wrap(vec, space.size) }
 		space.normalizeAABB = func(aabb *AABB[T]) {
 			space.normalizeAABBTopLeft(aabb)
-			if space.normalizeAABBBottomRight(aabb) {
-				step1 := space.vectorMath.Sub(space.size, aabb.TopLeft)
-				step2 := space.vectorMath.Sub(step1, aabb.size)
-
-				d := step2
-				aabb.fragmentation(d.X, d.Y)
-			}
+			dx, dy := space.normalizeAABBBottomRight(aabb)
+			aabb.fragmentation(dx, dy)
 		}
 		space.metric = func(vec1, vec2 geom.Vec[T]) T {
 			return min(space.relativeMetric(vec1, vec2), space.relativeMetric(vec2, vec1))
@@ -134,11 +129,17 @@ func (s space2d[T]) normalizeAABBTopLeft(aabb *AABB[T]) {
 	}
 }
 
-func (s space2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) bool {
+func (s space2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) (dx T, dy T) {
 	aabb.BottomRight = aabb.TopLeft.Add(aabb.size)
-	if !s.Viewport().ContainsVec(aabb.AABB.BottomRight) {
-		s.vectorMath.Clamp(&aabb.BottomRight, s.size)
-		return true
+	dx = T(0)
+	dy = T(0)
+	if aabb.BottomRight.X > s.size.X {
+		dx = aabb.BottomRight.X - s.size.X
 	}
-	return false
+	if aabb.BottomRight.Y > s.size.Y {
+		dy = aabb.BottomRight.Y - s.size.Y
+	}
+	s.vectorMath.Clamp(&aabb.BottomRight, s.size)
+	return
+
 }

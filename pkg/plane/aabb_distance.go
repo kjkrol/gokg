@@ -11,8 +11,8 @@ func newAABBDistance[T geom.Numeric](metric Metric[T]) AABBDistance[T] {
 		if aabb1.Intersects(aabb2) {
 			return 0
 		}
-		dx := aabb1.AxisDistanceTo(aabb2, func(v geom.Vec[T]) T { return v.X })
-		dy := aabb1.AxisDistanceTo(aabb2, func(v geom.Vec[T]) T { return v.Y })
+		dx := aabb1.AxisDistanceX(aabb2)
+		dy := aabb1.AxisDistanceY(aabb2)
 		return metric(geom.NewVec(dx, dy), geom.NewVec[T](0, 0))
 	}
 }

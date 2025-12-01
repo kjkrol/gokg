@@ -39,7 +39,7 @@ type normalizeScenario struct {
 }
 
 func cartesianNormalizeScenarios[T geom.Numeric]() []normalizeScenario {
-	scenarios := []normalizeScenario{
+	return []normalizeScenario{
 		{
 			name:                "keeps_box_inside_viewport",
 			topLeft:             geom.NewVec(1, 1),
@@ -80,49 +80,38 @@ func cartesianNormalizeScenarios[T geom.Numeric]() []normalizeScenario {
 			expectedTopLeft:     geom.NewVec(8, 8),
 			expectedBottomRight: geom.NewVec(10, 10),
 		},
-	}
-
-	if supportsNegatives[T]() {
-		scenarios = append(scenarios,
-			normalizeScenario{
-				name:                "clamps_top_left_outside_viewport",
-				topLeft:             geom.NewVec(-2, -2),
-				width:               2,
-				height:              2,
-				expectedTopLeft:     geom.NewVec(0, 0),
-				expectedBottomRight: geom.NewVec(0, 0),
-			},
-			normalizeScenario{
-				name:                "moves_negative_box_inside_viewport",
-				topLeft:             geom.NewVec(-1, -1),
-				width:               2,
-				height:              2,
-				expectedTopLeft:     geom.NewVec(0, 0),
-				expectedBottomRight: geom.NewVec(1, 1),
-			},
-			normalizeScenario{
-				name:                "ignores_far_negative_box",
-				topLeft:             geom.NewVec(-11, -11),
-				width:               2,
-				height:              2,
-				expectedTopLeft:     geom.NewVec(0, 0),
-				expectedBottomRight: geom.NewVec(0, 0),
-			},
-		)
-	}
-
-	scenarios = append(scenarios,
-		normalizeScenario{
+		{
+			name:                "clamps_top_left_outside_viewport",
+			topLeft:             geom.NewVec(-2, -2),
+			width:               2,
+			height:              2,
+			expectedTopLeft:     geom.NewVec(0, 0),
+			expectedBottomRight: geom.NewVec(0, 0),
+		},
+		{
+			name:                "moves_negative_box_inside_viewport",
+			topLeft:             geom.NewVec(-1, -1),
+			width:               2,
+			height:              2,
+			expectedTopLeft:     geom.NewVec(0, 0),
+			expectedBottomRight: geom.NewVec(1, 1),
+		},
+		{
+			name:                "ignores_far_negative_box",
+			topLeft:             geom.NewVec(-11, -11),
+			width:               2,
+			height:              2,
+			expectedTopLeft:     geom.NewVec(0, 0),
+			expectedBottomRight: geom.NewVec(0, 0),
+		},
+		{
 			name:                "clamps_far_outside_viewport",
 			topLeft:             geom.NewVec(19, 19),
 			width:               2,
 			height:              2,
 			expectedTopLeft:     geom.NewVec(10, 10),
 			expectedBottomRight: geom.NewVec(10, 10),
-		},
-	)
-
-	return scenarios
+		}}
 }
 
 func TestTorus_normalizeBox(t *testing.T) {
@@ -142,7 +131,7 @@ func runTorusNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 				expectAABBState(t, aabb,
 					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
 					vec[T](tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
-					fragmentsForType(convertFragments[T](tc.expectedFragments)),
+					convertFragments[T](tc.expectedFragments),
 				)
 			})
 		}
@@ -155,7 +144,7 @@ type torusNormalizeScenario struct {
 }
 
 func torusNormalizeScenarios[T geom.Numeric]() []torusNormalizeScenario {
-	scenarios := []torusNormalizeScenario{
+	return []torusNormalizeScenario{
 		{
 			normalizeScenario: normalizeScenario{
 				name:                "wraps_box_into_view",
@@ -210,65 +199,47 @@ func torusNormalizeScenarios[T geom.Numeric]() []torusNormalizeScenario {
 				FRAG_BOTTOM: {geom.NewVec(0, 0), geom.NewVec(2, 1)},
 			},
 		},
-	}
-
-	if supportsNegatives[T]() {
-		scenarios = append(scenarios,
-			torusNormalizeScenario{
-				normalizeScenario: normalizeScenario{
-					name:                "wraps_negative_box_into_view",
-					topLeft:             geom.NewVec(-2, -2),
-					width:               2,
-					height:              2,
-					expectedTopLeft:     geom.NewVec(8, 8),
-					expectedBottomRight: geom.NewVec(10, 10),
-				},
-				expectedFragments: map[FragPosition][2]geom.Vec[int]{},
+		{
+			normalizeScenario: normalizeScenario{
+				name:                "wraps_negative_box_into_view",
+				topLeft:             geom.NewVec(-2, -2),
+				width:               2,
+				height:              2,
+				expectedTopLeft:     geom.NewVec(8, 8),
+				expectedBottomRight: geom.NewVec(10, 10),
 			},
-			torusNormalizeScenario{
-				normalizeScenario: normalizeScenario{
-					name:                "wraps_from_negative_corner_with_fragments",
-					topLeft:             geom.NewVec(-1, -1),
-					width:               2,
-					height:              2,
-					expectedTopLeft:     geom.NewVec(9, 9),
-					expectedBottomRight: geom.NewVec(10, 10),
-				},
-				expectedFragments: map[FragPosition][2]geom.Vec[int]{
-					FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
-					FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
-					FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
-				},
+			expectedFragments: map[FragPosition][2]geom.Vec[int]{},
+		},
+		{
+			normalizeScenario: normalizeScenario{
+				name:                "wraps_from_negative_corner_with_fragments",
+				topLeft:             geom.NewVec(-1, -1),
+				width:               2,
+				height:              2,
+				expectedTopLeft:     geom.NewVec(9, 9),
+				expectedBottomRight: geom.NewVec(10, 10),
 			},
-			torusNormalizeScenario{
-				normalizeScenario: normalizeScenario{
-					name:                "wraps_far_negative_box",
-					topLeft:             geom.NewVec(-11, -11),
-					width:               2,
-					height:              2,
-					expectedTopLeft:     geom.NewVec(9, 9),
-					expectedBottomRight: geom.NewVec(10, 10),
-				},
-				expectedFragments: map[FragPosition][2]geom.Vec[int]{
-					FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
-					FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
-					FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
-				},
+			expectedFragments: map[FragPosition][2]geom.Vec[int]{
+				FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
+				FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
+				FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
 			},
-		)
-	}
-
-	return scenarios
-}
-
-func supportsNegatives[T geom.Numeric]() bool {
-	var zero T
-	switch any(zero).(type) {
-	case uint32:
-		return false
-	default:
-		return true
-	}
+		},
+		{
+			normalizeScenario: normalizeScenario{
+				name:                "wraps_far_negative_box",
+				topLeft:             geom.NewVec(-11, -11),
+				width:               2,
+				height:              2,
+				expectedTopLeft:     geom.NewVec(9, 9),
+				expectedBottomRight: geom.NewVec(10, 10),
+			},
+			expectedFragments: map[FragPosition][2]geom.Vec[int]{
+				FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
+				FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
+				FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
+			},
+		}}
 }
 
 func convertFragments[T geom.Numeric](frags map[FragPosition][2]geom.Vec[int]) map[FragPosition][2]geom.Vec[T] {

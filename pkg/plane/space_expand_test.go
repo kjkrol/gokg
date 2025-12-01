@@ -47,11 +47,11 @@ func runTorusExpandCornerCase[T geom.Numeric](t *testing.T, name string) {
 		torus := NewTorus(T(10), T(10))
 		aabb := newAABB(vec[T](0, 0), T(2), T(2))
 		torus.Expand(&aabb, T(2))
-		expectAABBState(t, aabb, vec[T](8, 8), vec[T](10, 10), fragmentsForType(convertFragments[T](map[FragPosition][2]geom.Vec[int]{
+		expectAABBState(t, aabb, vec[T](8, 8), vec[T](10, 10), convertFragments[T](map[FragPosition][2]geom.Vec[int]{
 			FRAG_RIGHT:        {geom.NewVec(0, 8), geom.NewVec(4, 10)},
 			FRAG_BOTTOM:       {geom.NewVec(8, 0), geom.NewVec(10, 4)},
 			FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(4, 4)},
-		})))
+		}))
 	})
 }
 
@@ -70,9 +70,8 @@ func runTorusExpandThenIntersects[T geom.Numeric](t *testing.T, name string) {
 
 		torus.Expand(&aabb2, T(0))
 
-		expectedIntersection := supportsNegatives[T]()
-		if intersects := aabb1.Intersects(aabb2); intersects != expectedIntersection {
-			t.Errorf("unexpected intersection result. got %t, want %t for boxes %v and %v", intersects, expectedIntersection, aabb1, aabb2)
+		if intersects := aabb1.Intersects(aabb2); intersects != true {
+			t.Errorf("unexpected intersection result. got %t, want %t for boxes %v and %v", intersects, true, aabb1, aabb2)
 		}
 	})
 }

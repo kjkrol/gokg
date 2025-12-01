@@ -61,18 +61,18 @@ func (ab AABB[T]) Intersects(other AABB[T]) bool {
 func (ab AABB[T]) Fragments() map[FragPosition]geom.AABB[T] { return ab.frags }
 
 func (ab *AABB[T]) fragmentation(dx, dy T) {
-	if dx < 0 {
-		ab.frags[FRAG_RIGHT] = geom.NewAABB(geom.NewVec(0, ab.TopLeft.Y), geom.NewVec(-dx, ab.BottomRight.Y))
+	if dx > 0 {
+		ab.frags[FRAG_RIGHT] = geom.NewAABB(geom.NewVec(0, ab.TopLeft.Y), geom.NewVec(dx, ab.BottomRight.Y))
 	} else {
 		delete(ab.frags, FRAG_RIGHT)
 	}
-	if dy < 0 {
-		ab.frags[FRAG_BOTTOM] = geom.NewAABB(geom.NewVec(ab.TopLeft.X, 0), geom.NewVec(ab.BottomRight.X, -dy))
+	if dy > 0 {
+		ab.frags[FRAG_BOTTOM] = geom.NewAABB(geom.NewVec(ab.TopLeft.X, 0), geom.NewVec(ab.BottomRight.X, dy))
 	} else {
 		delete(ab.frags, FRAG_BOTTOM)
 	}
-	if dx < 0 && dy < 0 {
-		ab.frags[FRAG_BOTTOM_RIGHT] = geom.NewAABB(geom.NewVec[T](0, 0), geom.NewVec(-dx, -dy))
+	if dx > 0 && dy > 0 {
+		ab.frags[FRAG_BOTTOM_RIGHT] = geom.NewAABB(geom.NewVec[T](0, 0), geom.NewVec(dx, dy))
 	} else {
 		delete(ab.frags, FRAG_BOTTOM_RIGHT)
 	}
