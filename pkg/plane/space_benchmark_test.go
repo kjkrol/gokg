@@ -14,27 +14,33 @@ var (
 func BenchmarkEuclideanNormalizeAABB(b *testing.B) {
 	space := NewEuclidean2D(10, 10).(*euclidean2d[int])
 	template := newAABB(geom.NewVec(9, 9), 2, 2)
+	aabbs := make([]AABB[int], b.N)
+	for i := range aabbs {
+		aabbs[i] = template
+	}
 
 	b.ReportAllocs()
-	var aabb AABB[int]
-	for i := 0; i < b.N; i++ {
-		aabb = template
-		space.normalizeAABB(&aabb)
+	b.ResetTimer()
+	for i := range aabbs {
+		space.normalizeAABB(&aabbs[i])
 	}
-	boolSink = aabb.BottomRight.Equals(geom.NewVec(10, 10))
+	boolSink = aabbs[len(aabbs)-1].BottomRight.Equals(geom.NewVec(10, 10))
 }
 
 func BenchmarkToroidalNormalizeAABB(b *testing.B) {
 	space := NewToroidal2D(10, 10).(*toroidal2d[int])
 	template := newAABB(geom.NewVec(9, 9), 2, 2)
+	aabbs := make([]AABB[int], b.N)
+	for i := range aabbs {
+		aabbs[i] = template
+	}
 
 	b.ReportAllocs()
-	var aabb AABB[int]
-	for i := 0; i < b.N; i++ {
-		aabb = template
-		space.normalizeAABB(&aabb)
+	b.ResetTimer()
+	for i := range aabbs {
+		space.normalizeAABB(&aabbs[i])
 	}
-	boolSink = aabb.BottomRight.Equals(geom.NewVec(10, 10))
+	boolSink = aabbs[len(aabbs)-1].BottomRight.Equals(geom.NewVec(10, 10))
 }
 
 func BenchmarkEuclideanMetric(b *testing.B) {
@@ -43,7 +49,7 @@ func BenchmarkEuclideanMetric(b *testing.B) {
 	v2 := geom.NewVec(78, 90)
 
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		intSink = space.metric(v1, v2)
 	}
 }
@@ -54,7 +60,7 @@ func BenchmarkToroidalMetric(b *testing.B) {
 	v2 := geom.NewVec(78, 90)
 
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		intSink = space.metric(v1, v2)
 	}
 }
