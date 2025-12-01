@@ -3,12 +3,12 @@ package plane
 import "github.com/kjkrol/gokg/pkg/geom"
 
 const (
-	modeCartesian = "cartesian"
-	modeTorus     = "torus"
+	modeEuclidean2D = "Euclidean2D"
+	modeToroidal2D  = "Toroidal2D"
 )
 
 type (
-	Space[T geom.Numeric] interface {
+	Space2D[T geom.Numeric] interface {
 		WrapAABB(aabb geom.AABB[T]) AABB[T]
 		WrapVec(vec geom.Vec[T]) AABB[T]
 		Expand(aabb *AABB[T], margin T)
@@ -23,9 +23,9 @@ type (
 
 // -----------------------------------------------------------------------------
 
-// NewCartesian constructs a 2D space that clamps vectors to the given width and height.
-func NewCartesian[T geom.Numeric](sizeX, sizeY T) Space[T] {
-	return newSpace2d(modeCartesian, sizeX, sizeY, func(space *space2d[T]) {
+// NewEuclidean2D constructs a 2D space that clamps vectors to the given width and height.
+func NewEuclidean2D[T geom.Numeric](sizeX, sizeY T) Space2D[T] {
+	return newSpace2d(modeEuclidean2D, sizeX, sizeY, func(space *space2d[T]) {
 		space.normalizeVec = func(vec *geom.Vec[T]) { space.vectorMath.Clamp(vec, space.size) }
 		space.normalizeAABB = func(aabb *AABB[T]) {
 			space.normalizeAABBBottomRight(aabb)
@@ -39,9 +39,9 @@ func NewCartesian[T geom.Numeric](sizeX, sizeY T) Space[T] {
 
 // -----------------------------------------------------------------------------
 
-// NewTorus constructs a 2D space with wrap-around behaviour on both axes.
-func NewTorus[T geom.Numeric](sizeX, sizeY T) Space[T] {
-	return newSpace2d(modeTorus, sizeX, sizeY, func(space *space2d[T]) {
+// NewToroidal2D constructs a 2D space with wrap-around behaviour on both axes.
+func NewToroidal2D[T geom.Numeric](sizeX, sizeY T) Space2D[T] {
+	return newSpace2d(modeToroidal2D, sizeX, sizeY, func(space *space2d[T]) {
 		space.normalizeVec = func(vec *geom.Vec[T]) { space.vectorMath.Wrap(vec, space.size) }
 		space.normalizeAABB = func(aabb *AABB[T]) {
 			space.normalizeAABBTopLeft(aabb)
@@ -100,7 +100,7 @@ func (s space2d[T]) AABBDistance() AABBDistance[T] {
 	return newAABBDistance(s.metric)
 }
 
-// Name reports the space mode (cartesian or torus).
+// Name reports the space mode (Euclidean2D or Toroidal2D).
 func (s space2d[T]) Name() string { return s.name }
 
 // Viewport returns the canonical axis-aligned bounding box covering the entire plane.

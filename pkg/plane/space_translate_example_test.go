@@ -7,10 +7,10 @@ import (
 	"github.com/kjkrol/gokg/pkg/plane"
 )
 
-// Demonstrates how shifting a contiguous box beyond the cyclic plane boundary
+// Demonstrates how shifting a contiguous box beyond the toroidal plane boundary
 // causes it to fragment into multiple wrapped pieces and prints those fragments.
-func ExampleSpace_Translate() {
-	cyclicPlane := plane.NewTorus(10, 10)
+func ExampleSpace2D_Translate() {
+	cyclicPlane := plane.NewToroidal2D(10, 10)
 
 	box := geom.NewAABBAt(geom.NewVec(0, 0), 2, 2)
 	planeBox := cyclicPlane.WrapAABB(box)

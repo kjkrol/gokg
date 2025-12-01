@@ -4,7 +4,7 @@ import "github.com/kjkrol/gokg/pkg/geom"
 
 // FragPosition identifies a fragment's position relative to its parent AABB (axis-aligned bounding box).
 // Names follow logical cardinal directions of the parent; depending on screen
-// coordinates they may appear flipped (e.g. right on Cartesian may render left in screen space).
+// coordinates they may appear flipped (e.g. right on a Euclidean grid may render left in screen space).
 type FragPosition int
 
 const (
