@@ -21,7 +21,8 @@ const (
 type AABB[T geom.Numeric] struct {
 	geom.AABB[T]
 	size  geom.Vec[T]
-	frags map[FragPosition]geom.AABB[T]
+	frags [3]geom.AABB[T]
+	set   [3]bool
 }
 
 // newAABB builds a AABB at pos with the given size, priming fragment storage for Space operations.
@@ -31,8 +32,7 @@ func newAABB[T geom.Numeric](pos geom.Vec[T], width, height T) AABB[T] {
 			TopLeft:     pos,
 			BottomRight: geom.NewVec(pos.X+width, pos.Y+height),
 		},
-		size:  geom.NewVec(width, height),
-		frags: make(map[FragPosition]geom.AABB[T], 4),
+		size: geom.NewVec(width, height),
 	}
 }
 
@@ -57,24 +57,43 @@ func (ab AABB[T]) Intersects(other AABB[T]) bool {
 	return ab.compareWithFrags(other, geom.AABB[T].Intersects)
 }
 
-// Fragments returns lazily computed fragments keyed by bound position.
-func (ab AABB[T]) Fragments() map[FragPosition]geom.AABB[T] { return ab.frags }
+type FragVisitor[T geom.Numeric] func(pos FragPosition, box geom.AABB[T]) bool
+
+func (ab *AABB[T]) VisitFragments(fn FragVisitor[T]) {
+	for pos, set := range ab.set {
+		if !set {
+			continue
+		}
+		if !fn(FragPosition(pos), ab.frags[pos]) {
+			return
+		}
+	}
+}
+
+func (ab *AABB[T]) setFragment(pos FragPosition, box geom.AABB[T]) {
+	ab.frags[pos] = box
+	ab.set[pos] = true
+}
+
+func (ab *AABB[T]) clearFragment(pos FragPosition) {
+	ab.set[pos] = false
+}
 
 func (ab *AABB[T]) fragmentation(dx, dy T) {
 	if dx > 0 {
-		ab.frags[FRAG_RIGHT] = geom.NewAABB(geom.NewVec(0, ab.TopLeft.Y), geom.NewVec(dx, ab.BottomRight.Y))
+		ab.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, ab.TopLeft.Y), geom.NewVec(dx, ab.BottomRight.Y)))
 	} else {
-		delete(ab.frags, FRAG_RIGHT)
+		ab.clearFragment(FRAG_RIGHT)
 	}
 	if dy > 0 {
-		ab.frags[FRAG_BOTTOM] = geom.NewAABB(geom.NewVec(ab.TopLeft.X, 0), geom.NewVec(ab.BottomRight.X, dy))
+		ab.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(ab.TopLeft.X, 0), geom.NewVec(ab.BottomRight.X, dy)))
 	} else {
-		delete(ab.frags, FRAG_BOTTOM)
+		ab.clearFragment(FRAG_BOTTOM)
 	}
 	if dx > 0 && dy > 0 {
-		ab.frags[FRAG_BOTTOM_RIGHT] = geom.NewAABB(geom.NewVec[T](0, 0), geom.NewVec(dx, dy))
+		ab.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec[T](0, 0), geom.NewVec(dx, dy)))
 	} else {
-		delete(ab.frags, FRAG_BOTTOM_RIGHT)
+		ab.clearFragment(FRAG_BOTTOM_RIGHT)
 	}
 }
 
@@ -82,23 +101,31 @@ func (ab AABB[T]) compareWithFrags(other AABB[T], compareFn func(geom.AABB[T], g
 	if compareFn(ab.AABB, other.AABB) {
 		return true
 	}
-	for _, frag := range other.frags {
+	found := false
+	(&other).VisitFragments(func(_ FragPosition, frag geom.AABB[T]) bool {
 		if compareFn(ab.AABB, frag) {
-			return true
+			found = true
+			return false
 		}
+		return true
+	})
+	if found {
+		return true
 	}
-	for _, frag := range ab.frags {
+	(&ab).VisitFragments(func(_ FragPosition, frag geom.AABB[T]) bool {
 		if compareFn(other.AABB, frag) {
-			return true
+			found = true
+			return false
 		}
-	}
-	for _, left := range ab.frags {
-		for _, right := range other.frags {
-			if compareFn(left, right) {
-				return true
+		(&other).VisitFragments(func(_ FragPosition, otherFrag geom.AABB[T]) bool {
+			if compareFn(frag, otherFrag) {
+				found = true
+				return false
 			}
-		}
-	}
+			return true
+		})
+		return !found
+	})
 
-	return false
+	return found
 }

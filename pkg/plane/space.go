@@ -141,5 +141,4 @@ func (s space2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) (dx T, dy T) {
 	}
 	s.vectorMath.Clamp(&aabb.BottomRight, s.size)
 	return
-
 }
