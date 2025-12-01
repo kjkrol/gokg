@@ -101,11 +101,9 @@ func exampleVectorMathLength[T geom.Numeric](v geom.Vec[T], vm geom.VectorMath[T
 }
 
 func exampleVectorMathClamp[T geom.Numeric](v, size geom.Vec[T], vm geom.VectorMath[T]) {
-	vm.Clamp(&v, size)
-	fmt.Println(v)
+	fmt.Println(vm.Clamp(v, size))
 }
 
 func exampleVectorMathWrap[T geom.Numeric](v, size geom.Vec[T], vm geom.VectorMath[T]) {
-	vm.Wrap(&v, size)
-	fmt.Println(v)
+	fmt.Println(vm.Wrap(v, size))
 }

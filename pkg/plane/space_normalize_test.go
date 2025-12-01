@@ -6,20 +6,20 @@ import (
 	"github.com/kjkrol/gokg/pkg/geom"
 )
 
-func TestCartesian_normalizeBox(t *testing.T) {
-	runCartesianNormalizeBoxTest[int](t, "int")
-	runCartesianNormalizeBoxTest[uint32](t, "uint32")
-	runCartesianNormalizeBoxTest[float64](t, "float64")
+func TestEuclidean2D_normalizeBox(t *testing.T) {
+	runEuclidean2DNormalizeBoxTest[int](t, "int")
+	runEuclidean2DNormalizeBoxTest[uint32](t, "uint32")
+	runEuclidean2DNormalizeBoxTest[float64](t, "float64")
 }
 
-func runCartesianNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
+func runEuclidean2DNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
-		cartesian := NewCartesian(T(10), T(10))
+		euclidean := NewEuclidean2D(T(10), T(10))
 
-		for _, tc := range cartesianNormalizeScenarios[T]() {
+		for _, tc := range euclideanNormalizeScenarios[T]() {
 			t.Run(tc.name, func(t *testing.T) {
 				aabb := newAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
-				cartesian.(space2d[T]).normalizeAABB(&aabb)
+				euclidean.(*euclidean2d[T]).normalizeAABB(&aabb)
 				expectAABBState(t, aabb,
 					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
 					vec[T](tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
@@ -38,7 +38,7 @@ type normalizeScenario struct {
 	expectedBottomRight geom.Vec[int]
 }
 
-func cartesianNormalizeScenarios[T geom.Numeric]() []normalizeScenario {
+func euclideanNormalizeScenarios[T geom.Numeric]() []normalizeScenario {
 	return []normalizeScenario{
 		{
 			name:                "keeps_box_inside_viewport",
@@ -114,20 +114,20 @@ func cartesianNormalizeScenarios[T geom.Numeric]() []normalizeScenario {
 		}}
 }
 
-func TestTorus_normalizeBox(t *testing.T) {
-	runTorusNormalizeBoxTest[int](t, "int")
-	runTorusNormalizeBoxTest[uint32](t, "uint32")
-	runTorusNormalizeBoxTest[float64](t, "float64")
+func TestToroidal2D_normalizeBox(t *testing.T) {
+	runToroidal2DNormalizeBoxTest[int](t, "int")
+	runToroidal2DNormalizeBoxTest[uint32](t, "uint32")
+	runToroidal2DNormalizeBoxTest[float64](t, "float64")
 }
 
-func runTorusNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
+func runToroidal2DNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
-		torus := NewTorus(T(10), T(10))
+		toroidal := NewToroidal2D(T(10), T(10))
 
-		for _, tc := range torusNormalizeScenarios[T]() {
+		for _, tc := range toroidalNormalizeScenarios[T]() {
 			t.Run(tc.name, func(t *testing.T) {
 				aabb := newAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
-				torus.(space2d[T]).normalizeAABB(&aabb)
+				toroidal.(*toroidal2d[T]).normalizeAABB(&aabb)
 				expectAABBState(t, aabb,
 					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
 					vec[T](tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
@@ -138,13 +138,13 @@ func runTorusNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 	})
 }
 
-type torusNormalizeScenario struct {
+type toroidalNormalizeScenario struct {
 	normalizeScenario
 	expectedFragments map[FragPosition][2]geom.Vec[int]
 }
 
-func torusNormalizeScenarios[T geom.Numeric]() []torusNormalizeScenario {
-	return []torusNormalizeScenario{
+func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
+	return []toroidalNormalizeScenario{
 		{
 			normalizeScenario: normalizeScenario{
 				name:                "wraps_box_into_view",

@@ -29,21 +29,21 @@ func runAxisDistanceTest[T geom.Numeric](t *testing.T, name string) {
 	})
 }
 
-func TestAABBDistance_CartesianSpace(t *testing.T) {
-	runAABBDistanceCartesianTest[int](t, "int")
-	runAABBDistanceCartesianTest[uint32](t, "uint32")
-	runAABBDistanceCartesianTest[float64](t, "float64")
+func TestAABBDistance_Euclidean2DSpace(t *testing.T) {
+	runAABBDistanceEuclidean2DTest[int](t, "int")
+	runAABBDistanceEuclidean2DTest[uint32](t, "uint32")
+	runAABBDistanceEuclidean2DTest[float64](t, "float64")
 }
 
-func runAABBDistanceCartesianTest[T geom.Numeric](t *testing.T, name string) {
+func runAABBDistanceEuclidean2DTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
 		rectA := newAABB(vec[T](0, 0), T(2), T(2))
 		rectB := newAABB(vec[T](4, 5), T(2), T(2))
 
-		cartesian := NewCartesian(T(20), T(20))
-		distance := cartesian.AABBDistance()(rectA.AABB, rectB.AABB)
+		euclidean := NewEuclidean2D(T(20), T(20))
+		distance := euclidean.AABBDistance()(rectA.AABB, rectB.AABB)
 
-		expected := cartesian.(space2d[T]).metric(vec[T](2, 3), geom.NewVec[T](0, 0))
+		expected := euclidean.(*euclidean2d[T]).metric(vec[T](2, 3), geom.NewVec[T](0, 0))
 		if distance != expected {
 			t.Errorf("expected distance %v, got %v", expected, distance)
 		}
@@ -61,21 +61,21 @@ func runAABBDistanceZeroOnIntersectionTest[T geom.Numeric](t *testing.T, name st
 		rectA := newAABB(vec[T](0, 0), T(4), T(4))
 		rectB := newAABB(vec[T](2, 2), T(4), T(4))
 
-		cartesian := NewCartesian(T(20), T(20))
-		distance := cartesian.AABBDistance()(rectA.AABB, rectB.AABB)
+		euclidean := NewEuclidean2D(T(20), T(20))
+		distance := euclidean.AABBDistance()(rectA.AABB, rectB.AABB)
 		if distance != T(0) {
 			t.Errorf("expected distance 0 for intersecting rectangles, got %v", distance)
 		}
 	})
 }
 
-func TestAABBDistance_To_Vector_Cartesian(t *testing.T) {
-	runAABBDistanceToVectorCartesianTest[int](t, "int")
-	runAABBDistanceToVectorCartesianTest[uint32](t, "uint32")
-	runAABBDistanceToVectorCartesianTest[float64](t, "float64")
+func TestAABBDistance_To_Vector_Euclidean2D(t *testing.T) {
+	runAABBDistanceToVectorEuclidean2DTest[int](t, "int")
+	runAABBDistanceToVectorEuclidean2DTest[uint32](t, "uint32")
+	runAABBDistanceToVectorEuclidean2DTest[float64](t, "float64")
 }
 
-func runAABBDistanceToVectorCartesianTest[T geom.Numeric](t *testing.T, name string) {
+func runAABBDistanceToVectorEuclidean2DTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
 		testCases := []struct {
 			name   string
@@ -97,11 +97,11 @@ func runAABBDistanceToVectorCartesianTest[T geom.Numeric](t *testing.T, name str
 			},
 		}
 
-		cartesian := NewCartesian(T(100), T(100))
+		euclidean := NewEuclidean2D(T(100), T(100))
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				distance := cartesian.AABBDistance()(tc.first, tc.second)
-				expected := cartesian.(space2d[T]).metric(tc.delta, geom.NewVec[T](0, 0))
+				distance := euclidean.AABBDistance()(tc.first, tc.second)
+				expected := euclidean.(*euclidean2d[T]).metric(tc.delta, geom.NewVec[T](0, 0))
 				if distance != expected {
 					t.Errorf("expected distance %v, got %v", expected, distance)
 				}

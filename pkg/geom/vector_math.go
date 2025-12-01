@@ -24,10 +24,10 @@ type (
 	VectorMath[T Numeric] interface {
 		// Length returns the Euclidean magnitude of v.
 		Length(v Vec[T]) T
-		// Clamp bounds v1 to the inclusive box [0,size].
-		Clamp(v1 *Vec[T], size Vec[T])
-		// Wrap folds v1 back into [0,size) using modulo semantics appropriate for T.
-		Wrap(v1 *Vec[T], size Vec[T])
+		// Clamp bounds v1 to the inclusive box [0,size] and returns the bounded vector.
+		Clamp(v1 Vec[T], size Vec[T]) Vec[T]
+		// Wrap folds v1 back into [0,size) using modulo semantics appropriate for T and returns the wrapped vector.
+		Wrap(v1 Vec[T], size Vec[T]) Vec[T]
 		Sub(v1, v2 Vec[T]) Vec[T]
 	}
 )
@@ -73,14 +73,18 @@ func (m FloatVectorMath[T]) Length(v Vec[T]) T {
 	return T(l)
 }
 
-func (m FloatVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) {
-	v.X = clampSigned(v.X, size.X)
-	v.Y = clampSigned(v.Y, size.Y)
+func (m FloatVectorMath[T]) Clamp(v Vec[T], size Vec[T]) Vec[T] {
+	return Vec[T]{
+		X: clampSigned(v.X, size.X),
+		Y: clampSigned(v.Y, size.Y),
+	}
 }
 
-func (m FloatVectorMath[T]) Wrap(v *Vec[T], size Vec[T]) {
-	v.X = wrapFloat(v.X, size.X)
-	v.Y = wrapFloat(v.Y, size.Y)
+func (m FloatVectorMath[T]) Wrap(v Vec[T], size Vec[T]) Vec[T] {
+	return Vec[T]{
+		X: wrapFloat(v.X, size.X),
+		Y: wrapFloat(v.Y, size.Y),
+	}
 }
 
 func (m FloatVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] {
@@ -96,14 +100,18 @@ func (m SignedIntVectorMath[T]) Length(v Vec[T]) T {
 	return T(math.Ceil(l))
 }
 
-func (m SignedIntVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) {
-	v.X = clampSigned(v.X, size.X)
-	v.Y = clampSigned(v.Y, size.Y)
+func (m SignedIntVectorMath[T]) Clamp(v Vec[T], size Vec[T]) Vec[T] {
+	return Vec[T]{
+		X: clampSigned(v.X, size.X),
+		Y: clampSigned(v.Y, size.Y),
+	}
 }
 
-func (m SignedIntVectorMath[T]) Wrap(v *Vec[T], size Vec[T]) {
-	v.X = wrapSigned(v.X, size.X)
-	v.Y = wrapSigned(v.Y, size.Y)
+func (m SignedIntVectorMath[T]) Wrap(v Vec[T], size Vec[T]) Vec[T] {
+	return Vec[T]{
+		X: wrapSigned(v.X, size.X),
+		Y: wrapSigned(v.Y, size.Y),
+	}
 }
 
 func (m SignedIntVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] { return v1.Sub(v2) }
@@ -117,7 +125,7 @@ func (m UnsignedIntVectorMath[T]) Length(v Vec[T]) T {
 	return T(math.Ceil(l))
 }
 
-func (m UnsignedIntVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) {
+func (m UnsignedIntVectorMath[T]) Clamp(v Vec[T], size Vec[T]) Vec[T] {
 	// odczytaj komponenty jako signed (int32 -> int64),
 	// żeby np. 0xFFFF_FFF8 traktować jako -8, a nie 4_294_967_288
 	sx := int64(int32(v.X))
@@ -129,11 +137,10 @@ func (m UnsignedIntVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) {
 	sx = clampSigned(sx, maxX)
 	sy = clampSigned(sy, maxY)
 
-	v.X = T(sx)
-	v.Y = T(sy)
+	return Vec[T]{T(sx), T(sy)}
 }
 
-func (m UnsignedIntVectorMath[T]) Wrap(v *Vec[T], size Vec[T]) {
+func (m UnsignedIntVectorMath[T]) Wrap(v Vec[T], size Vec[T]) Vec[T] {
 	// reinterpretacja do signed (int32 -> int64)
 	signed := Vec[int64]{
 		int64(int32(v.X)),
@@ -147,8 +154,7 @@ func (m UnsignedIntVectorMath[T]) Wrap(v *Vec[T], size Vec[T]) {
 	signed.X = wrapSigned(signed.X, bounds.X)
 	signed.Y = wrapSigned(signed.Y, bounds.Y)
 
-	v.X = T(signed.X)
-	v.Y = T(signed.Y)
+	return Vec[T]{T(signed.X), T(signed.Y)}
 }
 
 func (m UnsignedIntVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] {
@@ -201,8 +207,6 @@ func wrapFloat[T Floating](val, max T) T {
 	if max == 0 {
 		return val
 	}
-
-	// opcjonalnie: traktuj ujemne size jak dodatnie
 	if max < 0 {
 		max = -max
 	}
@@ -212,7 +216,22 @@ func wrapFloat[T Floating](val, max T) T {
 		return val
 	}
 
-	// ogólny przypadek: jedno math.Mod + korekta ujemnego wyniku
+	// dodatkowa szybka ścieżka: niewielkie odchylenie
+	twice := max + max
+	if val >= 0 && val < twice {
+		if val >= max {
+			return val - max
+		}
+		return val
+	}
+	if val < 0 {
+		if val >= -max {
+			return val + max
+		}
+		// dla (-2*max, -max) trzeba dodać 2*max albo spaść do math.Mod
+	}
+
+	// ogólny przypadek
 	r := T(math.Mod(float64(val), float64(max)))
 	if r < 0 {
 		r += max

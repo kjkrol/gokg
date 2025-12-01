@@ -2,14 +2,14 @@
 
 *aka "Golang kjkrol Geometry"*
 
-**GOKG** is a Go toolkit focused on practical 2D computational geometry.  
-It splits into two packages: `geom` supplies numeric vectors (`Vec`), axis-aligned bounding boxes (`AABB`), and vector math; `plane` wraps those primitives in boundary-aware `Space` implementations (cartesian and torus) that keep boxes canonical to a surface. `plane.AABB` caches size and fragments so translations, wraps, and clamps obey the space’s rules without duplicating bookkeeping.  
+**GOKG** is a Go toolkit focused on practical 2D computational geometry.
+It splits into two packages: `geom` supplies numeric vectors (`Vec`), axis-aligned bounding boxes (`AABB`), and vector math; `plane` wraps those primitives in boundary-aware `Space2D` implementations (Euclidean2D and Toroidal2D) that keep boxes canonical to a surface. `plane.AABB` caches size and fragments so translations, wraps, and clamps obey the space’s rules without duplicating bookkeeping.
 The library stays focused on mathematical geometry; rendering or UI concerns live in neighbouring packages.
 
-## Space boundary handling
+## Space2D boundary handling
 
-- Cartesian spaces clamp boxes to the viewport while keeping their size consistent, so expansions never bleed beyond the defined world.
-- Torus spaces automatically wrap boxes that cross an edge and split them into fragments that continue on the opposite side, making toroidal worlds easy to model. Conceptually, glue the top edge of the plane to the bottom edge, then the left edge to the right; this seam-stitching turns the rectangle into the torus shown in the animation below.
+- Euclidean2D spaces clamp boxes to the viewport while keeping their size consistent, so expansions never bleed beyond the defined world.
+- Toroidal2D spaces automatically wrap boxes that cross an edge and split them into fragments that continue on the opposite side, making toroidal worlds easy to model. Conceptually, glue the top edge of the plane to the bottom edge, then the left edge to the right; this seam-stitching turns the rectangle into the torus shown in the animation below.
 
   ![Torus](doc/Torus_from_rectangle.gif)
 
@@ -17,7 +17,7 @@ The library stays focused on mathematical geometry; rendering or UI concerns liv
 
 ## Usage example
 
-This snippet shifts a contiguous `plane.AABB` by `(-1,-1)` across a 10×10 torus `Space`, so the box wraps past the right and bottom edges and automatically splits into the fragments returned by `Fragments()`. The exact situation is illustrated by the plot below.
+This snippet shifts a contiguous `plane.AABB` by `(-1,-1)` across a 10×10 toroidal `Space2D`, so the box wraps past the right and bottom edges and automatically splits into the fragments returned by `Fragments()`. The exact situation is illustrated by the plot below.
 
 ![Wrapped AABB fragments](doc/example_plot.svg)
 
@@ -31,16 +31,16 @@ import (
 	"github.com/kjkrol/gokg/pkg/plane"
 )
 
-// Demonstrates how shifting a contiguous aabb beyond the torus plane boundary
+// Demonstrates how shifting a contiguous aabb beyond the toroidal plane boundary
 // causes it to fragment into multiple wrapped pieces and prints those fragments.
 func main() {
-	torus := plane.NewTorus(10, 10)
+        toroidal := plane.NewToroidal2D(10, 10)
 
-	box := geom.NewAABBAt(geom.NewVec(0, 0), 2, 2)
-	aabb := torus.WrapAABB(box)
+        box := geom.NewAABBAt(geom.NewVec(0, 0), 2, 2)
+        aabb := toroidal.WrapAABB(box)
 
-	shift := geom.NewVec(-1, -1)
-	torus.Translate(&aabb, shift)
+        shift := geom.NewVec(-1, -1)
+        toroidal.Translate(&aabb, shift)
 
 	fragments := aabb.Fragments()
 	if len(fragments) < 3 {

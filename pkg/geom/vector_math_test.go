@@ -42,10 +42,9 @@ func runClampTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
 		}
 
 		for _, c := range cases {
-			vec := NewVec(c.start.X, c.start.Y)
-			math.Clamp(&vec, bounds)
-			if vec != c.expected {
-				t.Errorf("expected %v, got %v", c.expected, vec)
+			got := math.Clamp(c.start, bounds)
+			if got != c.expected {
+				t.Errorf("expected %v, got %v", c.expected, got)
 			}
 		}
 	})
@@ -82,9 +81,9 @@ func runWrapTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
 			if c.start != (Vec[T]{}) {
 				vec = c.start
 			}
-			math.Wrap(&vec, c.offset)
-			if vec != c.expected {
-				t.Errorf("expected %v, got %v", c.expected, vec)
+			got := math.Wrap(vec, c.offset)
+			if got != c.expected {
+				t.Errorf("expected %v, got %v", c.expected, got)
 			}
 		}
 	})
