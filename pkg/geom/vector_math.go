@@ -8,7 +8,7 @@ import (
 
 // VectorMath exposes vector operations for numeric components.
 type (
-	SignedInt   interface{ ~int | ~int64 }
+	SignedInt   interface{ ~int | ~int64 | ~int32 }
 	UnsignedInt interface{ ~uint32 }
 	Floating    interface{ ~float32 | ~float64 }
 	Numeric     interface {
@@ -38,6 +38,7 @@ var (
 	float32VecMath = FloatVectorMath[float32]{}
 	float64VecMath = FloatVectorMath[float64]{}
 	intVecMath     = SignedIntVectorMath[int]{}
+	int32VecMath   = SignedIntVectorMath[int32]{}
 	int64VecMath   = SignedIntVectorMath[int64]{}
 	uint32VecMath  = UnsignedIntVectorMath[uint32]{}
 )
@@ -54,6 +55,8 @@ func VectorMathByType[T Numeric]() VectorMath[T] {
 		return any(intVecMath).(VectorMath[T])
 	case int64:
 		return any(int64VecMath).(VectorMath[T])
+	case int32:
+		return any(int32VecMath).(VectorMath[T])
 	case uint32:
 		return any(uint32VecMath).(VectorMath[T])
 	default:
@@ -66,22 +69,18 @@ func VectorMathByType[T Numeric]() VectorMath[T] {
 type FloatVectorMath[T Floating] struct{}
 
 func (m FloatVectorMath[T]) Length(v Vec[T]) T {
-	return T(math.Sqrt(float64(v.X*v.X + v.Y*v.Y)))
+	l := lengthFloat64XY(v.X, v.Y)
+	return T(l)
 }
 
-func (m FloatVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) { clampClosed(v, size) }
+func (m FloatVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) {
+	v.X = clampSigned(v.X, size.X)
+	v.Y = clampSigned(v.Y, size.Y)
+}
 
 func (m FloatVectorMath[T]) Wrap(v *Vec[T], size Vec[T]) {
-	modMutable := func(v1 *Vec[T], v2 Vec[T]) {
-		if v2.X != 0 {
-			v1.X = T(math.Mod(float64(v1.X), float64(v2.X)))
-		}
-		if v2.Y != 0 {
-			v1.Y = T(math.Mod(float64(v1.Y), float64(v2.Y)))
-		}
-
-	}
-	wrap(v, size, modMutable)
+	v.X = wrapFloat(v.X, size.X)
+	v.Y = wrapFloat(v.Y, size.Y)
 }
 
 func (m FloatVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] {
@@ -93,21 +92,18 @@ func (m FloatVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] {
 type SignedIntVectorMath[T SignedInt] struct{}
 
 func (m SignedIntVectorMath[T]) Length(v Vec[T]) T {
-	return T(math.Ceil(math.Sqrt(float64(v.X*v.X + v.Y*v.Y))))
+	l := lengthFloat64XY(v.X, v.Y)
+	return T(math.Ceil(l))
 }
 
-func (m SignedIntVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) { clampClosed(v, size) }
+func (m SignedIntVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) {
+	v.X = clampSigned(v.X, size.X)
+	v.Y = clampSigned(v.Y, size.Y)
+}
 
 func (m SignedIntVectorMath[T]) Wrap(v *Vec[T], size Vec[T]) {
-	modMutable := func(v1 *Vec[T], v2 Vec[T]) {
-		if v2.X != 0 {
-			v1.X %= v2.X
-		}
-		if v2.Y != 0 {
-			v1.Y %= v2.Y
-		}
-	}
-	wrap(v, size, modMutable)
+	v.X = wrapSigned(v.X, size.X)
+	v.Y = wrapSigned(v.Y, size.Y)
 }
 
 func (m SignedIntVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] { return v1.Sub(v2) }
@@ -117,40 +113,39 @@ func (m SignedIntVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] { return v1.Sub(v2) }
 type UnsignedIntVectorMath[T UnsignedInt] struct{}
 
 func (m UnsignedIntVectorMath[T]) Length(v Vec[T]) T {
-	return T(math.Ceil(math.Sqrt(float64(v.X*v.X + v.Y*v.Y))))
+	l := lengthFloat64XY(v.X, v.Y)
+	return T(math.Ceil(l))
 }
 
 func (m UnsignedIntVectorMath[T]) Clamp(v *Vec[T], size Vec[T]) {
-	// odczytaj komponenty jako signed, żeby podwijane ujemne wartości nie lądowały na „9”
+	// odczytaj komponenty jako signed (int32 -> int64),
+	// żeby np. 0xFFFF_FFF8 traktować jako -8, a nie 4_294_967_288
 	sx := int64(int32(v.X))
 	sy := int64(int32(v.Y))
 
-	clamp := func(val, max int64) int64 {
-		if val < 0 {
-			return 0
-		}
-		if val > max {
-			return max
-		}
-		return val
-	}
+	maxX := int64(size.X)
+	maxY := int64(size.Y)
 
-	v.X = T(clamp(sx, int64(size.X)))
-	v.Y = T(clamp(sy, int64(size.Y)))
+	sx = clampSigned(sx, maxX)
+	sy = clampSigned(sy, maxY)
+
+	v.X = T(sx)
+	v.Y = T(sy)
 }
 
 func (m UnsignedIntVectorMath[T]) Wrap(v *Vec[T], size Vec[T]) {
-	// reinterpretuj komponenty jako signed (int32 -> int64), żeby -8 nie stało się 4294967288
-	signed := Vec[int64]{int64(int32(v.X)), int64(int32(v.Y))}
-	bounds := Vec[int64]{int64(size.X), int64(size.Y)}
+	// reinterpretacja do signed (int32 -> int64)
+	signed := Vec[int64]{
+		int64(int32(v.X)),
+		int64(int32(v.Y)),
+	}
+	bounds := Vec[int64]{
+		int64(size.X),
+		int64(size.Y),
+	}
 
-	// modulo dodatnie pozwala znormalizować także duże wartości ujemne (np. -17 przy size=9 -> 1)
-	if bounds.X != 0 {
-		signed.X = ((signed.X % bounds.X) + bounds.X) % bounds.X
-	}
-	if bounds.Y != 0 {
-		signed.Y = ((signed.Y % bounds.Y) + bounds.Y) % bounds.Y
-	}
+	signed.X = wrapSigned(signed.X, bounds.X)
+	signed.Y = wrapSigned(signed.Y, bounds.Y)
 
 	v.X = T(signed.X)
 	v.Y = T(signed.Y)
@@ -164,21 +159,69 @@ func (m UnsignedIntVectorMath[T]) Sub(v1, v2 Vec[T]) Vec[T] {
 
 //-----------------------------------------------------------------------------
 
-func clampClosed[T Numeric](v *Vec[T], bounds Vec[T]) {
-	if v.X > bounds.X {
-		v.X = bounds.X
-	} else if v.X < 0 {
-		v.X = 0
+func clampSigned[T SignedInt | Floating](val, max T) T {
+	if val > max {
+		return max
 	}
-	if v.Y > bounds.Y {
-		v.Y = bounds.Y
-	} else if v.Y < 0 {
-		v.Y = 0
+	if val < 0 {
+		return 0
 	}
+	return val
 }
 
-func wrap[T Numeric](v *Vec[T], bounds Vec[T], modMutable func(*Vec[T], Vec[T])) {
-	modMutable(v, bounds)
-	v.AddMutable(bounds)
-	modMutable(v, bounds)
+func wrapSigned[T SignedInt](val, max T) T {
+	if max == 0 {
+		return val
+	}
+
+	if max < 0 {
+		max = -max
+	}
+
+	// szybka ścieżka: już w [0, max)
+	if val >= 0 && val < max {
+		return val
+	}
+
+	// szybka ścieżka dla potęgi dwójki
+	if max&(max-1) == 0 {
+		mask := max - 1
+		return val & mask
+	}
+
+	// ogólny przypadek: jedno modulo + korekta ujemnego wyniku
+	r := val % max
+	if r < 0 {
+		r += max
+	}
+	return r
+}
+
+func wrapFloat[T Floating](val, max T) T {
+	if max == 0 {
+		return val
+	}
+
+	// opcjonalnie: traktuj ujemne size jak dodatnie
+	if max < 0 {
+		max = -max
+	}
+
+	// szybka ścieżka: już w [0, max)
+	if val >= 0 && val < max {
+		return val
+	}
+
+	// ogólny przypadek: jedno math.Mod + korekta ujemnego wyniku
+	r := T(math.Mod(float64(val), float64(max)))
+	if r < 0 {
+		r += max
+	}
+	return r
+}
+
+func lengthFloat64XY[T Numeric](x, y T) float64 {
+	dx := float64(x)
+	dy := float64(y)
+	return math.Sqrt(dx*dx + dy*dy)
 }
