@@ -74,6 +74,11 @@ func (ab AABB[T]) ContainsVec(vec Vec[T]) bool {
 		vec.Y > ab.TopLeft.Y && vec.Y < ab.BottomRight.Y
 }
 
+func (ab AABB[T]) IntersectsVec(vec Vec[T]) bool {
+	return vec.X >= ab.TopLeft.X && vec.X <= ab.BottomRight.X &&
+		vec.Y >= ab.TopLeft.Y && vec.Y <= ab.BottomRight.Y
+}
+
 // Intersects reports whether this AABB overlaps another axis-aligned bounding box.
 // It returns true both when the AABBs share any interior volume
 // and when they only touch along edges or vertices.

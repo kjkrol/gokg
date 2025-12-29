@@ -9,6 +9,7 @@ const (
 
 type (
 	Space2D[T geom.Numeric] interface {
+		Normalize(aabb geom.AABB[T]) geom.AABB[T]
 		WrapAABB(aabb geom.AABB[T]) AABB[T]
 		WrapVec(vec geom.Vec[T]) AABB[T]
 		Expand(aabb *AABB[T], margin T)

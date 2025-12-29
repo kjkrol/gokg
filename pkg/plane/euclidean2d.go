@@ -15,6 +15,12 @@ func NewEuclidean2D[T geom.Numeric](sizeX, sizeY T) Space2D[T] {
 
 type euclidean2d[T geom.Numeric] struct{ space2d[T] }
 
+func (s euclidean2d[T]) Normalize(aabb geom.AABB[T]) geom.AABB[T] {
+	wrappedAABB := s.WrapAABB(aabb)
+	s.normalizeAABB(&wrappedAABB)
+	return wrappedAABB.AABB
+}
+
 func (s euclidean2d[T]) Name() string { return modeEuclidean2D }
 
 func (s euclidean2d[T]) Viewport() geom.AABB[T] { return s.viewport }
