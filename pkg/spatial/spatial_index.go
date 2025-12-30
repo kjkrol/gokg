@@ -1,6 +1,8 @@
 package spatial
 
-import "github.com/kjkrol/gokg/pkg/geom"
+import (
+	"github.com/kjkrol/gokg/pkg/geom"
+)
 
 // Index is a discrete spatial index over a 2D power-of-two grid.
 // It stores objects at integer coordinates and supports point lookups,
@@ -20,6 +22,7 @@ type (
 		BulkMove(moves EntriesMove)
 
 		// QueryRange – all objects within the AABB.
+		// Collector cannot modify Index.
 		QueryRange(aabb AABB, collector func(uint64)) int
 
 		// Count – number of objects in the structure.
@@ -27,6 +30,10 @@ type (
 
 		// Bounds – global bounds of the handled space.
 		Bounds() AABB
+
+		Optimize()
+
+		Clear()
 	}
 
 	Entry struct {
@@ -38,6 +45,12 @@ type (
 		Old []Entry
 		New []Entry
 	}
+)
+
+var (
+	NewVec    = geom.NewVec[uint32]
+	NewAABB   = geom.NewAABB[uint32]
+	NewAABBAt = geom.NewAABBAt[uint32]
 )
 
 func NewEntriesMove(capHint int) EntriesMove {

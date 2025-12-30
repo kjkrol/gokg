@@ -1,25 +1,20 @@
-package bucketgrid
+package spatial
 
 import (
 	"testing"
 
 	"github.com/kjkrol/gokg/pkg/geom"
-	"github.com/kjkrol/gokg/pkg/spatial"
-
 	"github.com/stretchr/testify/assert"
-)
-
-var (
-	NewAABBAt = geom.NewAABBAt[uint32]
-	NewVec    = geom.NewVec[uint32]
 )
 
 func TestBucketGrid_Buckets_Len(t *testing.T) {
 
-	overalRes := spatial.Size128x128
-	bucketRes := spatial.Size32x32
-	idx := NewBucketGrid(overalRes, bucketRes, 1)
-	bucketGrid := idx.(*BucketGrid)
+	idx, _ := NewBucketGrid(
+		Size128x128,
+		Size32x32,
+		WithBucketCapacityFactor(1),
+	)
+	bucketGrid := idx.(*bucketGrid)
 	bucketsLen := len(bucketGrid.buckets)
 
 	if bucketsLen != 16 {
@@ -31,9 +26,11 @@ func TestBucketGrid_Buckets_Len(t *testing.T) {
 func TestBucketGrid_Buckets_QueryRange(t *testing.T) {
 
 	// given
-	overalRes := spatial.Size128x128
-	bucketRes := spatial.Size16x16
-	bucketGrid := NewBucketGrid(overalRes, bucketRes, 1)
+	bucketGrid, _ := NewBucketGrid(
+		Size128x128,
+		Size16x16,
+		WithBucketCapacityFactor(1),
+	)
 
 	entries := []Entry{
 		{AABB: NewAABBAt(NewVec(15, 15), 3, 3), Id: 1},
@@ -45,17 +42,11 @@ func TestBucketGrid_Buckets_QueryRange(t *testing.T) {
 	bucketGrid.BulkInsert(entries)
 
 	out := make([]uint64, 0, len(entries))
-	seen := make(map[uint64]bool, len(entries))
 	aabb := geom.NewAABBAt(Vec{X: 28, Y: 28}, 10, 10)
 	expected := []uint64{2, 3, 4}
 
 	// when
-	bucketGrid.QueryRange(aabb, func(u uint64) {
-		if !seen[u] {
-			out = append(out, u)
-			seen[u] = true
-		}
-	})
+	bucketGrid.QueryRange(aabb, func(u uint64) { out = append(out, u) })
 
 	// then
 	assert.ElementsMatch(t, expected, out, "Should have exactly same elements")
@@ -64,9 +55,11 @@ func TestBucketGrid_Buckets_QueryRange(t *testing.T) {
 func TestBucketGrid_Buckets_BulkMove(t *testing.T) {
 
 	// given
-	overalRes := spatial.Size128x128
-	bucketRes := spatial.Size16x16
-	bucketGrid := NewBucketGrid(overalRes, bucketRes, 1)
+	bucketGrid, _ := NewBucketGrid(
+		Size128x128,
+		Size16x16,
+		WithBucketCapacityFactor(1),
+	)
 
 	entries := []Entry{
 		{AABB: NewAABBAt(NewVec(15, 15), 3, 3), Id: 1},
@@ -79,7 +72,6 @@ func TestBucketGrid_Buckets_BulkMove(t *testing.T) {
 	bucketGrid.BulkInsert(entries)
 
 	out := make([]uint64, 0, len(entries))
-	seen := make(map[uint64]bool, len(entries))
 	aabb := geom.NewAABBAt(Vec{X: 28, Y: 28}, 10, 10)
 	expected := []uint64{1, 3}
 
@@ -98,12 +90,7 @@ func TestBucketGrid_Buckets_BulkMove(t *testing.T) {
 	bucketGrid.BulkMove(entriesMove)
 
 	// when
-	bucketGrid.QueryRange(aabb, func(u uint64) {
-		if !seen[u] {
-			out = append(out, u)
-			seen[u] = true
-		}
-	})
+	bucketGrid.QueryRange(aabb, func(u uint64) { out = append(out, u) })
 
 	// then
 	assert.ElementsMatch(t, expected, out, "Should have exactly same elements")

@@ -22,6 +22,7 @@ const (
 	Size256x256
 	Size512x512
 	Size1024x1024
+	Size2048x2048
 )
 
 func NewResolution(cord uint8) Resolution {
@@ -48,8 +49,8 @@ func (s Resolution) MaxCoord() uint32 {
 
 // Cells returns the total number of cells in the grid (side * side).
 // To jest 1 << (2*s).
-func (s Resolution) Cells() uint64 {
-	return uint64(1) << (s << 1)
+func (s Resolution) Cells() int {
+	return int(1) << (s << 1)
 }
 
 // String returns a human-readable name like "1x1", "1024x1024".
