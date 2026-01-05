@@ -36,6 +36,11 @@ type (
 		Clear()
 	}
 
+	GridIndexer interface {
+		Index
+		CalculateGridIndex(vec Vec) int
+	}
+
 	Entry struct {
 		AABB
 		Id uint64

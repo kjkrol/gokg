@@ -90,6 +90,31 @@ func (ab AABB[T]) Intersects(other AABB[T]) bool {
 		ab.BottomRight.Y >= other.TopLeft.Y
 }
 
+// IntersectStrict returns the overlapping AABB with positive area.
+// Touching edges are treated as non-intersecting.
+func IntersectStrict[T Numeric](a, b AABB[T]) (AABB[T], bool) {
+	minX := a.TopLeft.X
+	if b.TopLeft.X > minX {
+		minX = b.TopLeft.X
+	}
+	minY := a.TopLeft.Y
+	if b.TopLeft.Y > minY {
+		minY = b.TopLeft.Y
+	}
+	maxX := a.BottomRight.X
+	if b.BottomRight.X < maxX {
+		maxX = b.BottomRight.X
+	}
+	maxY := a.BottomRight.Y
+	if b.BottomRight.Y < maxY {
+		maxY = b.BottomRight.Y
+	}
+	if maxX <= minX || maxY <= minY {
+		return AABB[T]{}, false
+	}
+	return NewAABB(NewVec(minX, minY), NewVec(maxX, maxY)), true
+}
+
 // AxisDistanceTo returns the gap between tow given AABBs on the axis selected by axisValue.
 func (ab AABB[T]) AxisDistanceX(other AABB[T]) T {
 	return axisDistance1D(ab.TopLeft.X, ab.BottomRight.X, other.TopLeft.X, other.BottomRight.X)

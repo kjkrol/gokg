@@ -8,6 +8,7 @@ import (
 
 type (
 	bucketGrid struct {
+		resolution        Resolution
 		bucketsResolution Resolution
 		bucketCapacity    int
 		gridResolution    Resolution
@@ -49,6 +50,7 @@ func NewBucketGrid(
 	side := overallResolution.Side()
 
 	bg := &bucketGrid{
+		resolution:        overallResolution,
 		bucketsResolution: bucketsResolution,
 		gridResolution:    gridResolution,
 		gridCellCodec:     gridCellCodec,
@@ -91,8 +93,11 @@ func WithBucketCapacity(bucketCapacity int) Option {
 
 func (bg *bucketGrid) BulkInsert(entries []Entry) {
 	for _, entry := range entries {
-		tlIdx := bg.calculateGridIndex(entry.AABB.TopLeft)
-		brIdx := bg.calculateGridIndex(entry.AABB.BottomRight)
+		tlIdx := bg.CalculateGridIndex(entry.AABB.TopLeft)
+		brIdx := bg.CalculateGridIndex(entry.AABB.BottomRight)
+		if tlIdx < 0 || brIdx < 0 || tlIdx >= len(bg.buckets) || brIdx >= len(bg.buckets) {
+			continue
+		}
 
 		if tlIdx == brIdx {
 			bg.buckets[tlIdx].Add(entry.Id, bg.bucketCapacity)
@@ -101,7 +106,10 @@ func (bg *bucketGrid) BulkInsert(entries []Entry) {
 			x2, y2 := bg.gridCellCodec.Decode(brIdx)
 			for y := y1; y <= y2; y++ {
 				for x := x1; x <= x2; x++ {
-					idx := bg.gridCellCodec.Encode(x, y)
+					idx, err := bg.gridCellCodec.Encode(x, y)
+					if err != nil || idx < 0 || idx >= len(bg.buckets) {
+						continue
+					}
 					bg.buckets[idx].Add(entry.Id, bg.bucketCapacity)
 				}
 			}
@@ -113,8 +121,11 @@ func (bg *bucketGrid) BulkInsert(entries []Entry) {
 // BulkRemove – remove whatever is stored at the given positions.
 func (bg *bucketGrid) BulkRemove(entries []Entry) {
 	for _, entry := range entries {
-		tlIdx := bg.calculateGridIndex(entry.AABB.TopLeft)
-		brIdx := bg.calculateGridIndex(entry.AABB.BottomRight)
+		tlIdx := bg.CalculateGridIndex(entry.AABB.TopLeft)
+		brIdx := bg.CalculateGridIndex(entry.AABB.BottomRight)
+		if tlIdx < 0 || brIdx < 0 || tlIdx >= len(bg.buckets) || brIdx >= len(bg.buckets) {
+			continue
+		}
 
 		if tlIdx == brIdx {
 			if bg.buckets[tlIdx].Remove(entry.Id) {
@@ -125,7 +136,10 @@ func (bg *bucketGrid) BulkRemove(entries []Entry) {
 			x2, y2 := bg.gridCellCodec.Decode(brIdx)
 			for y := y1; y <= y2; y++ {
 				for x := x1; x <= x2; x++ {
-					idx := bg.gridCellCodec.Encode(x, y)
+					idx, err := bg.gridCellCodec.Encode(x, y)
+					if err != nil || idx < 0 || idx >= len(bg.buckets) {
+						continue
+					}
 					if bg.buckets[idx].Remove(entry.Id) {
 						bg.optimizer.mark(idx, len(bg.buckets[idx].ids) == 0)
 					}
@@ -145,10 +159,16 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 			continue
 		}
 
-		oldTl := bg.calculateGridIndex(oldEntry.AABB.TopLeft)
-		oldBr := bg.calculateGridIndex(oldEntry.AABB.BottomRight)
-		newTl := bg.calculateGridIndex(newEntry.AABB.TopLeft)
-		newBr := bg.calculateGridIndex(newEntry.AABB.BottomRight)
+		oldTl := bg.CalculateGridIndex(oldEntry.AABB.TopLeft)
+		oldBr := bg.CalculateGridIndex(oldEntry.AABB.BottomRight)
+		newTl := bg.CalculateGridIndex(newEntry.AABB.TopLeft)
+		newBr := bg.CalculateGridIndex(newEntry.AABB.BottomRight)
+		if oldTl < 0 || oldBr < 0 || newTl < 0 || newBr < 0 {
+			continue
+		}
+		if oldTl >= len(bg.buckets) || oldBr >= len(bg.buckets) || newTl >= len(bg.buckets) || newBr >= len(bg.buckets) {
+			continue
+		}
 
 		if oldTl != newTl || oldBr != newBr {
 			if oldTl == oldBr {
@@ -158,7 +178,11 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 				x2, y2 := bg.gridCellCodec.Decode(oldBr)
 				for y := y1; y <= y2; y++ {
 					for x := x1; x <= x2; x++ {
-						bg.buckets[bg.gridCellCodec.Encode(x, y)].Remove(oldEntry.Id)
+						idx, err := bg.gridCellCodec.Encode(x, y)
+						if err != nil || idx < 0 || idx >= len(bg.buckets) {
+							continue
+						}
+						bg.buckets[idx].Remove(oldEntry.Id)
 					}
 				}
 			}
@@ -170,7 +194,11 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 				x2, y2 := bg.gridCellCodec.Decode(newBr)
 				for y := y1; y <= y2; y++ {
 					for x := x1; x <= x2; x++ {
-						bg.buckets[bg.gridCellCodec.Encode(x, y)].Add(newEntry.Id, bg.bucketCapacity)
+						idx, err := bg.gridCellCodec.Encode(x, y)
+						if err != nil || idx < 0 || idx >= len(bg.buckets) {
+							continue
+						}
+						bg.buckets[idx].Add(newEntry.Id, bg.bucketCapacity)
 					}
 				}
 			}
@@ -182,8 +210,11 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 // QueryRange – all objects within the AABB.
 func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
 
-	tlIdx := bg.calculateGridIndex(aabb.TopLeft)
-	brIdx := bg.calculateGridIndex(aabb.BottomRight)
+	tlIdx := bg.CalculateGridIndex(aabb.TopLeft)
+	brIdx := bg.CalculateGridIndex(aabb.BottomRight)
+	if tlIdx < 0 || brIdx < 0 || tlIdx >= len(bg.buckets) || brIdx >= len(bg.buckets) {
+		return 0
+	}
 	counter := 0
 
 	// Optimal path
@@ -211,7 +242,10 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
 
 	for y := y1; y <= y2; y++ {
 		for x := x1; x <= x2; x++ {
-			idx := bg.gridCellCodec.Encode(x, y)
+			idx, err := bg.gridCellCodec.Encode(x, y)
+			if err != nil || idx < 0 || idx >= len(bg.buckets) {
+				continue
+			}
 			bucket := bg.buckets[idx]
 
 			for _, id := range bucket.ids {
@@ -250,10 +284,42 @@ func (bg *bucketGrid) Optimize() {
 	bg.optimizer.collect(bg.buckets)
 }
 
-func (bg *bucketGrid) calculateGridIndex(vec Vec) int {
+func (bg *bucketGrid) CalculateGridIndex(vec Vec) int {
 	xHead := vec.X >> bg.bucketsResolution
 	yHead := vec.Y >> bg.bucketsResolution
-	return bg.gridCellCodec.Encode(xHead, yHead)
+	idx, err := bg.gridCellCodec.Encode(xHead, yHead)
+	if err != nil {
+		return -1
+	}
+	return idx
+}
+
+func (bg *bucketGrid) forEachBucketIndex(aabb AABB, fn func(uint32)) {
+	if bg == nil {
+		return
+	}
+	tlIdx := bg.CalculateGridIndex(aabb.TopLeft)
+	brIdx := bg.CalculateGridIndex(aabb.BottomRight)
+	if tlIdx < 0 || brIdx < 0 || tlIdx >= len(bg.buckets) || brIdx >= len(bg.buckets) {
+		return
+	}
+
+	if tlIdx == brIdx {
+		fn(uint32(tlIdx))
+		return
+	}
+
+	x1, y1 := bg.gridCellCodec.Decode(tlIdx)
+	x2, y2 := bg.gridCellCodec.Decode(brIdx)
+	for y := y1; y <= y2; y++ {
+		for x := x1; x <= x2; x++ {
+			idx, err := bg.gridCellCodec.Encode(x, y)
+			if err != nil || idx < 0 || idx >= len(bg.buckets) {
+				continue
+			}
+			fn(uint32(idx))
+		}
+	}
 }
 
 // -----------------------------------------------------------

@@ -52,3 +52,12 @@ func (s *syncIndex) Clear() {
 	defer s.mu.Unlock()
 	s.Index.Clear()
 }
+
+func (s *syncIndex) CalculateGridIndex(vec Vec) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if indexer, ok := s.Index.(GridIndexer); ok {
+		return indexer.CalculateGridIndex(vec)
+	}
+	return -1
+}
