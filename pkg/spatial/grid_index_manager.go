@@ -9,9 +9,10 @@ import (
 const defaultOpsBuffer = 4096
 
 type GridIndexConfig struct {
-	WorldResolution  Resolution
+	Resolution       Resolution
 	BucketResolution Resolution
 	BucketCapacity   int
+	OpsBufferSize    int
 }
 
 type BucketDelta struct {
@@ -73,20 +74,20 @@ func NewGridIndexManager(space plane.Space2D[uint32], cfg GridIndexConfig) (*Gri
 	if space == nil {
 		return nil, fmt.Errorf("space is required")
 	}
-	if cfg.WorldResolution == 0 {
+	if cfg.Resolution == 0 {
 		return nil, fmt.Errorf("world resolution is required")
 	}
 	if cfg.BucketResolution == 0 {
 		return nil, fmt.Errorf("bucket resolution is required")
 	}
-	if cfg.WorldResolution < cfg.BucketResolution {
+	if cfg.Resolution < cfg.BucketResolution {
 		return nil, fmt.Errorf("bucket resolution must be <= world resolution")
 	}
 	if cfg.BucketCapacity <= 0 {
 		cfg.BucketCapacity = 2
 	}
 	index, err := NewBucketGrid(
-		cfg.WorldResolution,
+		cfg.Resolution,
 		cfg.BucketResolution,
 		WithBucketCapacity(cfg.BucketCapacity),
 	)
@@ -98,10 +99,14 @@ func NewGridIndexManager(space plane.Space2D[uint32], cfg GridIndexConfig) (*Gri
 		return nil, fmt.Errorf("unexpected bucket grid type")
 	}
 	maxGridCord := grid.resolution.MaxCoord()
+	opsBufferSize := cfg.OpsBufferSize
+	if cfg.OpsBufferSize == 0 {
+		opsBufferSize = defaultOpsBuffer
+	}
 	manager := &GridIndexManager{
 		bucketGrid:   grid,
 		space:        space,
-		opsCh:        make(chan indexOp, defaultOpsBuffer),
+		opsCh:        make(chan indexOp, opsBufferSize),
 		entries:      make(map[uint64]entryCache),
 		bucketDeltas: make(map[AABB]*bucketDelta),
 		maxGridCord:  maxGridCord,
