@@ -90,9 +90,9 @@ func (ab AABB[T]) Intersects(other AABB[T]) bool {
 		ab.BottomRight.Y >= other.TopLeft.Y
 }
 
-// IntersectStrict returns the overlapping AABB with positive area.
-// Touching edges are treated as non-intersecting.
-func IntersectStrict[T Numeric](a, b AABB[T]) (AABB[T], bool) {
+// Intersection returns the overlapping AABB.
+// Touching edges are treated as intersecting.
+func Intersection[T Numeric](a, b AABB[T]) (AABB[T], bool) {
 	minX := a.TopLeft.X
 	if b.TopLeft.X > minX {
 		minX = b.TopLeft.X
@@ -109,7 +109,7 @@ func IntersectStrict[T Numeric](a, b AABB[T]) (AABB[T], bool) {
 	if b.BottomRight.Y < maxY {
 		maxY = b.BottomRight.Y
 	}
-	if maxX <= minX || maxY <= minY {
+	if maxX < minX || maxY < minY {
 		return AABB[T]{}, false
 	}
 	return NewAABB(NewVec(minX, minY), NewVec(maxX, maxY)), true
