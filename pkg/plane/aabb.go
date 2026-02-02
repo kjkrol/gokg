@@ -25,8 +25,8 @@ type AABB[T geom.Numeric] struct {
 	fragMask uint8
 }
 
-// newAABB builds a AABB at pos with the given size, priming fragment storage for Space operations.
-func newAABB[T geom.Numeric](pos geom.Vec[T], width, height T) AABB[T] {
+// NewAABB builds a AABB at pos with the given size, priming fragment storage for Space operations.
+func NewAABB[T geom.Numeric](pos geom.Vec[T], width, height T) AABB[T] {
 	return AABB[T]{
 		AABB: geom.AABB[T]{
 			TopLeft:     pos,

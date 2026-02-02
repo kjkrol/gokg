@@ -164,7 +164,7 @@ func vec[T geom.Numeric](x, y int) geom.Vec[T] {
 func TestEuclidean2DSpace_TransformBackAndForth(t *testing.T) {
 	euclidean := NewEuclidean2D(10, 10)
 
-	box := newAABB(geom.NewVec(0, 0), 2, 2)
+	box := NewAABB(geom.NewVec(0, 0), 2, 2)
 
 	shift := geom.NewVec(2, 2)
 	euclidean.Translate(&box, shift)
@@ -184,7 +184,7 @@ func TestEuclidean2DSpace_TransformBackAndForth(t *testing.T) {
 func TestToroidal2DSpace_TransformBackAndForth(t *testing.T) {
 	toroidal := NewToroidal2D(10, 10)
 
-	box := newAABB(geom.NewVec(0, 0), 2, 2)
+	box := NewAABB(geom.NewVec(0, 0), 2, 2)
 
 	shift := geom.NewVec(-1, -1)
 	toroidal.Translate(&box, shift)

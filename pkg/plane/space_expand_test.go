@@ -15,7 +15,7 @@ func TestEuclidean2DExpand(t *testing.T) {
 func runEuclidean2DExpandTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
 		euclidean := NewEuclidean2D(T(10), T(10))
-		aabb := newAABB(vec[T](2, 3), T(3), T(4))
+		aabb := NewAABB(vec[T](2, 3), T(3), T(4))
 		euclidean.Expand(&aabb, T(2))
 		expectAABBState(t, aabb, vec[T](0, 1), vec[T](7, 9), map[FragPosition][2]geom.Vec[T]{})
 	})
@@ -30,7 +30,7 @@ func TestEuclidean2DExpandCornerCase(t *testing.T) {
 func runEuclidean2DExpandCornerCase[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
 		euclidean := NewEuclidean2D(T(10), T(10))
-		aabb := newAABB(vec[T](0, 0), T(2), T(2))
+		aabb := NewAABB(vec[T](0, 0), T(2), T(2))
 		euclidean.Expand(&aabb, T(2))
 		expectAABBState(t, aabb, vec[T](0, 0), vec[T](4, 4), map[FragPosition][2]geom.Vec[T]{})
 	})
@@ -45,7 +45,7 @@ func TestToroidal2DExpandCornerCase(t *testing.T) {
 func runToroidal2DExpandCornerCase[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
 		toroidal := NewToroidal2D(T(10), T(10))
-		aabb := newAABB(vec[T](0, 0), T(2), T(2))
+		aabb := NewAABB(vec[T](0, 0), T(2), T(2))
 		toroidal.Expand(&aabb, T(2))
 		expectAABBState(t, aabb, vec[T](8, 8), vec[T](10, 10), convertFragments[T](map[FragPosition][2]geom.Vec[int]{
 			FRAG_RIGHT:        {geom.NewVec(0, 8), geom.NewVec(4, 10)},
@@ -65,8 +65,8 @@ func runToroidal2DExpandThenIntersects[T geom.Numeric](t *testing.T, name string
 	t.Run(name, func(t *testing.T) {
 		toroidal := NewToroidal2D(T(100), T(100))
 
-		aabb1 := newAABB(vec[T](5, 5), T(10), T(10))
-		aabb2 := newAABB(vec[T](96, 96), T(10), T(10))
+		aabb1 := NewAABB(vec[T](5, 5), T(10), T(10))
+		aabb2 := NewAABB(vec[T](96, 96), T(10), T(10))
 
 		toroidal.Expand(&aabb2, T(0))
 

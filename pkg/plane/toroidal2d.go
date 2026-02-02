@@ -28,7 +28,7 @@ func (s toroidal2d[T]) Viewport() geom.AABB[T] { return s.viewport }
 func (s toroidal2d[T]) WrapAABB(aabb geom.AABB[T]) AABB[T] {
 	width := aabb.BottomRight.X - aabb.TopLeft.X
 	height := aabb.BottomRight.Y - aabb.TopLeft.Y
-	wrappedAABB := newAABB(aabb.TopLeft, width, height)
+	wrappedAABB := NewAABB(aabb.TopLeft, width, height)
 	s.normalizeAABB(&wrappedAABB)
 	return wrappedAABB
 }

@@ -14,8 +14,8 @@ func TestAxisDistance(t *testing.T) {
 
 func runAxisDistanceTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
-		aa := newAABB(geom.NewVec(T(0), T(0)), T(2), T(2))
-		bb := newAABB(geom.NewVec(T(5), T(0)), T(2), T(2))
+		aa := NewAABB(geom.NewVec(T(0), T(0)), T(2), T(2))
+		bb := NewAABB(geom.NewVec(T(5), T(0)), T(2), T(2))
 
 		dx := aa.AxisDistanceX(bb.AABB)
 		dy := aa.AxisDistanceY(bb.AABB)
@@ -37,8 +37,8 @@ func TestAABBDistance_Euclidean2DSpace(t *testing.T) {
 
 func runAABBDistanceEuclidean2DTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
-		rectA := newAABB(vec[T](0, 0), T(2), T(2))
-		rectB := newAABB(vec[T](4, 5), T(2), T(2))
+		rectA := NewAABB(vec[T](0, 0), T(2), T(2))
+		rectB := NewAABB(vec[T](4, 5), T(2), T(2))
 
 		euclidean := NewEuclidean2D(T(20), T(20))
 		distance := euclidean.AABBDistance()(rectA.AABB, rectB.AABB)
@@ -58,8 +58,8 @@ func TestAABBDistance_ReturnsZeroOnIntersection(t *testing.T) {
 
 func runAABBDistanceZeroOnIntersectionTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
-		rectA := newAABB(vec[T](0, 0), T(4), T(4))
-		rectB := newAABB(vec[T](2, 2), T(4), T(4))
+		rectA := NewAABB(vec[T](0, 0), T(4), T(4))
+		rectB := NewAABB(vec[T](2, 2), T(4), T(4))
 
 		euclidean := NewEuclidean2D(T(20), T(20))
 		distance := euclidean.AABBDistance()(rectA.AABB, rectB.AABB)
@@ -86,12 +86,12 @@ func runAABBDistanceToVectorEuclidean2DTest[T geom.Numeric](t *testing.T, name s
 			{
 				name:   "vectorAsPointLeft",
 				first:  geom.NewAABBAt(vec[T](0, 0), T(0), T(0)),
-				second: newAABB(vec[T](4, 0), T(2), T(2)).AABB,
+				second: NewAABB(vec[T](4, 0), T(2), T(2)).AABB,
 				delta:  vec[T](4, 0),
 			},
 			{
 				name:   "vectorAsPointRight",
-				first:  newAABB(vec[T](0, 0), T(2), T(2)).AABB,
+				first:  NewAABB(vec[T](0, 0), T(2), T(2)).AABB,
 				second: geom.NewAABBAt(vec[T](5, 6), T(0), T(0)),
 				delta:  vec[T](3, 4),
 			},

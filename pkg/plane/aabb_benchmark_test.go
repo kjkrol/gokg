@@ -12,8 +12,8 @@ var (
 )
 
 func Benchmark_AABB_Intersects(b *testing.B) {
-	base := newAABB(geom.NewVec(0, 0), 5, 5)
-	target := newAABB(geom.NewVec(4, 4), 3, 3)
+	base := NewAABB(geom.NewVec(0, 0), 5, 5)
+	target := NewAABB(geom.NewVec(4, 4), 3, 3)
 
 	b.ReportAllocs()
 	for b.Loop() {
@@ -22,8 +22,8 @@ func Benchmark_AABB_Intersects(b *testing.B) {
 }
 
 func Benchmark_AABB_IntersectsWithFrags(b *testing.B) {
-	base := newAABB(geom.NewVec(0, 0), 5, 5)
-	target := newAABB(geom.NewVec(4, 4), 3, 3)
+	base := NewAABB(geom.NewVec(0, 0), 5, 5)
+	target := NewAABB(geom.NewVec(4, 4), 3, 3)
 	target.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(2, 7)))
 	target.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(7, 2)))
 	target.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(2, 2)))
@@ -35,8 +35,8 @@ func Benchmark_AABB_IntersectsWithFrags(b *testing.B) {
 }
 
 func Benchmark_AABB_Contains(b *testing.B) {
-	outer := newAABB(geom.NewVec(0, 0), 10, 10)
-	inner := newAABB(geom.NewVec(3, 3), 2, 2)
+	outer := NewAABB(geom.NewVec(0, 0), 10, 10)
+	inner := NewAABB(geom.NewVec(3, 3), 2, 2)
 
 	b.ReportAllocs()
 	for b.Loop() {
@@ -45,8 +45,8 @@ func Benchmark_AABB_Contains(b *testing.B) {
 }
 
 func Benchmark_AABB_ContainsWithFrags(b *testing.B) {
-	base := newAABB(geom.NewVec(0, 0), 5, 5)
-	target := newAABB(geom.NewVec(4, 4), 3, 3)
+	base := NewAABB(geom.NewVec(0, 0), 5, 5)
+	target := NewAABB(geom.NewVec(4, 4), 3, 3)
 	target.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(2, 7)))
 	target.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(7, 2)))
 	target.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(2, 2)))

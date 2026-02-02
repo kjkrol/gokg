@@ -18,7 +18,7 @@ func runEuclidean2DNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 
 		for _, tc := range euclideanNormalizeScenarios[T]() {
 			t.Run(tc.name, func(t *testing.T) {
-				aabb := newAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
+				aabb := NewAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
 				euclidean.(*euclidean2d[T]).normalizeAABB(&aabb)
 				expectAABBState(t, aabb,
 					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
@@ -126,7 +126,7 @@ func runToroidal2DNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
 
 		for _, tc := range toroidalNormalizeScenarios[T]() {
 			t.Run(tc.name, func(t *testing.T) {
-				aabb := newAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
+				aabb := NewAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
 				toroidal.(*toroidal2d[T]).normalizeAABB(&aabb)
 				expectAABBState(t, aabb,
 					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),

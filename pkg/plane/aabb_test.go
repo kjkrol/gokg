@@ -14,7 +14,7 @@ func TestAABB_NewAABB(t *testing.T) {
 
 func runAABBNewTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
-		aabb := newAABB[T](vec[T](0, 0), T(10), T(10))
+		aabb := NewAABB[T](vec[T](0, 0), T(10), T(10))
 		expected := vec[T](10, 10)
 		if aabb.BottomRight != expected {
 			t.Errorf("center %v not equal to expected %v", aabb.BottomRight, expected)
@@ -39,8 +39,8 @@ func runAABBIntersectsIncludingFragsTest[T geom.Numeric](t *testing.T, name stri
 		}{
 			{
 				name:  "returnsTrueWhenAnyFragmentsIntersect",
-				aabb1: newAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
-				aabb2: newAABB(geom.NewVec(T(4), T(4)), T(1), T(1)),
+				aabb1: NewAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
+				aabb2: NewAABB(geom.NewVec(T(4), T(4)), T(1), T(1)),
 				frags: map[FragPosition]geom.AABB[T]{
 					FRAG_RIGHT:        geom.NewAABB(geom.NewVec(T(0), T(4)), geom.NewVec(T(1), T(5))),
 					FRAG_BOTTOM:       geom.NewAABB(geom.NewVec(T(4), T(0)), geom.NewVec(T(5), T(1))),
@@ -50,8 +50,8 @@ func runAABBIntersectsIncludingFragsTest[T geom.Numeric](t *testing.T, name stri
 			},
 			{
 				name:  "returnsFalseWhenNoFragmentsIntersect",
-				aabb1: newAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
-				aabb2: newAABB(geom.NewVec(T(4), T(4)), T(2), T(2)),
+				aabb1: NewAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
+				aabb2: NewAABB(geom.NewVec(T(4), T(4)), T(2), T(2)),
 				frags: map[FragPosition]geom.AABB[T]{
 					FRAG_RIGHT: geom.NewAABB(geom.NewVec(T(0), T(4)), geom.NewVec(T(1), T(6))),
 				},
@@ -81,15 +81,15 @@ func TestAABB_Contains(t *testing.T) {
 
 func runAABBContainsTest[T geom.Numeric](t *testing.T, name string) {
 	t.Run(name, func(t *testing.T) {
-		outer := newAABB(geom.NewVec(T(0), T(0)), T(10), T(10))
+		outer := NewAABB(geom.NewVec(T(0), T(0)), T(10), T(10))
 		testCases := []struct {
 			name   string
 			target AABB[T]
 			want   bool
 		}{
-			{name: "containsInner", target: newAABB(geom.NewVec(T(2), T(2)), T(6), T(6)), want: true},
-			{name: "rejectsBoxStartingOutside", target: newAABB(geom.NewVec(T(11), T(11)), T(1), T(1)), want: false},
-			{name: "rejectsBoxExtendingBeyondBounds", target: newAABB(geom.NewVec(T(5), T(5)), T(7), T(7)), want: false},
+			{name: "containsInner", target: NewAABB(geom.NewVec(T(2), T(2)), T(6), T(6)), want: true},
+			{name: "rejectsBoxStartingOutside", target: NewAABB(geom.NewVec(T(11), T(11)), T(1), T(1)), want: false},
+			{name: "rejectsBoxExtendingBeyondBounds", target: NewAABB(geom.NewVec(T(5), T(5)), T(7), T(7)), want: false},
 		}
 
 		for _, tc := range testCases {

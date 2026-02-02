@@ -14,7 +14,7 @@ var (
 
 func Benchmark_Euclidean_NormalizeAABB(b *testing.B) {
 	space := NewEuclidean2D(10, 10).(*euclidean2d[int])
-	template := newAABB(geom.NewVec(9, 9), 2, 2)
+	template := NewAABB(geom.NewVec(9, 9), 2, 2)
 	aabbs := make([]AABB[int], b.N)
 	for i := range aabbs {
 		aabbs[i] = template
@@ -30,7 +30,7 @@ func Benchmark_Euclidean_NormalizeAABB(b *testing.B) {
 
 func Benchmark_Toroidal_NormalizeAABB(b *testing.B) {
 	space := NewToroidal2D(10, 10).(*toroidal2d[int])
-	template := newAABB(geom.NewVec(9, 9), 2, 2)
+	template := NewAABB(geom.NewVec(9, 9), 2, 2)
 	aabbs := make([]AABB[int], b.N)
 	for i := range aabbs {
 		aabbs[i] = template
@@ -68,7 +68,7 @@ func Benchmark_Toroidal_Metric(b *testing.B) {
 
 func Benchmark_Euclidean_Expand(b *testing.B) {
 	space := NewEuclidean2D(100, 100).(*euclidean2d[int])
-	template := newAABB(geom.NewVec(90, 90), 8, 8)
+	template := NewAABB(geom.NewVec(90, 90), 8, 8)
 
 	b.ReportAllocs()
 	for b.Loop() {
@@ -80,7 +80,7 @@ func Benchmark_Euclidean_Expand(b *testing.B) {
 
 func Benchmark_Toroidal_Expand(b *testing.B) {
 	space := NewToroidal2D(100, 100).(*toroidal2d[int])
-	template := newAABB(geom.NewVec(90, 90), 8, 8)
+	template := NewAABB(geom.NewVec(90, 90), 8, 8)
 
 	b.ReportAllocs()
 	for b.Loop() {
@@ -92,7 +92,7 @@ func Benchmark_Toroidal_Expand(b *testing.B) {
 
 func Benchmark_Euclidean_Translate(b *testing.B) {
 	space := NewEuclidean2D(100, 100).(*euclidean2d[int])
-	template := newAABB(geom.NewVec(80, 80), 15, 10)
+	template := NewAABB(geom.NewVec(80, 80), 15, 10)
 	delta := geom.NewVec(12, -18)
 
 	b.ReportAllocs()
@@ -105,7 +105,7 @@ func Benchmark_Euclidean_Translate(b *testing.B) {
 
 func Benchmark_Toroidal_Translate(b *testing.B) {
 	space := NewToroidal2D(100, 100).(*toroidal2d[int])
-	template := newAABB(geom.NewVec(80, 80), 15, 10)
+	template := NewAABB(geom.NewVec(80, 80), 15, 10)
 	delta := geom.NewVec(12, -18)
 
 	b.ReportAllocs()
@@ -119,8 +119,8 @@ func Benchmark_Toroidal_Translate(b *testing.B) {
 func Benchmark_Euclidean_AABBDistance(b *testing.B) {
 	space := NewEuclidean2D(200, 200).(*euclidean2d[int])
 	distance := space.AABBDistance()
-	rectA := newAABB(geom.NewVec(10, 10), 10, 10)
-	rectB := newAABB(geom.NewVec(150, 160), 12, 12)
+	rectA := NewAABB(geom.NewVec(10, 10), 10, 10)
+	rectB := NewAABB(geom.NewVec(150, 160), 12, 12)
 
 	b.ReportAllocs()
 	for b.Loop() {
@@ -131,8 +131,8 @@ func Benchmark_Euclidean_AABBDistance(b *testing.B) {
 func Benchmark_Toroidal_AABBDistance(b *testing.B) {
 	space := NewToroidal2D(200, 200).(*toroidal2d[int])
 	distance := space.AABBDistance()
-	rectA := newAABB(geom.NewVec(10, 10), 10, 10)
-	rectB := newAABB(geom.NewVec(150, 160), 12, 12)
+	rectA := NewAABB(geom.NewVec(10, 10), 10, 10)
+	rectB := NewAABB(geom.NewVec(150, 160), 12, 12)
 
 	b.ReportAllocs()
 	for b.Loop() {
