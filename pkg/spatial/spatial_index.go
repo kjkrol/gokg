@@ -43,7 +43,7 @@ type (
 
 	Entry struct {
 		AABB
-		Id uint64
+		Id EntryId
 	}
 
 	EntriesMove struct {
@@ -65,7 +65,7 @@ func NewEntriesMove(capHint int) EntriesMove {
 	}
 }
 
-func (u *EntriesMove) Append(id uint64, old, new AABB) {
+func (u *EntriesMove) Append(id EntryId, old, new AABB) {
 	u.Old = append(u.Old, Entry{
 		AABB: old,
 		Id:   id,

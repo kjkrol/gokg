@@ -11,7 +11,7 @@ func generateEntries(count int) []Entry {
 	for i := range count {
 		pos := NewVec(uint32(i%128), uint32((i/128)%128))
 		entries[i] = Entry{
-			Id:   uint64(i),
+			Id:   EntryId(i),
 			AABB: NewAABBAt(pos, 2, 2),
 		}
 	}

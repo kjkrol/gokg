@@ -17,9 +17,9 @@ type GridIndexConfig struct {
 
 type BucketDelta struct {
 	Bucket  AABB
-	Added   []uint64
-	Removed []uint64
-	Updated []uint64
+	Added   []EntryId
+	Removed []EntryId
+	Updated []EntryId
 }
 
 type GridIndexManager struct {
@@ -50,9 +50,9 @@ type entryCache struct {
 }
 
 type bucketDelta struct {
-	added   map[uint64]struct{}
-	removed map[uint64]struct{}
-	updated map[uint64]struct{}
+	added   map[EntryId]struct{}
+	removed map[EntryId]struct{}
+	updated map[EntryId]struct{}
 }
 
 type opKind uint8
@@ -149,7 +149,7 @@ func (m *GridIndexManager) Flush(onDirty func(AABB)) {
 	}
 }
 
-func (m *GridIndexManager) EntryAABB(entryID uint64) (AABB, bool) {
+func (m *GridIndexManager) EntryAABB(entryID EntryId) (AABB, bool) {
 	if m.bucketGrid == nil {
 		return AABB{}, false
 	}
@@ -206,9 +206,9 @@ func (m *GridIndexManager) recordBucketDelta(rect AABB) *bucketDelta {
 	return delta
 }
 
-func (d *bucketDelta) add(id uint64) {
+func (d *bucketDelta) add(id EntryId) {
 	if d.added == nil {
-		d.added = make(map[uint64]struct{})
+		d.added = make(map[EntryId]struct{})
 	}
 	if d.removed != nil {
 		delete(d.removed, id)
@@ -219,7 +219,7 @@ func (d *bucketDelta) add(id uint64) {
 	d.added[id] = struct{}{}
 }
 
-func (d *bucketDelta) remove(id uint64) {
+func (d *bucketDelta) remove(id EntryId) {
 	if d.added != nil {
 		if _, ok := d.added[id]; ok {
 			delete(d.added, id)
@@ -227,7 +227,7 @@ func (d *bucketDelta) remove(id uint64) {
 		}
 	}
 	if d.removed == nil {
-		d.removed = make(map[uint64]struct{})
+		d.removed = make(map[EntryId]struct{})
 	}
 	if d.updated != nil {
 		delete(d.updated, id)
@@ -235,7 +235,7 @@ func (d *bucketDelta) remove(id uint64) {
 	d.removed[id] = struct{}{}
 }
 
-func (d *bucketDelta) update(id uint64) {
+func (d *bucketDelta) update(id EntryId) {
 	if d.added != nil {
 		if _, ok := d.added[id]; ok {
 			return
@@ -247,16 +247,16 @@ func (d *bucketDelta) update(id uint64) {
 		}
 	}
 	if d.updated == nil {
-		d.updated = make(map[uint64]struct{})
+		d.updated = make(map[EntryId]struct{})
 	}
 	d.updated[id] = struct{}{}
 }
 
-func deltaKeys(set map[uint64]struct{}) []uint64 {
+func deltaKeys(set map[EntryId]struct{}) []EntryId {
 	if len(set) == 0 {
 		return nil
 	}
-	out := make([]uint64, 0, len(set))
+	out := make([]EntryId, 0, len(set))
 	for id := range set {
 		out = append(out, id)
 	}
@@ -273,7 +273,7 @@ func (m *GridIndexManager) applyInsert(id uint64, shape AABB, markDirty bool, on
 		if mask&(1<<idx) == 0 {
 			continue
 		}
-		entryID := entryID(id, uint8(idx))
+		entryID := NewEntryID(id, uint8(idx))
 		entries = append(entries, Entry{
 			AABB: frags[idx],
 			Id:   entryID,
@@ -306,7 +306,7 @@ func (m *GridIndexManager) applyRemove(id uint64, onDirty func(AABB)) {
 		if cache.mask&(1<<idx) == 0 {
 			continue
 		}
-		entryID := entryID(id, uint8(idx))
+		entryID := NewEntryID(id, uint8(idx))
 		aabb, ok := m.bucketGrid.aabbById[entryID]
 		if !ok {
 			continue
@@ -345,7 +345,7 @@ func (m *GridIndexManager) applyUpdate(id uint64, shape AABB, markDirty bool, on
 			if newMask&(1<<idx) == 0 {
 				continue
 			}
-			entryID := entryID(id, uint8(idx))
+			entryID := NewEntryID(id, uint8(idx))
 			oldAABB := m.bucketGrid.aabbById[entryID]
 			newAABB := newFrags[idx]
 			m.recordBucketUpdates(entryID, oldAABB, newAABB)
@@ -388,7 +388,7 @@ func (m *GridIndexManager) indexAABB(aabb AABB) (AABB, bool) {
 	), true
 }
 
-func (m *GridIndexManager) recordBucketAdds(entryID uint64, aabb AABB) {
+func (m *GridIndexManager) recordBucketAdds(entryID EntryId, aabb AABB) {
 	if m.bucketGrid == nil {
 		return
 	}
@@ -397,7 +397,7 @@ func (m *GridIndexManager) recordBucketAdds(entryID uint64, aabb AABB) {
 	})
 }
 
-func (m *GridIndexManager) recordBucketRemovals(entryID uint64, aabb AABB) {
+func (m *GridIndexManager) recordBucketRemovals(entryID EntryId, aabb AABB) {
 	if m.bucketGrid == nil {
 		return
 	}
@@ -406,7 +406,7 @@ func (m *GridIndexManager) recordBucketRemovals(entryID uint64, aabb AABB) {
 	})
 }
 
-func (m *GridIndexManager) recordBucketUpdates(entryID uint64, oldAABB, newAABB AABB) {
+func (m *GridIndexManager) recordBucketUpdates(entryID EntryId, oldAABB, newAABB AABB) {
 	if oldAABB == newAABB {
 		if m.bucketGrid == nil {
 			return

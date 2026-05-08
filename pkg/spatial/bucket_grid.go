@@ -13,14 +13,14 @@ type (
 		bucketCapacity    int
 		gridResolution    Resolution
 		gridCellCodec     CellCodec
-		aabbById          map[uint64]AABB
+		aabbById          map[EntryId]AABB
 		bounds            AABB
 		buckets           []bucket
 		optimizer         *memoryOptimizer
 	}
 
 	bucket struct {
-		ids []uint64
+		ids []EntryId
 	}
 
 	memoryOptimizer struct {
@@ -35,7 +35,7 @@ var (
 	_            Index = (*bucketGrid)(nil)
 	queryMapPool       = sync.Pool{
 		New: func() any {
-			return make(map[uint64]struct{}, 1024)
+			return make(map[EntryId]struct{}, 1024)
 		},
 	}
 )
@@ -86,7 +86,7 @@ func WithBucketCapacity(bucketCapacity int) Option {
 
 		bg.buckets = make([]bucket, bucketsNumber)
 		bg.optimizer = newMemoryOptimizer(int(bucketsNumber))
-		bg.aabbById = make(map[uint64]AABB, overallCapacity)
+		bg.aabbById = make(map[EntryId]AABB, overallCapacity)
 		return nil
 	}
 }
@@ -223,7 +223,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
 		for _, id := range bucket.ids {
 			itemAABB, ok := bg.aabbById[id]
 			if ok && aabb.Intersects(itemAABB) {
-				collector(id)
+				collector(id.OriginalID())
 				counter++
 			}
 		}
@@ -231,7 +231,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
 	}
 
 	// Full path
-	seen := queryMapPool.Get().(map[uint64]struct{})
+	seen := queryMapPool.Get().(map[EntryId]struct{})
 	defer queryMapPool.Put(seen)
 	for k := range seen {
 		delete(seen, k)
@@ -256,7 +256,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
 				itemAABB, ok := bg.aabbById[id]
 				if ok && aabb.Intersects(itemAABB) {
 					seen[id] = struct{}{}
-					collector(id)
+					collector(id.OriginalID())
 					counter++
 				}
 			}
@@ -273,7 +273,7 @@ func (bg *bucketGrid) Count() int { return len(bg.aabbById) }
 func (bg *bucketGrid) Bounds() AABB { return bg.bounds }
 
 func (bg *bucketGrid) Clear() {
-	bg.aabbById = make(map[uint64]AABB, len(bg.aabbById))
+	bg.aabbById = make(map[EntryId]AABB, len(bg.aabbById))
 	for i := range bg.buckets {
 		bg.buckets[i].ids = nil
 	}
@@ -325,9 +325,9 @@ func (bg *bucketGrid) forEachBucketIndex(aabb AABB, fn func(uint32)) {
 // -----------------------------------------------------------
 // bucket
 
-func (b *bucket) Add(id uint64, initialCap int) bool {
+func (b *bucket) Add(id EntryId, initialCap int) bool {
 	if b.ids == nil {
-		b.ids = make([]uint64, 0, initialCap)
+		b.ids = make([]EntryId, 0, initialCap)
 	} else if slices.Contains(b.ids, id) {
 		return false
 	}
@@ -335,7 +335,7 @@ func (b *bucket) Add(id uint64, initialCap int) bool {
 	return true
 }
 
-func (b *bucket) Remove(id uint64) bool {
+func (b *bucket) Remove(id EntryId) bool {
 	if b.ids == nil {
 		return false
 	}
