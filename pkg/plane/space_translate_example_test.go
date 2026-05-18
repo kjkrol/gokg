@@ -40,7 +40,7 @@ func ExampleSpace2D_Translate() {
 	}
 	// Output:
 	// New position: {(9,9) (10,10)}
-	// - Fragment 0: {(0,9) (1,10)}
-	// - Fragment 1: {(9,0) (10,1)}
-	// - Fragment 2: {(0,0) (1,1)}
+	// - Fragment 1: {(0,9) (1,10)}
+	// - Fragment 2: {(9,0) (10,1)}
+	// - Fragment 3: {(0,0) (1,1)}
 }

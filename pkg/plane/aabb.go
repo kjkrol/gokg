@@ -8,13 +8,13 @@ import "github.com/kjkrol/gokg/pkg/geom"
 type FragPosition int
 
 const (
+	FRAG_MAIN FragPosition = iota
 	// FRAG_RIGHT is the fragment that spans the parent's right edge.
-	FRAG_RIGHT FragPosition = iota
+	FRAG_RIGHT
 	// FRAG_BOTTOM is the fragment along the parent's bottom edge.
 	FRAG_BOTTOM
 	// FRAG_BOTTOM_RIGHT is the fragment covering the parent's bottom-right quadrant.
 	FRAG_BOTTOM_RIGHT
-	FRAG_MAIN
 )
 
 // AABB extends geom.AABB with cached width, height, and boundary fragments used by Space normalisation.
@@ -65,14 +65,16 @@ func (ab AABB[T]) ContainsWithFrags(other AABB[T]) bool {
 	}
 
 	for idx := range len(other.frags) {
-		if other.fragMask&(1<<idx) != 0 && base.Contains(other.frags[idx]) {
+		pos := idx + 1
+		if other.fragMask&(1<<pos) != 0 && base.Contains(other.frags[idx]) {
 			return true
 		}
 	}
 
 	// other contains any fragment of ab
 	for idx := range len(ab.frags) {
-		if ab.fragMask&(1<<idx) == 0 {
+		pos := idx + 1
+		if ab.fragMask&(1<<pos) == 0 {
 			continue
 		}
 		frag := ab.frags[idx]
@@ -107,13 +109,15 @@ func (ab AABB[T]) IntersectsWithFrags(other AABB[T]) bool {
 	}
 
 	for idx := range len(other.frags) {
-		if other.fragMask&(1<<idx) != 0 && base.Intersects(other.frags[idx]) {
+		pos := idx + 1
+		if other.fragMask&(1<<pos) != 0 && base.Intersects(other.frags[idx]) {
 			return true
 		}
 	}
 
 	for idx := range len(ab.frags) {
-		if ab.fragMask&(1<<idx) == 0 {
+		pos := idx + 1
+		if ab.fragMask&(1<<pos) == 0 {
 			continue
 		}
 		frag := ab.frags[idx]
@@ -131,18 +135,19 @@ func (ab AABB[T]) IntersectsWithFrags(other AABB[T]) bool {
 type FragVisitor[T geom.Numeric] func(pos FragPosition, box geom.AABB[T]) bool
 
 func (ab *AABB[T]) VisitFragments(fn FragVisitor[T]) {
-	for pos := range len(ab.frags) {
+	for i := range len(ab.frags) {
+		pos := FragPosition(i + 1)
 		if ab.fragMask&(1<<pos) == 0 {
 			continue
 		}
-		if !fn(FragPosition(pos), ab.frags[pos]) {
+		if !fn(FragPosition(pos), ab.frags[i]) {
 			return
 		}
 	}
 }
 
 func (ab *AABB[T]) setFragment(pos FragPosition, box geom.AABB[T]) {
-	ab.frags[pos] = box
+	ab.frags[pos-1] = box
 	ab.fragMask |= 1 << pos
 }
 
@@ -169,8 +174,9 @@ func (ab *AABB[T]) fragmentation(dx, dy T) {
 }
 
 func fragContainsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
-	for j := range len(other.frags) {
-		if other.fragMask&(1<<j) != 0 && frag.Contains(other.frags[j]) {
+	for i := range len(other.frags) {
+		pos := i + 1
+		if other.fragMask&(1<<pos) != 0 && frag.Contains(other.frags[i]) {
 			return true
 		}
 	}
@@ -178,8 +184,9 @@ func fragContainsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
 }
 
 func fragIntersectsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
-	for j := range len(other.frags) {
-		if other.fragMask&(1<<j) != 0 && frag.Intersects(other.frags[j]) {
+	for i := range len(other.frags) {
+		pos := i + 1
+		if other.fragMask&(1<<pos) != 0 && frag.Intersects(other.frags[i]) {
 			return true
 		}
 	}
