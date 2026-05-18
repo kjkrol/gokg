@@ -14,6 +14,7 @@ const (
 	FRAG_BOTTOM
 	// FRAG_BOTTOM_RIGHT is the fragment covering the parent's bottom-right quadrant.
 	FRAG_BOTTOM_RIGHT
+	FRAG_MAIN
 )
 
 // AABB extends geom.AABB with cached width, height, and boundary fragments used by Space normalisation.

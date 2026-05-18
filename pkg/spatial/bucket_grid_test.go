@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/kjkrol/gokg/pkg/geom"
+	"github.com/kjkrol/gokg/pkg/plane"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +47,7 @@ func TestBucketGrid_Buckets_QueryRange(t *testing.T) {
 	expected := []uint64{2, 3, 4}
 
 	// when
-	bucketGrid.QueryRange(aabb, func(u uint64) { out = append(out, u) })
+	bucketGrid.QueryRange(aabb, func(u uint64, frag plane.FragPosition) { out = append(out, u) })
 
 	// then
 	assert.ElementsMatch(t, expected, out, "Should have exactly same elements")
@@ -90,7 +91,7 @@ func TestBucketGrid_Buckets_BulkMove(t *testing.T) {
 	bucketGrid.BulkMove(entriesMove)
 
 	// when
-	bucketGrid.QueryRange(aabb, func(u uint64) { out = append(out, u) })
+	bucketGrid.QueryRange(aabb, func(u uint64, frag plane.FragPosition) { out = append(out, u) })
 
 	// then
 	assert.ElementsMatch(t, expected, out, "Should have exactly same elements")

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+
+	"github.com/kjkrol/gokg/pkg/plane"
 )
 
 type (
@@ -208,7 +210,7 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 }
 
 // QueryRange – all objects within the AABB.
-func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
+func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64, plane.FragPosition)) int {
 
 	tlIdx := bg.CalculateGridIndex(aabb.TopLeft)
 	brIdx := bg.CalculateGridIndex(aabb.BottomRight)
@@ -223,7 +225,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
 		for _, id := range bucket.ids {
 			itemAABB, ok := bg.aabbById[id]
 			if ok && aabb.Intersects(itemAABB) {
-				collector(id.OriginalID())
+				collector(id.OriginalID(), plane.FragPosition(id.ExtractFrag()))
 				counter++
 			}
 		}
@@ -256,7 +258,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64)) int {
 				itemAABB, ok := bg.aabbById[id]
 				if ok && aabb.Intersects(itemAABB) {
 					seen[id] = struct{}{}
-					collector(id.OriginalID())
+					collector(id.OriginalID(), plane.FragPosition(id.ExtractFrag()))
 					counter++
 				}
 			}

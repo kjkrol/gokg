@@ -1,6 +1,10 @@
 package spatial
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/kjkrol/gokg/pkg/plane"
+)
 
 type syncIndex struct {
 	Index
@@ -32,7 +36,7 @@ func (s *syncIndex) BulkMove(moves EntriesMove) {
 }
 
 // Collector cannot modify Index.
-func (s *syncIndex) QueryRange(aabb AABB, collector func(uint64)) int {
+func (s *syncIndex) QueryRange(aabb AABB, collector func(uint64, plane.FragPosition)) int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.Index.QueryRange(aabb, collector)

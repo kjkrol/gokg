@@ -2,6 +2,7 @@ package spatial
 
 import (
 	"github.com/kjkrol/gokg/pkg/geom"
+	"github.com/kjkrol/gokg/pkg/plane"
 )
 
 // Index is a discrete spatial index over a 2D power-of-two grid.
@@ -23,7 +24,7 @@ type (
 
 		// QueryRange – all objects within the AABB.
 		// Collector cannot modify Index.
-		QueryRange(aabb AABB, collector func(uint64)) int
+		QueryRange(aabb AABB, collector func(uint64, plane.FragPosition)) int
 
 		// Count – number of objects in the structure.
 		Count() int

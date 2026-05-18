@@ -160,7 +160,7 @@ func (m *GridIndexManager) EntryAABB(entryID EntryId) (AABB, bool) {
 	return aabb, true
 }
 
-func (m *GridIndexManager) QueryRange(aabb AABB, collector func(uint64)) int {
+func (m *GridIndexManager) QueryRange(aabb AABB, collector func(uint64, plane.FragPosition)) int {
 	var count int
 	m.VisitWrappedAABB(aabb, func(rect AABB) {
 		if m.bucketGrid != nil {
