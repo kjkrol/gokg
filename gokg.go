@@ -55,6 +55,7 @@ func NewSpace(cfg Config) (*Space, error) {
 	return &Space{
 		surface:      surface,
 		spatialIndex: spatialIndex,
+		Config:       cfg,
 	}, nil
 }
 
