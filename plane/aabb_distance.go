@@ -1,6 +1,6 @@
 package plane
 
-import "github.com/kjkrol/gokg/pkg/geom"
+import "github.com/kjkrol/gokg/geom"
 
 // AABBDistance measures gaps between
 // axis-aligned bounding boxes using the metric defined by the provided plane.

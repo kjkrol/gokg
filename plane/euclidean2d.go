@@ -1,6 +1,6 @@
 package plane
 
-import "github.com/kjkrol/gokg/pkg/geom"
+import "github.com/kjkrol/gokg/geom"
 
 // NewEuclidean2D constructs a 2D space that clamps vectors to the given width and height.
 func NewEuclidean2D[T geom.Numeric](sizeX, sizeY T) Space2D[T] {

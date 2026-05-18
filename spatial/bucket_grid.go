@@ -5,7 +5,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/kjkrol/gokg/pkg/plane"
+	"github.com/kjkrol/gokg/plane"
 )
 
 type (

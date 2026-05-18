@@ -1,8 +1,8 @@
 package spatial
 
 import (
-	"github.com/kjkrol/gokg/pkg/geom"
-	"github.com/kjkrol/gokg/pkg/plane"
+	"github.com/kjkrol/gokg/geom"
+	"github.com/kjkrol/gokg/plane"
 )
 
 // Index is a discrete spatial index over a 2D power-of-two grid.

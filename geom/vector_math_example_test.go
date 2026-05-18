@@ -3,7 +3,7 @@ package geom_test
 import (
 	"fmt"
 
-	"github.com/kjkrol/gokg/pkg/geom"
+	"github.com/kjkrol/gokg/geom"
 )
 
 // Example_float64VectorMath_Length demonstrates how to use the Length method with float64 type.

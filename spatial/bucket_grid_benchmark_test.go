@@ -3,8 +3,8 @@ package spatial
 import (
 	"testing"
 
-	"github.com/kjkrol/gokg/pkg/geom"
-	"github.com/kjkrol/gokg/pkg/plane"
+	"github.com/kjkrol/gokg/geom"
+	"github.com/kjkrol/gokg/plane"
 )
 
 func generateEntries(count int) []Entry {

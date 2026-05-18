@@ -1,6 +1,6 @@
 package plane
 
-import "github.com/kjkrol/gokg/pkg/geom"
+import "github.com/kjkrol/gokg/geom"
 
 const (
 	modeEuclidean2D = "Euclidean2D"

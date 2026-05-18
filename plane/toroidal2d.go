@@ -1,6 +1,6 @@
 package plane
 
-import "github.com/kjkrol/gokg/pkg/geom"
+import "github.com/kjkrol/gokg/geom"
 
 // NewToroidal2D constructs a 2D space with wrap-around behaviour on both axes.
 func NewToroidal2D[T geom.Numeric](sizeX, sizeY T) Space2D[T] {

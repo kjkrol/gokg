@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/kjkrol/gokg/pkg/geom"
+	"github.com/kjkrol/gokg/geom"
 )
 
 func TestToroidal2DNormalizeVec(t *testing.T) {

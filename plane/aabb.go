@@ -1,6 +1,6 @@
 package plane
 
-import "github.com/kjkrol/gokg/pkg/geom"
+import "github.com/kjkrol/gokg/geom"
 
 // FragPosition identifies a fragment's position relative to its parent AABB (axis-aligned bounding box).
 // Names follow logical cardinal directions of the parent; depending on screen

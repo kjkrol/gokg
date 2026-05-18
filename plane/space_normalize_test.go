@@ -3,7 +3,7 @@ package plane
 import (
 	"testing"
 
-	"github.com/kjkrol/gokg/pkg/geom"
+	"github.com/kjkrol/gokg/geom"
 )
 
 func TestEuclidean2D_normalizeBox(t *testing.T) {

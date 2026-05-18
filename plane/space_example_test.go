@@ -3,7 +3,7 @@ package plane
 import (
 	"fmt"
 
-	"github.com/kjkrol/gokg/pkg/geom"
+	"github.com/kjkrol/gokg/geom"
 )
 
 // ExampleNormalizeVecEuclidean2D_int demonstrates how to use NewBoundedPlane with int type.
