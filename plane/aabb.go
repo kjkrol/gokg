@@ -21,7 +21,7 @@ const (
 // It is the Space-aware view of a AABB: Space keeps AABB instances canonical within its domain.
 type AABB[T geom.Numeric] struct {
 	geom.AABB[T]
-	size     geom.Vec[T]
+	Size     geom.Vec[T]
 	frags    [3]geom.AABB[T]
 	fragMask uint8
 }
@@ -33,7 +33,7 @@ func NewAABB[T geom.Numeric](pos geom.Vec[T], width, height T) AABB[T] {
 			TopLeft:     pos,
 			BottomRight: geom.NewVec(pos.X+width, pos.Y+height),
 		},
-		size: geom.NewVec(width, height),
+		Size: geom.NewVec(width, height),
 	}
 }
 

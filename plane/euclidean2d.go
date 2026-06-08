@@ -40,7 +40,7 @@ func (s euclidean2d[T]) WrapVec(vec geom.Vec[T]) AABB[T] {
 
 func (s euclidean2d[T]) Expand(aabb *AABB[T], margin T) {
 	aabb.TopLeft.AddMutable(geom.NewVec(-margin, -margin))
-	aabb.size.AddMutable(geom.NewVec(2*margin, 2*margin))
+	aabb.Size.AddMutable(geom.NewVec(2*margin, 2*margin))
 	s.normalizeAABB(aabb)
 }
 
@@ -67,7 +67,7 @@ func (s euclidean2d[T]) normalizeAABBTopLeft(aabb *AABB[T]) {
 }
 
 func (s euclidean2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) {
-	aabb.BottomRight = aabb.TopLeft.Add(aabb.size)
+	aabb.BottomRight = aabb.TopLeft.Add(aabb.Size)
 	aabb.BottomRight = s.vectorMath.Clamp(aabb.BottomRight, s.size)
 }
 

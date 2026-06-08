@@ -40,7 +40,7 @@ func (s toroidal2d[T]) WrapVec(vec geom.Vec[T]) AABB[T] {
 
 func (s toroidal2d[T]) Expand(aabb *AABB[T], margin T) {
 	aabb.TopLeft.AddMutable(geom.NewVec(-margin, -margin))
-	aabb.size.AddMutable(geom.NewVec(2*margin, 2*margin))
+	aabb.Size.AddMutable(geom.NewVec(2*margin, 2*margin))
 	s.normalizeAABB(aabb)
 }
 
@@ -68,7 +68,7 @@ func (s toroidal2d[T]) normalizeAABBTopLeft(aabb *AABB[T]) {
 }
 
 func (s toroidal2d[T]) normalizeAABBBottomRight(aabb *AABB[T]) (dx T, dy T) {
-	aabb.BottomRight = aabb.TopLeft.Add(aabb.size)
+	aabb.BottomRight = aabb.TopLeft.Add(aabb.Size)
 	dx = T(0)
 	dy = T(0)
 	if aabb.BottomRight.X > s.size.X {
