@@ -1,8 +1,11 @@
 module github.com/kjkrol/gokg
 
-go 1.25.3
+go 1.26.4
 
-require github.com/stretchr/testify v1.11.1
+require (
+	github.com/kjkrol/uid v0.3.0
+	github.com/stretchr/testify v1.11.1
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

@@ -5,6 +5,7 @@ import (
 
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
+	"github.com/kjkrol/uid"
 )
 
 func generateEntries(count int) []Entry {
@@ -12,7 +13,7 @@ func generateEntries(count int) []Entry {
 	for i := range count {
 		pos := NewVec(uint32(i%128), uint32((i/128)%128))
 		entries[i] = Entry{
-			Id:   EntryId(i),
+			Id:   uid.UID64(i),
 			AABB: NewAABBAt(pos, 2, 2),
 		}
 	}
@@ -48,15 +49,15 @@ func BenchmarkBucketGrid_QueryRange(b *testing.B) {
 
 	b.Run("WithCollection", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			out := make([]uint64, 0, 100)
-			bucketGrid.QueryRange(aabb, func(u uint64, frag plane.FragPosition) { out = append(out, u) })
+			out := make([]uid.UID64, 0, 100)
+			bucketGrid.QueryRange(aabb, func(u uid.UID64, frag plane.FragPosition) { out = append(out, u) })
 		}
 	})
 
 	b.Run("NoCollection", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			count := 0
-			bucketGrid.QueryRange(aabb, func(u uint64, frag plane.FragPosition) { count++ })
+			bucketGrid.QueryRange(aabb, func(u uid.UID64, frag plane.FragPosition) { count++ })
 		}
 	})
 }

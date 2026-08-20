@@ -6,6 +6,7 @@ import (
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
 	"github.com/kjkrol/gokg/spatial"
+	"github.com/kjkrol/uid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ func TestSpace_Lifecycle(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, space)
 
-	entityID := uint64(42)
+	entityID := uid.UID64(42)
 	// A 20x20 object at position (10,10)
 	box := plane.NewAABB(geom.NewVec[uint32](10, 10), 20, 20)
 
@@ -31,10 +32,10 @@ func TestSpace_Lifecycle(t *testing.T) {
 	space.Flush(nil) // Remember to Flush so channel operations enter the buckets!
 
 	// 3. Query (finds the object)
-	foundIDs := []uint64{}
+	foundIDs := []uid.UID64{}
 	queryBox := geom.NewAABBAt(geom.NewVec[uint32](15, 15), 5, 5)
 
-	space.Query(queryBox, func(id uint64, frag plane.FragPosition) {
+	space.Query(queryBox, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
 	})
 	assert.Contains(t, foundIDs, entityID, "Object should be found at its initial position")
@@ -45,16 +46,16 @@ func TestSpace_Lifecycle(t *testing.T) {
 	space.Flush(nil)
 
 	// 5. Query at the OLD position (it's no longer there)
-	foundIDs = []uint64{}
-	space.Query(queryBox, func(id uint64, frag plane.FragPosition) {
+	foundIDs = []uid.UID64{}
+	space.Query(queryBox, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
 	})
 	assert.NotContains(t, foundIDs, entityID, "Object should no longer be visible at the old position")
 
 	// 6. Query at the NEW position (it should be there)
-	foundIDs = []uint64{}
+	foundIDs = []uid.UID64{}
 	queryBoxNew := geom.NewAABBAt(geom.NewVec[uint32](115, 15), 5, 5)
-	space.Query(queryBoxNew, func(id uint64, frag plane.FragPosition) {
+	space.Query(queryBoxNew, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
 	})
 	assert.Contains(t, foundIDs, entityID, "Object should be found at the new position")
@@ -64,8 +65,8 @@ func TestSpace_Lifecycle(t *testing.T) {
 	space.Flush(nil)
 
 	// 8. Final check (empty)
-	foundIDs = []uint64{}
-	space.Query(queryBoxNew, func(id uint64, frag plane.FragPosition) {
+	foundIDs = []uid.UID64{}
+	space.Query(queryBoxNew, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
 	})
 	assert.Empty(t, foundIDs, "Object should be completely removed from the spatial grid")
@@ -83,7 +84,7 @@ func TestSpace_ToroidalWrap(t *testing.T) {
 	space, err := NewSpace(cfg)
 	assert.NoError(t, err)
 
-	entityID := uint64(99)
+	entityID := uid.UID64(99)
 	// Place the object near the right edge: X=5990
 	box := plane.NewAABB(geom.NewVec[uint32](5990, 50), 20, 20)
 
@@ -100,10 +101,10 @@ func TestSpace_ToroidalWrap(t *testing.T) {
 	assert.Equal(t, uint32(20), box.TopLeft.X, "Object should physically wrap around to position X=20")
 
 	// Query the object on the left side of the world (around X=20)
-	foundIDs := []uint64{}
+	foundIDs := []uid.UID64{}
 	queryBoxWrapped := geom.NewAABBAt(geom.NewVec[uint32](25, 55), 5, 5)
 
-	space.Query(queryBoxWrapped, func(id uint64, frag plane.FragPosition) {
+	space.Query(queryBoxWrapped, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
 	})
 	assert.Contains(t, foundIDs, entityID, "Object should be flawlessly queried on the left side of the plane after wrapping")

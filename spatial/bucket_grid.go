@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/kjkrol/gokg/plane"
+	"github.com/kjkrol/uid"
 )
 
 type (
@@ -15,14 +16,14 @@ type (
 		bucketCapacity    int
 		gridResolution    Resolution
 		gridCellCodec     CellCodec
-		aabbById          map[EntryId]AABB
+		aabbById          map[uid.UID64]AABB
 		bounds            AABB
 		buckets           []bucket
 		optimizer         *memoryOptimizer
 	}
 
 	bucket struct {
-		ids []EntryId
+		ids []uid.UID64
 	}
 
 	memoryOptimizer struct {
@@ -37,7 +38,7 @@ var (
 	_            Index = (*bucketGrid)(nil)
 	queryMapPool       = sync.Pool{
 		New: func() any {
-			return make(map[EntryId]struct{}, 1024)
+			return make(map[uid.UID64]struct{}, 1024)
 		},
 	}
 )
@@ -88,7 +89,7 @@ func WithBucketCapacity(bucketCapacity int) Option {
 
 		bg.buckets = make([]bucket, bucketsNumber)
 		bg.optimizer = newMemoryOptimizer(int(bucketsNumber))
-		bg.aabbById = make(map[EntryId]AABB, overallCapacity)
+		bg.aabbById = make(map[uid.UID64]AABB, overallCapacity)
 		return nil
 	}
 }
@@ -210,7 +211,7 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 }
 
 // QueryRange – all objects within the AABB.
-func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64, plane.FragPosition)) int {
+func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.FragPosition)) int {
 
 	tlIdx := bg.CalculateGridIndex(aabb.TopLeft)
 	brIdx := bg.CalculateGridIndex(aabb.BottomRight)
@@ -225,7 +226,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64, plane.FragPos
 		for _, id := range bucket.ids {
 			itemAABB, ok := bg.aabbById[id]
 			if ok && aabb.Intersects(itemAABB) {
-				collector(id.OriginalID(), plane.FragPosition(id.ExtractFrag()))
+				collector(withoutFrag(id), plane.FragPosition(fragOf(id)))
 				counter++
 			}
 		}
@@ -233,7 +234,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64, plane.FragPos
 	}
 
 	// Full path
-	seen := queryMapPool.Get().(map[EntryId]struct{})
+	seen := queryMapPool.Get().(map[uid.UID64]struct{})
 	defer queryMapPool.Put(seen)
 	for k := range seen {
 		delete(seen, k)
@@ -258,7 +259,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uint64, plane.FragPos
 				itemAABB, ok := bg.aabbById[id]
 				if ok && aabb.Intersects(itemAABB) {
 					seen[id] = struct{}{}
-					collector(id.OriginalID(), plane.FragPosition(id.ExtractFrag()))
+					collector(withoutFrag(id), plane.FragPosition(fragOf(id)))
 					counter++
 				}
 			}
@@ -275,7 +276,7 @@ func (bg *bucketGrid) Count() int { return len(bg.aabbById) }
 func (bg *bucketGrid) Bounds() AABB { return bg.bounds }
 
 func (bg *bucketGrid) Clear() {
-	bg.aabbById = make(map[EntryId]AABB, len(bg.aabbById))
+	bg.aabbById = make(map[uid.UID64]AABB, len(bg.aabbById))
 	for i := range bg.buckets {
 		bg.buckets[i].ids = nil
 	}
@@ -327,9 +328,9 @@ func (bg *bucketGrid) forEachBucketIndex(aabb AABB, fn func(uint32)) {
 // -----------------------------------------------------------
 // bucket
 
-func (b *bucket) Add(id EntryId, initialCap int) bool {
+func (b *bucket) Add(id uid.UID64, initialCap int) bool {
 	if b.ids == nil {
-		b.ids = make([]EntryId, 0, initialCap)
+		b.ids = make([]uid.UID64, 0, initialCap)
 	} else if slices.Contains(b.ids, id) {
 		return false
 	}
@@ -337,7 +338,7 @@ func (b *bucket) Add(id EntryId, initialCap int) bool {
 	return true
 }
 
-func (b *bucket) Remove(id EntryId) bool {
+func (b *bucket) Remove(id uid.UID64) bool {
 	if b.ids == nil {
 		return false
 	}

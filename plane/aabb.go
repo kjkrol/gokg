@@ -1,6 +1,8 @@
 package plane
 
-import "github.com/kjkrol/gokg/geom"
+import (
+	"github.com/kjkrol/gokg/geom"
+)
 
 // FragPosition identifies a fragment's position relative to its parent AABB (axis-aligned bounding box).
 // Names follow logical cardinal directions of the parent; depending on screen
@@ -19,11 +21,20 @@ const (
 
 // AABB extends geom.AABB with cached width, height, and boundary fragments used by Space normalisation.
 // It is the Space-aware view of a AABB: Space keeps AABB instances canonical within its domain.
+//
+// Frags/FragMask are a pure cache — fragmentation always fully recomputes
+// both from TopLeft/BottomRight/Size (see fragmentation), and every
+// mutating path (Translate/Expand/WrapAABB) already calls it. They're
+// exported (not hidden behind a BinaryMarshaler) so AABB stays a plain,
+// recursively POD-encodable type for goke's persist — embedding a type
+// with its own MarshalBinary would silently drop any sibling fields on the
+// embedding struct that MarshalBinary doesn't know about (Go promotes the
+// method to the whole outer type).
 type AABB[T geom.Numeric] struct {
 	geom.AABB[T]
 	Size     geom.Vec[T]
-	frags    [3]geom.AABB[T]
-	fragMask uint8
+	Frags    [3]geom.AABB[T]
+	FragMask uint8
 }
 
 // NewAABB builds a AABB at pos with the given size, priming fragment storage for Space operations.
@@ -57,27 +68,27 @@ func (ab AABB[T]) ContainsWithFrags(other AABB[T]) bool {
 		return true
 	}
 
-	abHasFrags := ab.fragMask != 0
-	otherHasFrags := other.fragMask != 0
+	abHasFrags := ab.FragMask != 0
+	otherHasFrags := other.FragMask != 0
 
 	if !abHasFrags && !otherHasFrags {
 		return false
 	}
 
-	for idx := range len(other.frags) {
+	for idx := range len(other.Frags) {
 		pos := idx + 1
-		if other.fragMask&(1<<pos) != 0 && base.Contains(other.frags[idx]) {
+		if other.FragMask&(1<<pos) != 0 && base.Contains(other.Frags[idx]) {
 			return true
 		}
 	}
 
 	// other contains any fragment of ab
-	for idx := range len(ab.frags) {
+	for idx := range len(ab.Frags) {
 		pos := idx + 1
-		if ab.fragMask&(1<<pos) == 0 {
+		if ab.FragMask&(1<<pos) == 0 {
 			continue
 		}
-		frag := ab.frags[idx]
+		frag := ab.Frags[idx]
 		if otherBase.Contains(frag) {
 			return true
 		}
@@ -101,26 +112,26 @@ func (ab AABB[T]) IntersectsWithFrags(other AABB[T]) bool {
 		return true
 	}
 
-	abHasFrags := ab.fragMask != 0
-	otherHasFrags := other.fragMask != 0
+	abHasFrags := ab.FragMask != 0
+	otherHasFrags := other.FragMask != 0
 
 	if !abHasFrags && !otherHasFrags {
 		return false
 	}
 
-	for idx := range len(other.frags) {
+	for idx := range len(other.Frags) {
 		pos := idx + 1
-		if other.fragMask&(1<<pos) != 0 && base.Intersects(other.frags[idx]) {
+		if other.FragMask&(1<<pos) != 0 && base.Intersects(other.Frags[idx]) {
 			return true
 		}
 	}
 
-	for idx := range len(ab.frags) {
+	for idx := range len(ab.Frags) {
 		pos := idx + 1
-		if ab.fragMask&(1<<pos) == 0 {
+		if ab.FragMask&(1<<pos) == 0 {
 			continue
 		}
-		frag := ab.frags[idx]
+		frag := ab.Frags[idx]
 		if otherBase.Intersects(frag) {
 			return true
 		}
@@ -135,24 +146,24 @@ func (ab AABB[T]) IntersectsWithFrags(other AABB[T]) bool {
 type FragVisitor[T geom.Numeric] func(pos FragPosition, box geom.AABB[T]) bool
 
 func (ab *AABB[T]) VisitFragments(fn FragVisitor[T]) {
-	for i := range len(ab.frags) {
+	for i := range len(ab.Frags) {
 		pos := FragPosition(i + 1)
-		if ab.fragMask&(1<<pos) == 0 {
+		if ab.FragMask&(1<<pos) == 0 {
 			continue
 		}
-		if !fn(FragPosition(pos), ab.frags[i]) {
+		if !fn(FragPosition(pos), ab.Frags[i]) {
 			return
 		}
 	}
 }
 
 func (ab *AABB[T]) setFragment(pos FragPosition, box geom.AABB[T]) {
-	ab.frags[pos-1] = box
-	ab.fragMask |= 1 << pos
+	ab.Frags[pos-1] = box
+	ab.FragMask |= 1 << pos
 }
 
 func (ab *AABB[T]) clearFragment(pos FragPosition) {
-	ab.fragMask &^= 1 << pos
+	ab.FragMask &^= 1 << pos
 }
 
 func (ab *AABB[T]) fragmentation(dx, dy T) {
@@ -174,9 +185,9 @@ func (ab *AABB[T]) fragmentation(dx, dy T) {
 }
 
 func fragContainsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
-	for i := range len(other.frags) {
+	for i := range len(other.Frags) {
 		pos := i + 1
-		if other.fragMask&(1<<pos) != 0 && frag.Contains(other.frags[i]) {
+		if other.FragMask&(1<<pos) != 0 && frag.Contains(other.Frags[i]) {
 			return true
 		}
 	}
@@ -184,9 +195,9 @@ func fragContainsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
 }
 
 func fragIntersectsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
-	for i := range len(other.frags) {
+	for i := range len(other.Frags) {
 		pos := i + 1
-		if other.fragMask&(1<<pos) != 0 && frag.Intersects(other.frags[i]) {
+		if other.FragMask&(1<<pos) != 0 && frag.Intersects(other.Frags[i]) {
 			return true
 		}
 	}
