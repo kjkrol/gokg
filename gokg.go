@@ -7,6 +7,7 @@ import (
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
 	"github.com/kjkrol/gokg/spatial"
+	"github.com/kjkrol/uid"
 )
 
 // Space represents the main physical domain of the simulation.
@@ -77,26 +78,26 @@ func NewSpace(cfg Config) (*Space, error) {
 // Insert adds a new entity to the space.
 // It first normalizes the AABB according to the Space topology (e.g., wraps it if Toroidal)
 // and then queues it for insertion into the spatial grid.
-func (w *Space) Insert(id uint64, aabb plane.AABB[uint32]) {
+func (w *Space) Insert(id uid.UID64, aabb plane.AABB[uint32]) {
 	w.surface.Normalize(aabb.AABB)
 	w.spatialIndex.QueueInsert(id, aabb)
 }
 
 // Remove queues the entity with the given ID for removal from the spatial grid.
-func (w *Space) Remove(id uint64) {
+func (w *Space) Remove(id uid.UID64) {
 	w.spatialIndex.QueueRemove(id)
 }
 
 // Translate moves the given AABB by the specified delta, recalculates its fragments
 // based on the boundary rules, and queues a spatial index update to reflect the new position.
-func (w *Space) Translate(id uint64, aabb *plane.AABB[uint32], delta geom.Vec[uint32]) {
+func (w *Space) Translate(id uid.UID64, aabb *plane.AABB[uint32], delta geom.Vec[uint32]) {
 	w.surface.Translate(aabb, delta)
 	w.spatialIndex.QueueUpdate(id, *aabb, true)
 }
 
 // Expand grows or shrinks the given AABB by the specified margin,
 // and immediately queues an update to the spatial index.
-func (w *Space) Expand(id uint64, aabb *plane.AABB[uint32], margin uint32) {
+func (w *Space) Expand(id uid.UID64, aabb *plane.AABB[uint32], margin uint32) {
 	w.surface.Expand(aabb, margin)
 	w.spatialIndex.QueueUpdate(id, *aabb, true)
 }
@@ -109,7 +110,7 @@ func (w *Space) ExpandOnly(aabb *plane.AABB[uint32], margin uint32) {
 
 // Query searches the spatial grid for all entities intersecting the provided AABB.
 // The collector function fn is called for every entity found, providing its ID and the exact fragment that was hit.
-func (w *Space) Query(aabb geom.AABB[uint32], fn func(id uint64, frag plane.FragPosition)) int {
+func (w *Space) Query(aabb geom.AABB[uint32], fn func(id uid.UID64, frag plane.FragPosition)) int {
 	return w.spatialIndex.QueryRange(aabb, fn)
 }
 

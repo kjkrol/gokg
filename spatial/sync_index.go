@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/kjkrol/gokg/plane"
+	"github.com/kjkrol/uid"
 )
 
 type syncIndex struct {
@@ -36,7 +37,7 @@ func (s *syncIndex) BulkMove(moves EntriesMove) {
 }
 
 // Collector cannot modify Index.
-func (s *syncIndex) QueryRange(aabb AABB, collector func(uint64, plane.FragPosition)) int {
+func (s *syncIndex) QueryRange(aabb AABB, collector func(uid.UID64, plane.FragPosition)) int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.Index.QueryRange(aabb, collector)

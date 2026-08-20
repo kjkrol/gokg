@@ -3,6 +3,7 @@ package spatial
 import (
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
+	"github.com/kjkrol/uid"
 )
 
 // Index is a discrete spatial index over a 2D power-of-two grid.
@@ -24,7 +25,7 @@ type (
 
 		// QueryRange – all objects within the AABB.
 		// Collector cannot modify Index.
-		QueryRange(aabb AABB, collector func(uint64, plane.FragPosition)) int
+		QueryRange(aabb AABB, collector func(uid.UID64, plane.FragPosition)) int
 
 		// Count – number of objects in the structure.
 		Count() int
@@ -44,7 +45,7 @@ type (
 
 	Entry struct {
 		AABB
-		Id EntryId
+		Id uid.UID64
 	}
 
 	EntriesMove struct {
@@ -66,7 +67,7 @@ func NewEntriesMove(capHint int) EntriesMove {
 	}
 }
 
-func (u *EntriesMove) Append(id EntryId, old, new AABB) {
+func (u *EntriesMove) Append(id uid.UID64, old, new AABB) {
 	u.Old = append(u.Old, Entry{
 		AABB: old,
 		Id:   id,
