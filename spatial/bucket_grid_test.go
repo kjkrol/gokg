@@ -25,6 +25,22 @@ func TestBucketGrid_Buckets_Len(t *testing.T) {
 
 }
 
+func TestBucketGrid_DefaultCellCodec(t *testing.T) {
+	idx, _ := NewBucketGrid(Size128x128, Size32x32, WithBucketCapacity(1))
+	bucketGrid := idx.(*bucketGrid)
+	if _, ok := bucketGrid.gridCellCodec.(LinearCodeCodec); !ok {
+		t.Errorf("default codec = %T, want LinearCodeCodec", bucketGrid.gridCellCodec)
+	}
+}
+
+func TestBucketGrid_WithMortonCodec(t *testing.T) {
+	idx, _ := NewBucketGrid(Size128x128, Size32x32, WithBucketCapacity(1), WithMortonCodec())
+	bucketGrid := idx.(*bucketGrid)
+	if _, ok := bucketGrid.gridCellCodec.(MortonCodeCodec); !ok {
+		t.Errorf("codec = %T, want MortonCodeCodec", bucketGrid.gridCellCodec)
+	}
+}
+
 func TestBucketGrid_Buckets_QueryRange(t *testing.T) {
 
 	// given

@@ -9,6 +9,16 @@ type CellCodec interface {
 	Decode(int) (x, y uint32)
 }
 
+// CellCodecKind selects which CellCodec a bucketGrid uses, via
+// GridIndexConfig.CellCodec. The zero value is LinearCellCodec, so existing
+// configs default to today's behavior.
+type CellCodecKind uint8
+
+const (
+	LinearCellCodec CellCodecKind = iota
+	MortonCellCodec
+)
+
 type LinearCodeCodec struct {
 	res      Resolution
 	mask     int

@@ -70,8 +70,8 @@ func (ab AABB[T]) Contains(other AABB[T]) bool {
 }
 
 func (ab AABB[T]) ContainsVec(vec Vec[T]) bool {
-	return vec.X > ab.TopLeft.X && vec.X < ab.BottomRight.X &&
-		vec.Y > ab.TopLeft.Y && vec.Y < ab.BottomRight.Y
+	return vec.X >= ab.TopLeft.X && vec.X <= ab.BottomRight.X &&
+		vec.Y >= ab.TopLeft.Y && vec.Y <= ab.BottomRight.Y
 }
 
 func (ab AABB[T]) IntersectsVec(vec Vec[T]) bool {
