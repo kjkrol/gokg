@@ -33,7 +33,7 @@ func ResolutionFrom(number uint32) Resolution {
 	if number == 0 {
 		return Size1x1
 	}
-	bits := bits.Len32(number)
+	bits := bits.Len32(number - 1)
 	return NewResolution(uint8(bits))
 }
 

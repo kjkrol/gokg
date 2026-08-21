@@ -2,7 +2,6 @@ package spatial
 
 import (
 	"fmt"
-	"slices"
 	"sync"
 
 	"github.com/kjkrol/gokg/plane"
@@ -73,6 +72,16 @@ func NewBucketGrid(
 	return bg, nil
 }
 
+// WithMortonCodec swaps the grid-cell codec from the default
+// LinearCodeCodec to a Z-order (Morton) codec, for better cache locality on
+// range queries that touch multiple neighboring cells.
+func WithMortonCodec() Option {
+	return func(bg *bucketGrid) error {
+		bg.gridCellCodec = NewMortonCodec(bg.gridResolution)
+		return nil
+	}
+}
+
 func WithBucketCapacityFactor(capacityFactor float64) Option {
 	return func(bg *bucketGrid) error {
 		cellsCount := float64(bg.bucketsResolution.Cells())
@@ -102,21 +111,9 @@ func (bg *bucketGrid) BulkInsert(entries []Entry) {
 			continue
 		}
 
-		if tlIdx == brIdx {
-			bg.buckets[tlIdx].Add(entry.Id, bg.bucketCapacity)
-		} else {
-			x1, y1 := bg.gridCellCodec.Decode(tlIdx)
-			x2, y2 := bg.gridCellCodec.Decode(brIdx)
-			for y := y1; y <= y2; y++ {
-				for x := x1; x <= x2; x++ {
-					idx, err := bg.gridCellCodec.Encode(x, y)
-					if err != nil || idx < 0 || idx >= len(bg.buckets) {
-						continue
-					}
-					bg.buckets[idx].Add(entry.Id, bg.bucketCapacity)
-				}
-			}
-		}
+		bg.forEachBucketIndex(entry.AABB, func(idx uint32) {
+			bg.buckets[idx].Add(entry.Id, bg.bucketCapacity)
+		})
 		bg.aabbById[entry.Id] = entry.AABB
 	}
 }
@@ -130,25 +127,11 @@ func (bg *bucketGrid) BulkRemove(entries []Entry) {
 			continue
 		}
 
-		if tlIdx == brIdx {
-			if bg.buckets[tlIdx].Remove(entry.Id) {
-				bg.optimizer.mark(tlIdx, len(bg.buckets[tlIdx].ids) == 0)
+		bg.forEachBucketIndex(entry.AABB, func(idx uint32) {
+			if bg.buckets[idx].Remove(entry.Id) {
+				bg.optimizer.mark(int(idx), len(bg.buckets[idx].ids) == 0)
 			}
-		} else {
-			x1, y1 := bg.gridCellCodec.Decode(tlIdx)
-			x2, y2 := bg.gridCellCodec.Decode(brIdx)
-			for y := y1; y <= y2; y++ {
-				for x := x1; x <= x2; x++ {
-					idx, err := bg.gridCellCodec.Encode(x, y)
-					if err != nil || idx < 0 || idx >= len(bg.buckets) {
-						continue
-					}
-					if bg.buckets[idx].Remove(entry.Id) {
-						bg.optimizer.mark(idx, len(bg.buckets[idx].ids) == 0)
-					}
-				}
-			}
-		}
+		})
 		delete(bg.aabbById, entry.Id)
 	}
 }
@@ -174,37 +157,12 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 		}
 
 		if oldTl != newTl || oldBr != newBr {
-			if oldTl == oldBr {
-				bg.buckets[oldTl].Remove(oldEntry.Id)
-			} else {
-				x1, y1 := bg.gridCellCodec.Decode(oldTl)
-				x2, y2 := bg.gridCellCodec.Decode(oldBr)
-				for y := y1; y <= y2; y++ {
-					for x := x1; x <= x2; x++ {
-						idx, err := bg.gridCellCodec.Encode(x, y)
-						if err != nil || idx < 0 || idx >= len(bg.buckets) {
-							continue
-						}
-						bg.buckets[idx].Remove(oldEntry.Id)
-					}
-				}
-			}
-
-			if newTl == newBr {
-				bg.buckets[newTl].Add(newEntry.Id, bg.bucketCapacity)
-			} else {
-				x1, y1 := bg.gridCellCodec.Decode(newTl)
-				x2, y2 := bg.gridCellCodec.Decode(newBr)
-				for y := y1; y <= y2; y++ {
-					for x := x1; x <= x2; x++ {
-						idx, err := bg.gridCellCodec.Encode(x, y)
-						if err != nil || idx < 0 || idx >= len(bg.buckets) {
-							continue
-						}
-						bg.buckets[idx].Add(newEntry.Id, bg.bucketCapacity)
-					}
-				}
-			}
+			bg.forEachBucketIndex(oldEntry.AABB, func(idx uint32) {
+				bg.buckets[idx].Remove(oldEntry.Id)
+			})
+			bg.forEachBucketIndex(newEntry.AABB, func(idx uint32) {
+				bg.buckets[idx].Add(newEntry.Id, bg.bucketCapacity)
+			})
 		}
 		bg.aabbById[newEntry.Id] = newEntry.AABB
 	}
@@ -328,14 +286,11 @@ func (bg *bucketGrid) forEachBucketIndex(aabb AABB, fn func(uint32)) {
 // -----------------------------------------------------------
 // bucket
 
-func (b *bucket) Add(id uid.UID64, initialCap int) bool {
+func (b *bucket) Add(id uid.UID64, initialCap int) {
 	if b.ids == nil {
 		b.ids = make([]uid.UID64, 0, initialCap)
-	} else if slices.Contains(b.ids, id) {
-		return false
 	}
 	b.ids = append(b.ids, id)
-	return true
 }
 
 func (b *bucket) Remove(id uid.UID64) bool {

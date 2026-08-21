@@ -15,6 +15,9 @@ type GridIndexConfig struct {
 	BucketResolution Resolution
 	BucketCapacity   int
 	OpsBufferSize    int
+	// CellCodec selects the grid-cell codec; zero value (LinearCellCodec)
+	// matches today's default behavior.
+	CellCodec CellCodecKind
 }
 
 type BucketDelta struct {
@@ -24,6 +27,11 @@ type BucketDelta struct {
 	Updated []uid.UID64
 }
 
+// GridIndexManager buffers spatial updates and applies them in bulk.
+// QueueInsert/QueueRemove/QueueUpdate are safe to call from any goroutine —
+// they only send on opsCh. Flush, EntryAABB, and any other read of the
+// manager's own state (entries, bucketGrid) are not synchronized and must
+// only ever be called from the single goroutine that owns Flush.
 type GridIndexManager struct {
 	bucketGrid   *bucketGrid
 	space        plane.Space2D[uint32]
@@ -74,11 +82,11 @@ func NewGridIndexManager(space plane.Space2D[uint32], cfg GridIndexConfig) (*Gri
 	if cfg.BucketCapacity <= 0 {
 		cfg.BucketCapacity = 2
 	}
-	index, err := NewBucketGrid(
-		cfg.Resolution,
-		cfg.BucketResolution,
-		WithBucketCapacity(cfg.BucketCapacity),
-	)
+	opts := []Option{WithBucketCapacity(cfg.BucketCapacity)}
+	if cfg.CellCodec == MortonCellCodec {
+		opts = append(opts, WithMortonCodec())
+	}
+	index, err := NewBucketGrid(cfg.Resolution, cfg.BucketResolution, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +122,8 @@ func (m *GridIndexManager) QueueUpdate(id uid.UID64, aabb plane.AABB[uint32], ma
 	m.opsCh <- indexOp{kind: opUpdate, id: id, aabb: aabb, markDirty: markDirty}
 }
 
+// Flush drains queued ops and applies them. Call it from a single, fixed
+// goroutine only — see the GridIndexManager doc comment.
 func (m *GridIndexManager) Flush(onDirty func(geom.AABB[uint32])) {
 	for {
 		select {
@@ -132,6 +142,9 @@ func (m *GridIndexManager) Flush(onDirty func(geom.AABB[uint32])) {
 	}
 }
 
+// EntryAABB reads m's own state directly (not via opsCh) — call it only
+// from the same goroutine that calls Flush, see the GridIndexManager doc
+// comment.
 func (m *GridIndexManager) EntryAABB(entryID uid.UID64) (geom.AABB[uint32], bool) {
 	if m.bucketGrid == nil {
 		return geom.AABB[uint32]{}, false

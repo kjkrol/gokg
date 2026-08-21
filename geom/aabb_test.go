@@ -103,6 +103,38 @@ func runAABBIntersectsTest[T Numeric](t *testing.T, name string) {
 	})
 }
 
+func TestAABB_ContainsVec(t *testing.T) {
+	runAABBContainsVecTest[int](t, "int")
+	runAABBContainsVecTest[uint32](t, "uint32")
+	runAABBContainsVecTest[float64](t, "float64")
+}
+
+func runAABBContainsVecTest[T Numeric](t *testing.T, name string) {
+	t.Run(name, func(t *testing.T) {
+		box := NewAABBAt(NewVec(T(3), T(3)), T(2), T(2)) // [3,3] .. [5,5]
+		testCases := []struct {
+			name string
+			vec  Vec[T]
+			want bool
+		}{
+			{name: "inside", vec: NewVec(T(4), T(4)), want: true},
+			{name: "topLeftCorner", vec: NewVec(T(3), T(3)), want: true},
+			{name: "bottomRightCorner", vec: NewVec(T(5), T(5)), want: true},
+			{name: "onLeftEdge", vec: NewVec(T(3), T(4)), want: true},
+			{name: "onTopEdge", vec: NewVec(T(4), T(3)), want: true},
+			{name: "outsideLeft", vec: NewVec(T(2), T(4)), want: false},
+			{name: "outsideBelow", vec: NewVec(T(4), T(6)), want: false},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if got := box.ContainsVec(tc.vec); got != tc.want {
+					t.Fatalf("box %v ContainsVec(%v) = %v, want %v", box, tc.vec, got, tc.want)
+				}
+			})
+		}
+	})
+}
+
 func TestSortAABBsBy(t *testing.T) {
 	runSortAABBsByTest[int](t, "int")
 	runSortAABBsByTest[uint32](t, "uint32")
