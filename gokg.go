@@ -88,6 +88,16 @@ func (w *Space) Remove(id uid.UID64) {
 	w.spatialIndex.QueueRemove(id)
 }
 
+// WrapAABB folds an arbitrary (possibly out-of-bounds) AABB into the
+// space's canonical bounds — for a toroidal space this may split it into
+// up to three additional wrapped fragments (Frags/FragMask), exactly as
+// Insert/Translate already do internally for entity positions. Use this
+// to build a valid Query box out of a rectangle that isn't already
+// known to be canonical (e.g. one derived from screen coordinates).
+func (w *Space) WrapAABB(aabb geom.AABB[uint32]) plane.AABB[uint32] {
+	return w.surface.WrapAABB(aabb)
+}
+
 // Translate moves the given AABB by the specified delta, recalculates its fragments
 // based on the boundary rules, and queues a spatial index update to reflect the new position.
 func (w *Space) Translate(id uid.UID64, aabb *plane.AABB[uint32], delta geom.Vec[uint32]) {

@@ -14,6 +14,7 @@ type (
 		WrapVec(vec geom.Vec[T]) AABB[T]
 		Expand(aabb *AABB[T], margin T)
 		Translate(aabb *AABB[T], delta geom.Vec[T])
+		Reposition(aabb *AABB[T], delta geom.Vec[T])
 		AABBDistance() AABBDistance[T]
 		Name() string
 		Viewport() geom.AABB[T]
