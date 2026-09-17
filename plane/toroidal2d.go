@@ -49,6 +49,11 @@ func (s toroidal2d[T]) Translate(aabb *AABB[T], delta geom.Vec[T]) {
 	s.normalizeAABB(aabb)
 }
 
+// Reposition delegates to Translate — toroidal wrapping already keeps size fixed.
+func (s toroidal2d[T]) Reposition(aabb *AABB[T], delta geom.Vec[T]) {
+	s.Translate(aabb, delta)
+}
+
 func (s toroidal2d[T]) AABBDistance() AABBDistance[T] {
 	return newAABBDistance(s.metric)
 }

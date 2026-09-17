@@ -49,6 +49,29 @@ func (s euclidean2d[T]) Translate(aabb *AABB[T], delta geom.Vec[T]) {
 	s.normalizeAABB(aabb)
 }
 
+// Reposition shifts aabb by delta, clamping its position so it stays
+// within bounds without clipping its size — see Space2D.Reposition.
+func (s euclidean2d[T]) Reposition(aabb *AABB[T], delta geom.Vec[T]) {
+	aabb.TopLeft = aabb.TopLeft.Add(delta)
+	aabb.TopLeft = s.clampPositionForSize(aabb.TopLeft, aabb.Size)
+	aabb.BottomRight = aabb.TopLeft.Add(aabb.Size)
+}
+
+// clampPositionForSize clamps pos so a box of the given size stays
+// within [0, s.size] without shrinking — a size at least as large as
+// the space on an axis is pinned to 0 on that axis.
+func (s euclidean2d[T]) clampPositionForSize(pos, size geom.Vec[T]) geom.Vec[T] {
+	var zero T
+	maxX, maxY := zero, zero
+	if size.X < s.size.X {
+		maxX = s.size.X - size.X
+	}
+	if size.Y < s.size.Y {
+		maxY = s.size.Y - size.Y
+	}
+	return s.vectorMath.Clamp(pos, geom.NewVec(maxX, maxY))
+}
+
 func (s euclidean2d[T]) AABBDistance() AABBDistance[T] {
 	return newAABBDistance(s.metric)
 }
