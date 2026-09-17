@@ -6,6 +6,7 @@ import (
 
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
+	"github.com/kjkrol/gokg/raycast"
 	"github.com/kjkrol/gokg/spatial"
 	"github.com/kjkrol/uid"
 )
@@ -112,6 +113,23 @@ func (w *Space) ExpandOnly(aabb *plane.AABB[uint32], margin uint32) {
 // The collector function fn is called for every entity found, providing its ID and the exact fragment that was hit.
 func (w *Space) Query(aabb geom.AABB[uint32], fn func(id uid.UID64, frag plane.FragPosition)) int {
 	return w.spatialIndex.QueryRange(aabb, fn)
+}
+
+// Bounds reports the world's dimensions and whether it wraps at its edges.
+func (w *Space) Bounds() (width, height uint32, toroidal bool) {
+	return w.Config.Width, w.Config.Height, w.Config.Toroidal
+}
+
+// EntryAABB returns the indexed box of a single entity.
+func (w *Space) EntryAABB(id uid.UID64) (geom.AABB[uint32], bool) {
+	return w.spatialIndex.EntryAABB(id)
+}
+
+// Scan fills v with what observer sees through cone, and reports whether the
+// query was answerable. Read the result off v as entities, as an outline, or as
+// both — see [raycast.View]. Keeping v across ticks reuses its buffers.
+func (w *Space) Scan(observer uid.UID64, cone raycast.Cone, v *raycast.View) bool {
+	return v.Scan(w, observer, cone)
 }
 
 // Flush processes all pending queued operations (Insert, Remove, Translate, Expand)

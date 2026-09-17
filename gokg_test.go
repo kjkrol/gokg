@@ -1,10 +1,12 @@
 package gokg
 
 import (
+	"math"
 	"testing"
 
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
+	"github.com/kjkrol/gokg/raycast"
 	"github.com/kjkrol/gokg/spatial"
 	"github.com/kjkrol/uid"
 	"github.com/stretchr/testify/assert"
@@ -108,4 +110,87 @@ func TestSpace_ToroidalWrap(t *testing.T) {
 		foundIDs = append(foundIDs, id)
 	})
 	assert.Contains(t, foundIDs, entityID, "Object should be flawlessly queried on the left side of the plane after wrapping")
+}
+
+func TestSpace_Visible(t *testing.T) {
+	cfg := Config{
+		Width:          2000,
+		Height:         2000,
+		Toroidal:       false,
+		BucketSize:     spatial.Size256x256,
+		BucketCapacity: 10,
+	}
+	space, err := NewSpace(cfg)
+	assert.NoError(t, err)
+
+	const (
+		guard  = uid.UID64(1)
+		inView = uid.UID64(2)
+		behind = uid.UID64(3)
+	)
+	space.Insert(guard, plane.NewAABB(geom.NewVec[uint32](500, 500), 10, 10))
+	space.Insert(inView, plane.NewAABB(geom.NewVec[uint32](700, 500), 10, 10))
+	space.Insert(behind, plane.NewAABB(geom.NewVec[uint32](900, 500), 10, 10))
+	space.Flush(nil)
+
+	w, h, toroidal := space.Bounds()
+	assert.Equal(t, cfg.Width, w)
+	assert.Equal(t, cfg.Height, h)
+	assert.Equal(t, cfg.Toroidal, toroidal)
+
+	box, ok := space.EntryAABB(inView)
+	assert.True(t, ok)
+	assert.Equal(t, uint32(700), box.TopLeft.X)
+
+	_, ok = space.EntryAABB(uid.UID64(999))
+	assert.False(t, ok)
+
+	cone := raycast.Cone{
+		Direction: geom.NewVec(1.0, 0.0),
+		HalfAngle: math.Pi / 6,
+		Radius:    600,
+	}
+	// One scan answers both what the guard sees and where the view ends.
+	var view raycast.View
+	assert.True(t, space.Scan(guard, cone, &view))
+
+	var seen []uid.UID64
+	n := view.Entities(func(id uid.UID64, _ float64) { seen = append(seen, id) })
+	assert.Equal(t, 1, n)
+	assert.Equal(t, []uid.UID64{inView}, seen, "behind must be hidden by inView")
+
+	outline := view.Outline(0, nil)
+	assert.NotEmpty(t, outline)
+	assert.Equal(t, float64(505), outline[0].X, "the fan starts at the observer")
+
+	assert.False(t, space.Scan(uid.UID64(999), cone, &view), "unknown observer")
+}
+
+// Expand reaches the spatial index; ExpandOnly changes the box and nothing
+// else, which is what makes it usable for a throwaway probe.
+func TestSpace_Expand(t *testing.T) {
+	space, err := NewSpace(Config{
+		Width: 1000, Height: 1000,
+		BucketSize: spatial.Size256x256, BucketCapacity: 8,
+	})
+	assert.NoError(t, err)
+
+	const id = uid.UID64(1)
+	box := plane.NewAABB(geom.NewVec[uint32](100, 100), 20, 20)
+	space.Insert(id, box)
+	space.Flush(nil)
+
+	space.Expand(id, &box, 10)
+	space.Flush(nil)
+
+	indexed, ok := space.EntryAABB(id)
+	assert.True(t, ok)
+	assert.Equal(t, uint32(90), indexed.TopLeft.X, "the indexed box grew with the margin")
+
+	probe := plane.NewAABB(geom.NewVec[uint32](500, 500), 20, 20)
+	space.ExpandOnly(&probe, 10)
+	assert.Equal(t, uint32(490), probe.TopLeft.X)
+
+	_, ok = space.EntryAABB(uid.UID64(2))
+	assert.False(t, ok, "ExpandOnly must not put a probe into the index")
 }
