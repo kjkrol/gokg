@@ -20,15 +20,15 @@ import (
 
 // QueryableSpace is the slice of a spatial index this package needs.
 type QueryableSpace interface {
-	Query(aabb geom.AABB[uint32], fn func(id uid.UID64, frag plane.FragPosition)) int
-	EntryAABB(id uid.UID64) (geom.AABB[uint32], bool)
+	Query(aabb geom.AABB, fn func(id uid.UID64, frag plane.FragPosition)) int
+	EntryAABB(id uid.UID64) (geom.AABB, bool)
 	Bounds() (width, height uint32, toroidal bool)
 }
 
 // Cone bounds a visibility query: a direction, a half-angle either side of it,
 // and how far it reaches.
 type Cone struct {
-	Direction geom.Vec[float64]
+	Direction geom.Vec
 	HalfAngle float64
 	Radius    float64
 }
@@ -45,12 +45,12 @@ type View struct {
 
 	col     collector
 	colFn   func(uid.UID64, plane.FragPosition)
-	areas   []geom.AABB[uint32]
+	areas   []geom.AABB
 	found   []seen
 	uniform []float64
 	depths  []sample
 
-	origin    geom.Vec[float64]
+	origin    geom.Vec
 	coneDir   float64
 	halfAngle float64
 	radius    float64
@@ -82,7 +82,7 @@ func (v *View) Scan(space QueryableSpace, observer uid.UID64, cone Cone) bool {
 
 	width, height, toroidal := space.Bounds()
 	w, h := float64(width), float64(height)
-	eyeBox := aabbToF64(eye)
+	eyeBox := eye
 
 	v.origin = centerOf(eyeBox)
 	v.coneDir = math.Atan2(cone.Direction.Y, cone.Direction.X)
@@ -191,7 +191,7 @@ func (v *View) Depths(k int, dst []float32) []float32 {
 // Passing buf[:0] reuses a buffer across frames. Assign the result back, as
 // with any append: growing dst returns a different array, and dropping it would
 // leave the caller holding the previous frame's points.
-func (v *View) Outline(maxArcStep float64, dst []geom.Vec[float64]) []geom.Vec[float64] {
+func (v *View) Outline(maxArcStep float64, dst []geom.Vec) []geom.Vec {
 	if !v.valid {
 		return dst
 	}
@@ -200,7 +200,7 @@ func (v *View) Outline(maxArcStep float64, dst []geom.Vec[float64]) []geom.Vec[f
 	}
 
 	dst = append(dst, v.origin)
-	at := func(rel, dist float64) geom.Vec[float64] {
+	at := func(rel, dist float64) geom.Vec {
 		a := v.coneDir + rel
 		return geom.NewVec(v.origin.X+dist*math.Cos(a), v.origin.Y+dist*math.Sin(a))
 	}
@@ -251,7 +251,7 @@ type candidate struct {
 	id   uid.UID64
 	dist float64
 	span arc
-	box  geom.AABB[float64]
+	box  geom.AABB
 }
 
 // collector is what one gather needs while the index walks it. It lives in the
@@ -260,8 +260,8 @@ type candidate struct {
 type collector struct {
 	space    QueryableSpace
 	observer uid.UID64
-	eyeBox   geom.AABB[float64]
-	origin   geom.Vec[float64]
+	eyeBox   geom.AABB
+	origin   geom.Vec
 	cone     Cone
 	coneDir  float64
 	edges    wedge
@@ -281,7 +281,7 @@ func (c *collector) take(id uid.UID64, _ plane.FragPosition) {
 	if !ok {
 		return
 	}
-	box := aabbToF64(raw)
+	box := raw
 	if c.toroidal {
 		box = nearestImage(c.origin, box, c.w, c.h)
 	}
@@ -302,7 +302,7 @@ func (c *collector) take(id uid.UID64, _ plane.FragPosition) {
 func (v *View) gather(
 	space QueryableSpace,
 	observer uid.UID64,
-	eyeBox geom.AABB[float64],
+	eyeBox geom.AABB,
 	cone Cone,
 	w, h float64,
 	toroidal bool,

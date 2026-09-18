@@ -1,90 +1,67 @@
 package geom
 
 import (
+	"math"
 	"testing"
 )
 
-func TestVectorMath_Length(t *testing.T) {
-	runLengthTest(t, "int", SignedIntVectorMath[int]{})
-	runLengthTest(t, "uint32", UnsignedIntVectorMath[uint32]{})
-	runLengthTest(t, "float64", FloatVectorMath[float64]{})
+func TestLength(t *testing.T) {
+	if got := Length(NewVec(3, 4)); got != 5 {
+		t.Errorf("Length = %v, want 5", got)
+	}
+	if got := Length(NewVec(0, 0)); got != 0 {
+		t.Errorf("Length of a zero vector = %v, want 0", got)
+	}
+	// A continuous world is the point of float64: lengths need not be whole.
+	if got := Length(NewVec(1, 1)); math.Abs(got-math.Sqrt2) > 1e-12 {
+		t.Errorf("Length = %v, want sqrt(2)", got)
+	}
 }
 
-func runLengthTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
-	t.Run(name, func(t *testing.T) {
-		v := NewVec(T(3), T(4))
-		expected := T(5)
+func TestClamp(t *testing.T) {
+	bounds := NewVec(4, 6)
 
-		if result := math.Length(v); result != expected {
-			t.Errorf("expected %v, got %v", expected, result)
-		}
-	})
-}
-
-func TestVectorMath_Clamp(t *testing.T) {
-	runClampTest(t, "int", SignedIntVectorMath[int]{})
-	runClampTest(t, "uint32", UnsignedIntVectorMath[uint32]{})
-	runClampTest(t, "float64", FloatVectorMath[float64]{})
-}
-
-func runClampTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
-	t.Run(name, func(t *testing.T) {
-		bounds := NewVec(T(4), T(6))
-		negX := int32(-3)
-		negY := int32(-1)
-		negStart := NewVec(T(negX), T(negY))
-		cases := []struct {
-			start    Vec[T]
-			expected Vec[T]
-		}{
-			{NewVec(T(5), T(7)), NewVec(T(4), T(6))},
-			{negStart, NewVec(T(0), T(0))}, // ujemne wartości muszą zostać przycięte do 0 także dla uint32
-		}
-
-		for _, c := range cases {
-			got := math.Clamp(c.start, bounds)
-			if got != c.expected {
-				t.Errorf("expected %v, got %v", c.expected, got)
+	cases := map[string]struct{ start, want Vec }{
+		"inside is left alone": {NewVec(2, 3), NewVec(2, 3)},
+		"past the far edge":    {NewVec(5, 7), NewVec(4, 6)},
+		"below zero":           {NewVec(-3, -1), NewVec(0, 0)},
+		"exactly on the edge":  {NewVec(4, 6), NewVec(4, 6)},
+		"fractional stays put": {NewVec(1.5, 2.25), NewVec(1.5, 2.25)},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := Clamp(c.start, bounds); got != c.want {
+				t.Errorf("Clamp(%v) = %v, want %v", c.start, got, c.want)
 			}
-		}
-	})
+		})
+	}
 }
 
-func TestVectorMath_Wrap(t *testing.T) {
-	runWrapTest(t, "int", SignedIntVectorMath[int]{})
-	runWrapTest(t, "uint32", UnsignedIntVectorMath[uint32]{})
-	runWrapTest(t, "float64", FloatVectorMath[float64]{})
+func TestWrap(t *testing.T) {
+	size := NewVec(4, 4)
+
+	cases := map[string]struct{ start, want Vec }{
+		"inside is left alone":     {NewVec(1, 3), NewVec(1, 3)},
+		"one step past the edge":   {NewVec(5, 7), NewVec(1, 3)},
+		"exactly on the far edge":  {NewVec(4, 4), NewVec(0, 0)},
+		"just below zero":          {NewVec(-3, -1), NewVec(1, 3)},
+		"far out, past the fast p": {NewVec(19, -13), NewVec(3, 3)},
+		"fractional wraps too":     {NewVec(4.5, -0.5), NewVec(0.5, 3.5)},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := Wrap(c.start, size)
+			if math.Abs(got.X-c.want.X) > 1e-12 || math.Abs(got.Y-c.want.Y) > 1e-12 {
+				t.Errorf("Wrap(%v) = %v, want %v", c.start, got, c.want)
+			}
+		})
+	}
 }
 
-func runWrapTest[T Numeric](t *testing.T, name string, math VectorMath[T]) {
-	t.Run(name, func(t *testing.T) {
-		v := NewVec(T(5), T(7))
-		bounds := NewVec(T(4), T(4))
-		negX := int32(-3)
-		negY := int32(-1)
-		negStart := NewVec(T(negX), T(negY))
-		cases := []struct {
-			offset   Vec[T]
-			expected Vec[T]
-			start    Vec[T]
-		}{
-			{NewVec(T(4), T(6)), NewVec(T(1), T(1)), Vec[T]{}},
-			{NewVec(bounds.X, 0), NewVec(T(1), T(7)), Vec[T]{}},
-			{NewVec(0, bounds.Y), NewVec(T(5), T(3)), Vec[T]{}},
-			{NewVec(bounds.X, bounds.Y), NewVec(T(1), T(3)), Vec[T]{}},
-			// ujemne wejście powinno się prawidłowo zawinąć dla wszystkich typów
-			{bounds, NewVec(T(1), T(3)), negStart},
-		}
-
-		for _, c := range cases {
-			vec := NewVec(v.X, v.Y)
-			if c.start != (Vec[T]{}) {
-				vec = c.start
-			}
-			got := math.Wrap(vec, c.offset)
-			if got != c.expected {
-				t.Errorf("expected %v, got %v", c.expected, got)
-			}
-		}
-	})
+// A size of zero has nothing to wrap into, so the value passes through rather
+// than dividing by zero.
+func TestWrap_ZeroSizePassesThrough(t *testing.T) {
+	if got := Wrap(NewVec(7, -7), NewVec(0, 0)); got != NewVec(7, -7) {
+		t.Errorf("Wrap with a zero size = %v, want the input unchanged", got)
+	}
 }

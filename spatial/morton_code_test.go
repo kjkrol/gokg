@@ -9,18 +9,18 @@ import (
 func TestMortonCodeOffset(t *testing.T) {
 	// TODO: cover boundary/wrap behaviour once Offset defines how to handle edges.
 	cases := []struct {
-		name     string
-		x, y     uint32
-		dx, dy   int32
-		expected Vec
+		name         string
+		x, y         uint32
+		dx, dy       int32
+		wantX, wantY uint32
 	}{
 		{
-			name:     "shift_3_4",
-			x:        10,
-			y:        20,
-			dx:       3,
-			dy:       4,
-			expected: Vec{X: 13, Y: 24},
+			name:  "shift_3_4",
+			x:     10,
+			y:     20,
+			dx:    3,
+			dy:    4,
+			wantX: 13, wantY: 24,
 		},
 	}
 
@@ -31,17 +31,18 @@ func TestMortonCodeOffset(t *testing.T) {
 		dx := int32(src.Intn(6) + 1)   // positive shifts to avoid underflow
 		dy := int32(src.Intn(6) + 1)   // positive shifts to avoid underflow
 		cases = append(cases, struct {
-			name     string
-			x, y     uint32
-			dx, dy   int32
-			expected Vec
+			name         string
+			x, y         uint32
+			dx, dy       int32
+			wantX, wantY uint32
 		}{
-			name:     fmt.Sprintf("rand_%d", i),
-			x:        x,
-			y:        y,
-			dx:       dx,
-			dy:       dy,
-			expected: Vec{X: x + uint32(dx), Y: y + uint32(dy)},
+			name:  fmt.Sprintf("rand_%d", i),
+			x:     x,
+			y:     y,
+			dx:    dx,
+			dy:    dy,
+			wantX: x + uint32(dx),
+			wantY: y + uint32(dy),
 		})
 	}
 
@@ -52,9 +53,9 @@ func TestMortonCodeOffset(t *testing.T) {
 			shifted := code.Offset(tc.dx, tc.dy)
 			gotX, gotY := shifted.Decode()
 
-			if gotX != tc.expected.X || gotY != tc.expected.Y {
+			if gotX != tc.wantX || gotY != tc.wantY {
 				t.Fatalf("Offset(%d,%d) from (%d,%d): got (%d,%d), want (%d,%d)",
-					tc.dx, tc.dy, tc.x, tc.y, gotX, gotY, tc.expected.X, tc.expected.Y)
+					tc.dx, tc.dy, tc.x, tc.y, gotX, gotY, tc.wantX, tc.wantY)
 			}
 		})
 	}
@@ -74,9 +75,10 @@ func TestMortonCodeArea(t *testing.T) {
 		t.Fatalf("len(MortonCodeArea) = %d, want %d", len(codes), wantLen)
 	}
 
+	// The box arrives in world coordinates; the codes it yields address cells.
 	idx := 0
-	for y := aabb.TopLeft.Y; y <= aabb.BottomRight.Y; y++ {
-		for x := aabb.TopLeft.X; x <= aabb.BottomRight.X; x++ {
+	for y := uint32(aabb.TopLeft.Y); y <= uint32(aabb.BottomRight.Y); y++ {
+		for x := uint32(aabb.TopLeft.X); x <= uint32(aabb.BottomRight.X); x++ {
 			want := NewMortonCode(x, y)
 			if codes[idx] != want {
 				t.Fatalf("codes[%d] = %v for (%d,%d), want %v", idx, codes[idx], x, y, want)

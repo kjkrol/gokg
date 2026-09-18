@@ -17,7 +17,7 @@ import (
 // Only boxes the fan reaches across an arc wider than minArc are returned: the
 // sweep resolves down to one unit at the far edge of the view, so a sliver
 // thinner than that is below what it promises to find.
-func bruteForce(boxes map[uid.UID64][4]float64, origin geom.Vec[float64], cone raycast.Cone, steps int, minArc float64) map[uid.UID64]bool {
+func bruteForce(boxes map[uid.UID64][4]float64, origin geom.Vec, cone raycast.Cone, steps int, minArc float64) map[uid.UID64]bool {
 	dir := math.Atan2(cone.Direction.Y, cone.Direction.X)
 	step := 2 * cone.HalfAngle / float64(steps)
 	arcs := map[uid.UID64]float64{}
@@ -78,9 +78,9 @@ func TestVisible_MissesNothingADenseFanOfRaysReaches(t *testing.T) {
 				if cx == 4 && cy == 4 {
 					continue // the observer's own cell
 				}
-				x := uint32(1600 + cx*100 + r.IntN(20))
-				y := uint32(1600 + cy*100 + r.IntN(20))
-				w, h := uint32(20+r.IntN(50)), uint32(20+r.IntN(50))
+				x := float64(1600 + cx*100 + r.IntN(20))
+				y := float64(1600 + cy*100 + r.IntN(20))
+				w, h := float64(20+r.IntN(50)), float64(20+r.IntN(50))
 				s.put(id, x, y, w, h)
 				boxes[id] = [4]float64{float64(x), float64(y), float64(x + w), float64(y + h)}
 				id++

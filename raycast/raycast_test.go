@@ -13,8 +13,8 @@ import (
 // fakeSpace is a QueryableSpace over a plain slice — enough to pin the
 // visibility rules without building a real index.
 type fakeSpace struct {
-	boxes    map[uid.UID64]geom.AABB[uint32]
-	w, h     uint32
+	boxes    map[uid.UID64]geom.AABB
+	w, h     float64
 	toroidal bool
 	// twice makes Query report every entity again, as it does for a box
 	// straddling the seam; phantom is reported but has no indexed box.
@@ -22,22 +22,22 @@ type fakeSpace struct {
 	phantom uid.UID64
 }
 
-func newFake(w, h uint32, toroidal bool) *fakeSpace {
-	return &fakeSpace{boxes: map[uid.UID64]geom.AABB[uint32]{}, w: w, h: h, toroidal: toroidal}
+func newFake(w, h float64, toroidal bool) *fakeSpace {
+	return &fakeSpace{boxes: map[uid.UID64]geom.AABB{}, w: w, h: h, toroidal: toroidal}
 }
 
-func (f *fakeSpace) put(id uid.UID64, x, y, w, h uint32) {
+func (f *fakeSpace) put(id uid.UID64, x, y, w, h float64) {
 	f.boxes[id] = geom.NewAABBAt(geom.NewVec(x, y), w, h)
 }
 
-func (f *fakeSpace) Bounds() (uint32, uint32, bool) { return f.w, f.h, f.toroidal }
+func (f *fakeSpace) Bounds() (uint32, uint32, bool) { return uint32(f.w), uint32(f.h), f.toroidal }
 
-func (f *fakeSpace) EntryAABB(id uid.UID64) (geom.AABB[uint32], bool) {
+func (f *fakeSpace) EntryAABB(id uid.UID64) (geom.AABB, bool) {
 	b, ok := f.boxes[id]
 	return b, ok
 }
 
-func (f *fakeSpace) Query(area geom.AABB[uint32], fn func(uid.UID64, plane.FragPosition)) int {
+func (f *fakeSpace) Query(area geom.AABB, fn func(uid.UID64, plane.FragPosition)) int {
 	n := 0
 	for id, b := range f.boxes {
 		if !area.Intersects(b) {
@@ -80,7 +80,7 @@ func visible(t *testing.T, s raycast.QueryableSpace, observer uid.UID64, c rayca
 	return got
 }
 
-func outline(t *testing.T, s raycast.QueryableSpace, observer uid.UID64, c raycast.Cone, step float64) []geom.Vec[float64] {
+func outline(t *testing.T, s raycast.QueryableSpace, observer uid.UID64, c raycast.Cone, step float64) []geom.Vec {
 	t.Helper()
 	return scan(t, s, observer, c).Outline(step, nil)
 }
@@ -145,7 +145,7 @@ func TestVisible_ExcludesOutOfRangeOutOfConeAndSelf(t *testing.T) {
 	// Every rejected entity sits inside the search square, so each subtest
 	// isolates one reason rather than leaning on the broad phase.
 	cases := map[string]struct {
-		x, y uint32
+		x, y float64
 		want []uid.UID64
 	}{
 		"in cone and in range":           {700, 500, []uid.UID64{near}},

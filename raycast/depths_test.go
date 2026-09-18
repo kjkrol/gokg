@@ -12,7 +12,7 @@ import (
 
 // nearestAlong is the reach of one ray, tested against every box directly — an
 // independent check on the active set the sweep maintains.
-func nearestAlong(boxes [][4]float64, origin geom.Vec[float64], angle, radius float64) float64 {
+func nearestAlong(boxes [][4]float64, origin geom.Vec, angle, radius float64) float64 {
 	dx, dy := math.Cos(angle), math.Sin(angle)
 	best := radius
 	for _, b := range boxes {
@@ -54,9 +54,9 @@ func TestDepths_MatchRaysCastDirectly(t *testing.T) {
 				if cx == 3 && cy == 3 {
 					continue // the observer's own cell
 				}
-				x := uint32(1700 + cx*100 + r.IntN(20))
-				y := uint32(1700 + cy*100 + r.IntN(20))
-				w, h := uint32(20+r.IntN(40)), uint32(20+r.IntN(40))
+				x := float64(1700 + cx*100 + r.IntN(20))
+				y := float64(1700 + cy*100 + r.IntN(20))
+				w, h := float64(20+r.IntN(40)), float64(20+r.IntN(40))
 				s.put(id, x, y, w, h)
 				boxes = append(boxes, [4]float64{float64(x), float64(y), float64(x + w), float64(y + h)})
 				id++

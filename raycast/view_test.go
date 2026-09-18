@@ -20,8 +20,8 @@ func scene(seed uint64) (*fakeSpace, raycast.Cone) {
 	s.put(eye, 2000, 2000, 10, 10)
 	for i := range 24 - 22*int(seed%2) {
 		s.put(uid.UID64(100+i),
-			uint32(2100+i*90+r.IntN(40)), uint32(1700+r.IntN(600)),
-			uint32(20+r.IntN(40)), uint32(20+r.IntN(40)))
+			float64(2100+i*90+r.IntN(40)), float64(1700+r.IntN(600)),
+			float64(20+r.IntN(40)), float64(20+r.IntN(40)))
 	}
 	return s, eastward(math.Pi/3+float64(seed%3)*0.2, 500+float64(r.IntN(400)))
 }
@@ -29,7 +29,7 @@ func scene(seed uint64) (*fakeSpace, raycast.Cone) {
 // freshScan answers through a View that has never been used, so no buffer it
 // holds can carry anything over. The one-shot functions cannot play this part:
 // they pool a View too, and would fail in exactly the same way.
-func freshScan(t *testing.T, s raycast.QueryableSpace, c raycast.Cone) ([]seenPair, []geom.Vec[float64]) {
+func freshScan(t *testing.T, s raycast.QueryableSpace, c raycast.Cone) ([]seenPair, []geom.Vec) {
 	t.Helper()
 	v := &raycast.View{}
 	if !v.Scan(s, eye, c) {
@@ -49,7 +49,7 @@ type seenPair struct {
 // into the next answer.
 func TestView_ReusedAcrossScansMatchesOneShotCalls(t *testing.T) {
 	v := &raycast.View{}
-	var buf []geom.Vec[float64]
+	var buf []geom.Vec
 
 	for seed := range uint64(8) {
 		s, cone := scene(seed)
@@ -124,7 +124,7 @@ func TestView_ReadsNothingWithoutASuccessfulScan(t *testing.T) {
 			if n := v.Entities(func(uid.UID64, float64) { t.Error("fn called") }); n != 0 {
 				t.Errorf("Entities = %d, want 0", n)
 			}
-			dst := []geom.Vec[float64]{{X: 1, Y: 2}}
+			dst := []geom.Vec{{X: 1, Y: 2}}
 			if got := v.Outline(0, dst); len(got) != 1 || got[0] != dst[0] {
 				t.Errorf("Outline = %v, want dst untouched", got)
 			}
@@ -142,7 +142,7 @@ func TestView_OutlineAppendsToDst(t *testing.T) {
 	}
 
 	head := geom.NewVec(7.0, 9.0)
-	got := v.Outline(0, []geom.Vec[float64]{head})
+	got := v.Outline(0, []geom.Vec{head})
 	if got[0] != head {
 		t.Errorf("got[0] = %v, want the caller's own point %v", got[0], head)
 	}

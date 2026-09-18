@@ -2,6 +2,7 @@ package spatial
 
 import (
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/kjkrol/gokg/plane"
@@ -56,7 +57,7 @@ func NewBucketGrid(
 		bucketsResolution: bucketsResolution,
 		gridResolution:    gridResolution,
 		gridCellCodec:     gridCellCodec,
-		bounds:            NewAABBAt(NewVec(0, 0), side, side),
+		bounds:            NewAABBAt(NewVec(0, 0), float64(side), float64(side)),
 	}
 	for _, opt := range opts {
 		err := opt(bg)
@@ -246,13 +247,32 @@ func (bg *bucketGrid) Optimize() {
 }
 
 func (bg *bucketGrid) CalculateGridIndex(vec Vec) int {
-	xHead := vec.X >> bg.bucketsResolution
-	yHead := vec.Y >> bg.bucketsResolution
+	xHead, ok := cellCoord(vec.X, bg.bucketsResolution)
+	if !ok {
+		return -1
+	}
+	yHead, ok := cellCoord(vec.Y, bg.bucketsResolution)
+	if !ok {
+		return -1
+	}
 	idx, err := bg.gridCellCodec.Encode(xHead, yHead)
 	if err != nil {
 		return -1
 	}
 	return idx
+}
+
+// cellCoord turns a world coordinate into the grid column or row holding it.
+//
+// The bounds check is not defensive tidiness: converting a negative, NaN or
+// out-of-range float to uint32 is implementation-defined in Go, and the world
+// used to be unsigned, so the type ruled those out for us. Now this does.
+// Writing the test as !(v >= 0) rather than v < 0 is what catches NaN.
+func cellCoord(v float64, res Resolution) (uint32, bool) {
+	if !(v >= 0) || v > math.MaxUint32 {
+		return 0, false
+	}
+	return uint32(v) >> res, true
 }
 
 func (bg *bucketGrid) forEachBucketIndex(aabb AABB, fn func(uint32)) {

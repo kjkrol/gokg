@@ -14,7 +14,7 @@ import (
 // those carry NaN and signed-zero handling that shows up as real calls in a
 // profile, and neither case can arise here — the only divisions are by a
 // non-zero component.
-func hitDistance(origin, dir geom.Vec[float64], box geom.AABB[float64]) (float64, bool) {
+func hitDistance(origin, dir geom.Vec, box geom.AABB) (float64, bool) {
 	near, far := math.Inf(-1), math.Inf(1)
 
 	if dir.X == 0 {

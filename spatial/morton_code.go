@@ -24,13 +24,13 @@ func (c MortonCode) Offset(dx, dy int32) MortonCode {
 }
 
 func MortonCodeArea(aabb AABB) []MortonCode {
-	// Pusta / niepoprawna AABB
-	if aabb.BottomRight.X < aabb.TopLeft.X || aabb.BottomRight.Y < aabb.TopLeft.Y {
+	minX, minY, maxX, maxY, ok := cellBox(aabb)
+	if !ok {
 		return nil
 	}
 
-	width := aabb.BottomRight.X - aabb.TopLeft.X + 1
-	height := aabb.BottomRight.Y - aabb.TopLeft.Y + 1
+	width := maxX - minX + 1
+	height := maxY - minY + 1
 
 	// Ile elementów w sumie
 	count := uint64(width) * uint64(height)
@@ -41,7 +41,7 @@ func MortonCodeArea(aabb AABB) []MortonCode {
 	res := make([]MortonCode, int(count))
 
 	// Kod lewego-górnego rogu (Min.X, Min.Y)
-	rowStart := NewMortonCode(aabb.TopLeft.X, aabb.TopLeft.Y)
+	rowStart := NewMortonCode(minX, minY)
 
 	idx := 0
 	for range height {
@@ -67,8 +67,13 @@ func MortonCodeAreaConsume(aabb AABB, fn func(int, MortonCode)) {
 		return
 	}
 
-	width := aabb.BottomRight.X - aabb.TopLeft.X + 1
-	height := aabb.BottomRight.Y - aabb.TopLeft.Y + 1
+	minX, minY, maxX, maxY, ok := cellBox(aabb)
+	if !ok {
+		return
+	}
+
+	width := maxX - minX + 1
+	height := maxY - minY + 1
 
 	// Ile elementów w sumie
 	count := uint64(width) * uint64(height)
@@ -77,7 +82,7 @@ func MortonCodeAreaConsume(aabb AABB, fn func(int, MortonCode)) {
 	}
 
 	// Kod lewego-górnego rogu (Min.X, Min.Y)
-	rowStart := NewMortonCode(aabb.TopLeft.X, aabb.TopLeft.Y)
+	rowStart := NewMortonCode(minX, minY)
 
 	idx := 0
 	for range height {
@@ -155,4 +160,19 @@ func compact1By1(a uint64) uint32 {
 	x = (x | (x >> 8)) & 0x0000FFFF0000FFFF
 	x = (x | (x >> 16)) & 0x00000000FFFFFFFF
 	return uint32(x)
+}
+
+// cellBox reads a box as the whole cells it addresses. Morton codes index
+// cells, not world coordinates, so the conversion belongs here — and it carries
+// the same guard as everywhere the world meets the grid: a negative or NaN
+// corner has no cell, and converting it would be implementation-defined.
+func cellBox(aabb AABB) (minX, minY, maxX, maxY uint32, ok bool) {
+	if !(aabb.TopLeft.X >= 0) || !(aabb.TopLeft.Y >= 0) {
+		return 0, 0, 0, 0, false
+	}
+	if aabb.BottomRight.X < aabb.TopLeft.X || aabb.BottomRight.Y < aabb.TopLeft.Y {
+		return 0, 0, 0, 0, false
+	}
+	return uint32(aabb.TopLeft.X), uint32(aabb.TopLeft.Y),
+		uint32(aabb.BottomRight.X), uint32(aabb.BottomRight.Y), true
 }

@@ -25,11 +25,11 @@ func realSpace(b *testing.B, n int, toroidal bool) (*gokg.Space, uid.UID64) {
 		b.Fatal(err)
 	}
 	observer := uid.UID64(1)
-	space.Insert(observer, plane.NewAABB(geom.NewVec[uint32](2000, 2000), 10, 10))
+	space.Insert(observer, plane.NewAABB(geom.NewVec(2000, 2000), 10, 10))
 	r := rand.New(rand.NewPCG(1, 2))
 	for i := range n {
 		space.Insert(uid.UID64(100+i),
-			plane.NewAABB(geom.NewVec(uint32(r.IntN(4000)), uint32(r.IntN(4000))), 20, 20))
+			plane.NewAABB(geom.NewVec(float64(r.IntN(4000)), float64(r.IntN(4000))), 20, 20))
 	}
 	space.Flush(nil)
 	return space, observer
@@ -57,7 +57,7 @@ func Benchmark_Real_Outline(b *testing.B) {
 			space, observer := realSpace(b, n, false)
 			cone := raycast.Cone{Direction: geom.NewVec(1.0, 0.0), HalfAngle: math.Pi / 4, Radius: 800}
 			v := &raycast.View{}
-			var fog []geom.Vec[float64]
+			var fog []geom.Vec
 			b.ReportAllocs()
 			for b.Loop() {
 				if space.Scan(observer, cone, v) {
@@ -76,7 +76,7 @@ func Benchmark_Real_View(b *testing.B) {
 			space, observer := realSpace(b, n, false)
 			cone := raycast.Cone{Direction: geom.NewVec(1.0, 0.0), HalfAngle: math.Pi / 4, Radius: 800}
 			v := &raycast.View{}
-			var fog []geom.Vec[float64]
+			var fog []geom.Vec
 			b.ReportAllocs()
 			for b.Loop() {
 				if space.Scan(observer, cone, v) {

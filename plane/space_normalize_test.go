@@ -7,38 +7,30 @@ import (
 )
 
 func TestEuclidean2D_normalizeBox(t *testing.T) {
-	runEuclidean2DNormalizeBoxTest[int](t, "int")
-	runEuclidean2DNormalizeBoxTest[uint32](t, "uint32")
-	runEuclidean2DNormalizeBoxTest[float64](t, "float64")
-}
+	euclidean := NewEuclidean2D(10, 10)
 
-func runEuclidean2DNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
-	t.Run(name, func(t *testing.T) {
-		euclidean := NewEuclidean2D(T(10), T(10))
-
-		for _, tc := range euclideanNormalizeScenarios[T]() {
-			t.Run(tc.name, func(t *testing.T) {
-				aabb := NewAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
-				euclidean.(*euclidean2d[T]).normalizeAABB(&aabb)
-				expectAABBState(t, aabb,
-					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
-					vec[T](tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
-					map[FragPosition][2]geom.Vec[T]{},
-				)
-			})
-		}
-	})
+	for _, tc := range euclideanNormalizeScenarios() {
+		t.Run(tc.name, func(t *testing.T) {
+			aabb := NewAABB(vec(tc.topLeft.X, tc.topLeft.Y), tc.width, tc.height)
+			euclidean.(*euclidean2d).normalizeAABB(&aabb)
+			expectAABBState(t, aabb,
+				vec(tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
+				vec(tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
+				map[FragPosition][2]geom.Vec{},
+			)
+		})
+	}
 }
 
 type normalizeScenario struct {
 	name                string
-	topLeft             geom.Vec[int]
-	width, height       int
-	expectedTopLeft     geom.Vec[int]
-	expectedBottomRight geom.Vec[int]
+	topLeft             geom.Vec
+	width, height       float64
+	expectedTopLeft     geom.Vec
+	expectedBottomRight geom.Vec
 }
 
-func euclideanNormalizeScenarios[T geom.Numeric]() []normalizeScenario {
+func euclideanNormalizeScenarios() []normalizeScenario {
 	return []normalizeScenario{
 		{
 			name:                "keeps_box_inside_viewport",
@@ -115,35 +107,27 @@ func euclideanNormalizeScenarios[T geom.Numeric]() []normalizeScenario {
 }
 
 func TestToroidal2D_normalizeBox(t *testing.T) {
-	runToroidal2DNormalizeBoxTest[int](t, "int")
-	runToroidal2DNormalizeBoxTest[uint32](t, "uint32")
-	runToroidal2DNormalizeBoxTest[float64](t, "float64")
-}
+	toroidal := NewToroidal2D(10, 10)
 
-func runToroidal2DNormalizeBoxTest[T geom.Numeric](t *testing.T, name string) {
-	t.Run(name, func(t *testing.T) {
-		toroidal := NewToroidal2D(T(10), T(10))
-
-		for _, tc := range toroidalNormalizeScenarios[T]() {
-			t.Run(tc.name, func(t *testing.T) {
-				aabb := NewAABB(vec[T](tc.topLeft.X, tc.topLeft.Y), T(tc.width), T(tc.height))
-				toroidal.(*toroidal2d[T]).normalizeAABB(&aabb)
-				expectAABBState(t, aabb,
-					vec[T](tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
-					vec[T](tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
-					convertFragments[T](tc.expectedFragments),
-				)
-			})
-		}
-	})
+	for _, tc := range toroidalNormalizeScenarios() {
+		t.Run(tc.name, func(t *testing.T) {
+			aabb := NewAABB(vec(tc.topLeft.X, tc.topLeft.Y), tc.width, tc.height)
+			toroidal.(*toroidal2d).normalizeAABB(&aabb)
+			expectAABBState(t, aabb,
+				vec(tc.expectedTopLeft.X, tc.expectedTopLeft.Y),
+				vec(tc.expectedBottomRight.X, tc.expectedBottomRight.Y),
+				convertFragments(tc.expectedFragments),
+			)
+		})
+	}
 }
 
 type toroidalNormalizeScenario struct {
 	normalizeScenario
-	expectedFragments map[FragPosition][2]geom.Vec[int]
+	expectedFragments map[FragPosition][2]geom.Vec
 }
 
-func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
+func toroidalNormalizeScenarios() []toroidalNormalizeScenario {
 	return []toroidalNormalizeScenario{
 		{
 			normalizeScenario: normalizeScenario{
@@ -154,7 +138,7 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 				expectedTopLeft:     geom.NewVec(2, 2),
 				expectedBottomRight: geom.NewVec(4, 4),
 			},
-			expectedFragments: map[FragPosition][2]geom.Vec[int]{},
+			expectedFragments: map[FragPosition][2]geom.Vec{},
 		},
 		{
 			normalizeScenario: normalizeScenario{
@@ -165,7 +149,7 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 				expectedTopLeft:     geom.NewVec(9, 9),
 				expectedBottomRight: geom.NewVec(10, 10),
 			},
-			expectedFragments: map[FragPosition][2]geom.Vec[int]{
+			expectedFragments: map[FragPosition][2]geom.Vec{
 				FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
 				FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
 				FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
@@ -180,7 +164,7 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 				expectedTopLeft:     geom.NewVec(9, 9),
 				expectedBottomRight: geom.NewVec(10, 10),
 			},
-			expectedFragments: map[FragPosition][2]geom.Vec[int]{
+			expectedFragments: map[FragPosition][2]geom.Vec{
 				FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
 				FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
 				FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
@@ -195,7 +179,7 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 				expectedTopLeft:     geom.NewVec(0, 9),
 				expectedBottomRight: geom.NewVec(2, 10),
 			},
-			expectedFragments: map[FragPosition][2]geom.Vec[int]{
+			expectedFragments: map[FragPosition][2]geom.Vec{
 				FRAG_BOTTOM: {geom.NewVec(0, 0), geom.NewVec(2, 1)},
 			},
 		},
@@ -208,7 +192,7 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 				expectedTopLeft:     geom.NewVec(8, 8),
 				expectedBottomRight: geom.NewVec(10, 10),
 			},
-			expectedFragments: map[FragPosition][2]geom.Vec[int]{},
+			expectedFragments: map[FragPosition][2]geom.Vec{},
 		},
 		{
 			normalizeScenario: normalizeScenario{
@@ -219,7 +203,7 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 				expectedTopLeft:     geom.NewVec(9, 9),
 				expectedBottomRight: geom.NewVec(10, 10),
 			},
-			expectedFragments: map[FragPosition][2]geom.Vec[int]{
+			expectedFragments: map[FragPosition][2]geom.Vec{
 				FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
 				FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
 				FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
@@ -234,7 +218,7 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 				expectedTopLeft:     geom.NewVec(9, 9),
 				expectedBottomRight: geom.NewVec(10, 10),
 			},
-			expectedFragments: map[FragPosition][2]geom.Vec[int]{
+			expectedFragments: map[FragPosition][2]geom.Vec{
 				FRAG_RIGHT:        {geom.NewVec(0, 9), geom.NewVec(1, 10)},
 				FRAG_BOTTOM:       {geom.NewVec(9, 0), geom.NewVec(10, 1)},
 				FRAG_BOTTOM_RIGHT: {geom.NewVec(0, 0), geom.NewVec(1, 1)},
@@ -242,16 +226,16 @@ func toroidalNormalizeScenarios[T geom.Numeric]() []toroidalNormalizeScenario {
 		}}
 }
 
-func convertFragments[T geom.Numeric](frags map[FragPosition][2]geom.Vec[int]) map[FragPosition][2]geom.Vec[T] {
+func convertFragments(frags map[FragPosition][2]geom.Vec) map[FragPosition][2]geom.Vec {
 	if frags == nil {
 		return nil
 	}
 
-	converted := make(map[FragPosition][2]geom.Vec[T], len(frags))
+	converted := make(map[FragPosition][2]geom.Vec, len(frags))
 	for pos, vecs := range frags {
-		converted[pos] = [2]geom.Vec[T]{
-			geom.NewVec(T(vecs[0].X), T(vecs[0].Y)),
-			geom.NewVec(T(vecs[1].X), T(vecs[1].Y)),
+		converted[pos] = [2]geom.Vec{
+			geom.NewVec(float64(vecs[0].X), float64(vecs[0].Y)),
+			geom.NewVec(float64(vecs[1].X), float64(vecs[1].Y)),
 		}
 	}
 

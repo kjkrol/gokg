@@ -18,8 +18,8 @@ func ExampleSpace2D_Translate() {
 	shift := geom.NewVec(-1, -1)
 	cyclicPlane.Translate(&planeBox, shift)
 
-	fragments := map[plane.FragPosition]geom.AABB[int]{}
-	planeBox.VisitFragments(func(pos plane.FragPosition, box geom.AABB[int]) bool {
+	fragments := map[plane.FragPosition]geom.AABB{}
+	planeBox.VisitFragments(func(pos plane.FragPosition, box geom.AABB) bool {
 		fragments[pos] = box
 		return true
 	})

@@ -27,7 +27,7 @@ func TestSpace_Lifecycle(t *testing.T) {
 
 	entityID := uid.UID64(42)
 	// A 20x20 object at position (10,10)
-	box := plane.NewAABB(geom.NewVec[uint32](10, 10), 20, 20)
+	box := plane.NewAABB(geom.NewVec(10, 10), 20, 20)
 
 	// 2. Insert
 	space.Insert(entityID, box)
@@ -35,7 +35,7 @@ func TestSpace_Lifecycle(t *testing.T) {
 
 	// 3. Query (finds the object)
 	foundIDs := []uid.UID64{}
-	queryBox := geom.NewAABBAt(geom.NewVec[uint32](15, 15), 5, 5)
+	queryBox := geom.NewAABBAt(geom.NewVec(15, 15), 5, 5)
 
 	space.Query(queryBox, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
@@ -43,7 +43,7 @@ func TestSpace_Lifecycle(t *testing.T) {
 	assert.Contains(t, foundIDs, entityID, "Object should be found at its initial position")
 
 	// 4. Translate
-	shift := geom.NewVec[uint32](100, 0)
+	shift := geom.NewVec(100, 0)
 	space.Translate(entityID, &box, shift) // box will be updated automatically
 	space.Flush(nil)
 
@@ -56,7 +56,7 @@ func TestSpace_Lifecycle(t *testing.T) {
 
 	// 6. Query at the NEW position (it should be there)
 	foundIDs = []uid.UID64{}
-	queryBoxNew := geom.NewAABBAt(geom.NewVec[uint32](115, 15), 5, 5)
+	queryBoxNew := geom.NewAABBAt(geom.NewVec(115, 15), 5, 5)
 	space.Query(queryBoxNew, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
 	})
@@ -88,23 +88,23 @@ func TestSpace_ToroidalWrap(t *testing.T) {
 
 	entityID := uid.UID64(99)
 	// Place the object near the right edge: X=5990
-	box := plane.NewAABB(geom.NewVec[uint32](5990, 50), 20, 20)
+	box := plane.NewAABB(geom.NewVec(5990, 50), 20, 20)
 
 	space.Insert(entityID, box)
 	space.Flush(nil)
 
 	// Shift it right by 30 pixels. It should cross the edge (6000)
 	// and wrap around to the left side of the toroidal plane at X = 20.
-	shift := geom.NewVec[uint32](30, 0)
+	shift := geom.NewVec(30, 0)
 	space.Translate(entityID, &box, shift)
 	space.Flush(nil)
 
 	// Check the new box position
-	assert.Equal(t, uint32(20), box.TopLeft.X, "Object should physically wrap around to position X=20")
+	assert.Equal(t, float64(20), box.TopLeft.X, "Object should physically wrap around to position X=20")
 
 	// Query the object on the left side of the world (around X=20)
 	foundIDs := []uid.UID64{}
-	queryBoxWrapped := geom.NewAABBAt(geom.NewVec[uint32](25, 55), 5, 5)
+	queryBoxWrapped := geom.NewAABBAt(geom.NewVec(25, 55), 5, 5)
 
 	space.Query(queryBoxWrapped, func(id uid.UID64, frag plane.FragPosition) {
 		foundIDs = append(foundIDs, id)
@@ -128,9 +128,9 @@ func TestSpace_Visible(t *testing.T) {
 		inView = uid.UID64(2)
 		behind = uid.UID64(3)
 	)
-	space.Insert(guard, plane.NewAABB(geom.NewVec[uint32](500, 500), 10, 10))
-	space.Insert(inView, plane.NewAABB(geom.NewVec[uint32](700, 500), 10, 10))
-	space.Insert(behind, plane.NewAABB(geom.NewVec[uint32](900, 500), 10, 10))
+	space.Insert(guard, plane.NewAABB(geom.NewVec(500, 500), 10, 10))
+	space.Insert(inView, plane.NewAABB(geom.NewVec(700, 500), 10, 10))
+	space.Insert(behind, plane.NewAABB(geom.NewVec(900, 500), 10, 10))
 	space.Flush(nil)
 
 	w, h, toroidal := space.Bounds()
@@ -140,7 +140,7 @@ func TestSpace_Visible(t *testing.T) {
 
 	box, ok := space.EntryAABB(inView)
 	assert.True(t, ok)
-	assert.Equal(t, uint32(700), box.TopLeft.X)
+	assert.Equal(t, float64(700), box.TopLeft.X)
 
 	_, ok = space.EntryAABB(uid.UID64(999))
 	assert.False(t, ok)
@@ -176,7 +176,7 @@ func TestSpace_Expand(t *testing.T) {
 	assert.NoError(t, err)
 
 	const id = uid.UID64(1)
-	box := plane.NewAABB(geom.NewVec[uint32](100, 100), 20, 20)
+	box := plane.NewAABB(geom.NewVec(100, 100), 20, 20)
 	space.Insert(id, box)
 	space.Flush(nil)
 
@@ -185,11 +185,11 @@ func TestSpace_Expand(t *testing.T) {
 
 	indexed, ok := space.EntryAABB(id)
 	assert.True(t, ok)
-	assert.Equal(t, uint32(90), indexed.TopLeft.X, "the indexed box grew with the margin")
+	assert.Equal(t, float64(90), indexed.TopLeft.X, "the indexed box grew with the margin")
 
-	probe := plane.NewAABB(geom.NewVec[uint32](500, 500), 20, 20)
+	probe := plane.NewAABB(geom.NewVec(500, 500), 20, 20)
 	space.ExpandOnly(&probe, 10)
-	assert.Equal(t, uint32(490), probe.TopLeft.X)
+	assert.Equal(t, float64(490), probe.TopLeft.X)
 
 	_, ok = space.EntryAABB(uid.UID64(2))
 	assert.False(t, ok, "ExpandOnly must not put a probe into the index")

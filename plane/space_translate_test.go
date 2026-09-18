@@ -7,158 +7,142 @@ import (
 )
 
 func TestToroidal2DTranslate(t *testing.T) {
-	runToroidal2DTranslateTest[int](t, "int")
-	runToroidal2DTranslateTest[uint32](t, "uint32")
-	runToroidal2DTranslateTest[float64](t, "float64")
-}
+	t.Run("CrossesRightEdge", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(8, 4), 4, 2)
 
-func runToroidal2DTranslateTest[T geom.Numeric](t *testing.T, name string) {
-	t.Run(name, func(t *testing.T) {
-		t.Run("CrossesRightEdge", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](8, 4), T(4), T(2))
+		toroidal.Translate(&aabb, vec(0, 0))
 
-			toroidal.Translate(&aabb, vec[T](0, 0))
+		expectAABBState(t, aabb, vec(8, 4), vec(10, 6), map[FragPosition][2]geom.Vec{
+			FRAG_RIGHT: {vec(0, 4), vec(2, 6)},
+		})
+	})
 
-			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), map[FragPosition][2]geom.Vec[T]{
-				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
-			})
+	t.Run("HugeShift", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(8, 4), 4, 2)
+
+		toroidal.Translate(&aabb, vec(100, 100))
+		expectAABBState(t, aabb, vec(8, 4), vec(10, 6), map[FragPosition][2]geom.Vec{
+			FRAG_RIGHT: {vec(0, 4), vec(2, 6)},
 		})
 
-		t.Run("HugeShift", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](8, 4), T(4), T(2))
+		toroidal.Translate(&aabb, vec(100, 100))
+		expectAABBState(t, aabb, vec(8, 4), vec(10, 6), map[FragPosition][2]geom.Vec{
+			FRAG_RIGHT: {vec(0, 4), vec(2, 6)},
+		})
+	})
 
-			toroidal.Translate(&aabb, vec[T](100, 100))
-			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), map[FragPosition][2]geom.Vec[T]{
-				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
-			})
+	t.Run("BackAndForth", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(8, 8), 2, 2)
 
-			toroidal.Translate(&aabb, vec[T](100, 100))
-			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), map[FragPosition][2]geom.Vec[T]{
-				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
-			})
+		toroidal.Translate(&aabb, vec(5, 5))
+		expectAABBState(t, aabb, vec(3, 3), vec(5, 5), map[FragPosition][2]geom.Vec{})
+
+		toroidal.Translate(&aabb, vec(5, 5))
+		expectAABBState(t, aabb, vec(8, 8), vec(10, 10), map[FragPosition][2]geom.Vec{})
+	})
+
+	t.Run("CrossesBottomEdge", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(4, 8), 2, 4)
+
+		toroidal.Translate(&aabb, vec(0, 0))
+
+		expectAABBState(t, aabb, vec(4, 8), vec(6, 10), map[FragPosition][2]geom.Vec{
+			FRAG_BOTTOM: {vec(4, 0), vec(6, 2)},
+		})
+	})
+
+	t.Run("CrossesCorner", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(9, 9), 2, 2)
+
+		toroidal.Translate(&aabb, vec(0, 0))
+
+		expectAABBState(t, aabb, vec(9, 9), vec(10, 10), map[FragPosition][2]geom.Vec{
+			FRAG_RIGHT:        {vec(0, 9), vec(1, 10)},
+			FRAG_BOTTOM:       {vec(9, 0), vec(10, 1)},
+			FRAG_BOTTOM_RIGHT: {vec(0, 0), vec(1, 1)},
+		})
+	})
+
+	t.Run("ClearsFragmentsWhenNotWrapping", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(8, 4), 4, 2)
+
+		toroidal.Translate(&aabb, vec(0, 0))
+		expectAABBState(t, aabb, vec(8, 4), vec(10, 6), map[FragPosition][2]geom.Vec{
+			FRAG_RIGHT: {vec(0, 4), vec(2, 6)},
 		})
 
-		t.Run("BackAndForth", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](8, 8), T(2), T(2))
+		toroidal.Translate(&aabb, vec(8, 0))
+		expectAABBState(t, aabb, vec(6, 4), vec(10, 6), map[FragPosition][2]geom.Vec{})
+	})
 
-			toroidal.Translate(&aabb, vec[T](5, 5))
-			expectAABBState(t, aabb, vec[T](3, 3), vec[T](5, 5), map[FragPosition][2]geom.Vec[T]{})
+	t.Run("ThroughEdge", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(2, 2), 2, 2)
 
-			toroidal.Translate(&aabb, vec[T](5, 5))
-			expectAABBState(t, aabb, vec[T](8, 8), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{})
+		toroidal.Translate(&aabb, vec(8, 0))
+
+		expectAABBState(t, aabb, vec(0, 2), vec(2, 4), map[FragPosition][2]geom.Vec{})
+	})
+
+	t.Run("FragmentsMergeSequence", func(t *testing.T) {
+		toroidal := NewToroidal2D(10, 10)
+		aabb := NewAABB(vec(2, 2), 2, 2)
+
+		toroidal.Translate(&aabb, vec(7, 0))
+		expectAABBState(t, aabb, vec(9, 2), vec(10, 4), map[FragPosition][2]geom.Vec{
+			FRAG_RIGHT: {vec(0, 2), vec(1, 4)},
 		})
 
-		t.Run("CrossesBottomEdge", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](4, 8), T(2), T(4))
-
-			toroidal.Translate(&aabb, vec[T](0, 0))
-
-			expectAABBState(t, aabb, vec[T](4, 8), vec[T](6, 10), map[FragPosition][2]geom.Vec[T]{
-				FRAG_BOTTOM: {vec[T](4, 0), vec[T](6, 2)},
-			})
+		toroidal.Translate(&aabb, vec(0, 7))
+		expectAABBState(t, aabb, vec(9, 9), vec(10, 10), map[FragPosition][2]geom.Vec{
+			FRAG_RIGHT:        {vec(0, 9), vec(1, 10)},
+			FRAG_BOTTOM:       {vec(9, 0), vec(10, 1)},
+			FRAG_BOTTOM_RIGHT: {vec(0, 0), vec(1, 1)},
 		})
 
-		t.Run("CrossesCorner", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](9, 9), T(2), T(2))
-
-			toroidal.Translate(&aabb, vec[T](0, 0))
-
-			expectAABBState(t, aabb, vec[T](9, 9), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{
-				FRAG_RIGHT:        {vec[T](0, 9), vec[T](1, 10)},
-				FRAG_BOTTOM:       {vec[T](9, 0), vec[T](10, 1)},
-				FRAG_BOTTOM_RIGHT: {vec[T](0, 0), vec[T](1, 1)},
-			})
-		})
-
-		t.Run("ClearsFragmentsWhenNotWrapping", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](8, 4), T(4), T(2))
-
-			toroidal.Translate(&aabb, vec[T](0, 0))
-			expectAABBState(t, aabb, vec[T](8, 4), vec[T](10, 6), map[FragPosition][2]geom.Vec[T]{
-				FRAG_RIGHT: {vec[T](0, 4), vec[T](2, 6)},
-			})
-
-			toroidal.Translate(&aabb, vec[T](8, 0))
-			expectAABBState(t, aabb, vec[T](6, 4), vec[T](10, 6), map[FragPosition][2]geom.Vec[T]{})
-		})
-
-		t.Run("ThroughEdge", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](2, 2), T(2), T(2))
-
-			toroidal.Translate(&aabb, vec[T](8, 0))
-
-			expectAABBState(t, aabb, vec[T](0, 2), vec[T](2, 4), map[FragPosition][2]geom.Vec[T]{})
-		})
-
-		t.Run("FragmentsMergeSequence", func(t *testing.T) {
-			toroidal := NewToroidal2D(T(10), T(10))
-			aabb := NewAABB(vec[T](2, 2), T(2), T(2))
-
-			toroidal.Translate(&aabb, vec[T](7, 0))
-			expectAABBState(t, aabb, vec[T](9, 2), vec[T](10, 4), map[FragPosition][2]geom.Vec[T]{
-				FRAG_RIGHT: {vec[T](0, 2), vec[T](1, 4)},
-			})
-
-			toroidal.Translate(&aabb, vec[T](0, 7))
-			expectAABBState(t, aabb, vec[T](9, 9), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{
-				FRAG_RIGHT:        {vec[T](0, 9), vec[T](1, 10)},
-				FRAG_BOTTOM:       {vec[T](9, 0), vec[T](10, 1)},
-				FRAG_BOTTOM_RIGHT: {vec[T](0, 0), vec[T](1, 1)},
-			})
-
-			toroidal.Translate(&aabb, vec[T](3, 3))
-			expectAABBState(t, aabb, vec[T](2, 2), vec[T](4, 4), map[FragPosition][2]geom.Vec[T]{})
-		})
+		toroidal.Translate(&aabb, vec(3, 3))
+		expectAABBState(t, aabb, vec(2, 2), vec(4, 4), map[FragPosition][2]geom.Vec{})
 	})
 }
 
 func TestEuclidean2DTranslate(t *testing.T) {
-	runEuclidean2DTranslateTest[int](t, "int")
-	runEuclidean2DTranslateTest[uint32](t, "uint32")
-	runEuclidean2DTranslateTest[float64](t, "float64")
-}
+	t.Run("HugeShift", func(t *testing.T) {
+		euclidean := NewEuclidean2D(10, 10)
+		aabb := NewAABB(vec(8, 4), 4, 2)
 
-func runEuclidean2DTranslateTest[T geom.Numeric](t *testing.T, name string) {
-	t.Run(name, func(t *testing.T) {
-		t.Run("HugeShift", func(t *testing.T) {
-			euclidean := NewEuclidean2D(T(10), T(10))
-			aabb := NewAABB(vec[T](8, 4), T(4), T(2))
+		euclidean.Translate(&aabb, vec(100, 100))
+		expectAABBState(t, aabb, vec(10, 10), vec(10, 10), map[FragPosition][2]geom.Vec{})
+	})
 
-			euclidean.Translate(&aabb, vec[T](100, 100))
-			expectAABBState(t, aabb, vec[T](10, 10), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{})
-		})
+	t.Run("TranslateWithinBounds", func(t *testing.T) {
+		euclidean := NewEuclidean2D(10, 10)
+		aabb := NewAABB(vec(1, 1), 2, 2)
 
-		t.Run("TranslateWithinBounds", func(t *testing.T) {
-			euclidean := NewEuclidean2D(T(10), T(10))
-			aabb := NewAABB(vec[T](1, 1), T(2), T(2))
+		euclidean.Translate(&aabb, vec(2, 2))
+		expectAABBState(t, aabb, vec(3, 3), vec(5, 5), map[FragPosition][2]geom.Vec{})
+	})
 
-			euclidean.Translate(&aabb, vec[T](2, 2))
-			expectAABBState(t, aabb, vec[T](3, 3), vec[T](5, 5), map[FragPosition][2]geom.Vec[T]{})
-		})
+	t.Run("ClampAtBoundary", func(t *testing.T) {
+		euclidean := NewEuclidean2D(10, 10)
+		aabb := NewAABB(vec(9, 9), 3, 3)
 
-		t.Run("ClampAtBoundary", func(t *testing.T) {
-			euclidean := NewEuclidean2D(T(10), T(10))
-			aabb := NewAABB(vec[T](9, 9), T(3), T(3))
-
-			euclidean.Translate(&aabb, vec[T](2, 2))
-			expectAABBState(t, aabb, vec[T](10, 10), vec[T](10, 10), map[FragPosition][2]geom.Vec[T]{})
-		})
+		euclidean.Translate(&aabb, vec(2, 2))
+		expectAABBState(t, aabb, vec(10, 10), vec(10, 10), map[FragPosition][2]geom.Vec{})
 	})
 }
 
-func expectAABBState[T geom.Numeric](
+func expectAABBState(
 	t *testing.T,
-	b AABB[T],
-	expectedPos geom.Vec[T],
-	expectedBottomRight geom.Vec[T],
-	expectedFragments map[FragPosition][2]geom.Vec[T],
+	b AABB,
+	expectedPos geom.Vec,
+	expectedBottomRight geom.Vec,
+	expectedFragments map[FragPosition][2]geom.Vec,
 ) {
 	t.Helper()
 
@@ -173,12 +157,12 @@ func expectAABBState[T geom.Numeric](
 	expectAABBFragments(t, b, expectedFragments)
 }
 
-func expectAABBFragments[T geom.Numeric](t *testing.T, b AABB[T], expected map[FragPosition][2]geom.Vec[T]) {
+func expectAABBFragments(t *testing.T, b AABB, expected map[FragPosition][2]geom.Vec) {
 	t.Helper()
 
-	actual := map[FragPosition][2]geom.Vec[T]{}
-	(&b).VisitFragments(func(pos FragPosition, box geom.AABB[T]) bool {
-		actual[pos] = [2]geom.Vec[T]{box.TopLeft, box.BottomRight}
+	actual := map[FragPosition][2]geom.Vec{}
+	(&b).VisitFragments(func(pos FragPosition, box geom.AABB) bool {
+		actual[pos] = [2]geom.Vec{box.TopLeft, box.BottomRight}
 		return true
 	})
 

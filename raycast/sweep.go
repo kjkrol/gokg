@@ -33,7 +33,7 @@ type event struct {
 // angles the nearest surface is a single box edge, so the reach varies linearly
 // there. A box visible by even a sliver is the nearest hit at one of the angles
 // bounding that sliver.
-func sweep(origin geom.Vec[float64], coneDir, halfAngle, radius float64, cands []candidate, sc *scratch) []sample {
+func sweep(origin geom.Vec, coneDir, halfAngle, radius float64, cands []candidate, sc *scratch) []sample {
 	eps := math.Atan2(1, radius) // one unit at the far edge of the view
 
 	angles := sc.angles
@@ -85,7 +85,7 @@ func sweep(origin geom.Vec[float64], coneDir, halfAngle, radius float64, cands [
 // Angles closer together than minGap are skipped — critical angles arrive with
 // duplicate corners shared by neighbouring boxes. Pass zero to keep every angle.
 func walk(
-	origin geom.Vec[float64],
+	origin geom.Vec,
 	coneDir, radius, minGap float64,
 	angles []float64,
 	events []event,
@@ -116,7 +116,7 @@ func walk(
 
 // castAt finds the nearest of the active candidates along one angle, or the
 // range limit.
-func castAt(origin geom.Vec[float64], coneDir, rel, radius float64, cands []candidate, active []int) sample {
+func castAt(origin geom.Vec, coneDir, rel, radius float64, cands []candidate, active []int) sample {
 	abs := coneDir + rel
 	dir := geom.NewVec(math.Cos(abs), math.Sin(abs))
 

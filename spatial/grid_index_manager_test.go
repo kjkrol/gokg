@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewGridIndexManager_CellCodec(t *testing.T) {
-	space := plane.NewEuclidean2D[uint32](128, 128)
+	space := plane.NewEuclidean2D(128, 128)
 
 	m, err := NewGridIndexManager(space, GridIndexConfig{
 		Resolution:       Size128x128,

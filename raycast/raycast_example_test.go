@@ -26,9 +26,9 @@ func ExampleView() {
 	}
 
 	const guard = uid.UID64(1)
-	space.Insert(guard, plane.NewAABB(geom.NewVec[uint32](100, 100), 10, 10))
-	space.Insert(uid.UID64(2), plane.NewAABB(geom.NewVec[uint32](300, 100), 10, 10))
-	space.Insert(uid.UID64(3), plane.NewAABB(geom.NewVec[uint32](500, 100), 10, 10))
+	space.Insert(guard, plane.NewAABB(geom.NewVec(100, 100), 10, 10))
+	space.Insert(uid.UID64(2), plane.NewAABB(geom.NewVec(300, 100), 10, 10))
+	space.Insert(uid.UID64(3), plane.NewAABB(geom.NewVec(500, 100), 10, 10))
 	space.Flush(nil)
 
 	cone := raycast.Cone{
@@ -38,7 +38,7 @@ func ExampleView() {
 	}
 
 	var view raycast.View
-	var fog []geom.Vec[float64]
+	var fog []geom.Vec
 
 	grew := 0
 	for tick := 1; tick <= 3; tick++ {

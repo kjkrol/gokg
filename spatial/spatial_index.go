@@ -10,8 +10,8 @@ import (
 // It stores objects at integer coordinates and supports point lookups,
 // range queries (AABB) and bulk operations (insert, remove, move).
 type (
-	Vec  = geom.Vec[uint32]
-	AABB = geom.AABB[uint32]
+	Vec  = geom.Vec
+	AABB = geom.AABB
 
 	Index interface {
 		// BulkInsert – insert many objects at once.
@@ -55,9 +55,9 @@ type (
 )
 
 var (
-	NewVec    = geom.NewVec[uint32]
-	NewAABB   = geom.NewAABB[uint32]
-	NewAABBAt = geom.NewAABBAt[uint32]
+	NewVec    = geom.NewVec
+	NewAABB   = geom.NewAABB
+	NewAABBAt = geom.NewAABBAt
 )
 
 func NewEntriesMove(capHint int) EntriesMove {

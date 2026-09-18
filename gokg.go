@@ -17,7 +17,7 @@ import (
 // a single, safe entry point for entity manipulation and querying.
 type Space struct {
 	Config
-	surface      plane.Space2D[uint32]
+	surface      plane.Space2D
 	spatialIndex *spatial.GridIndexManager
 }
 
@@ -44,11 +44,11 @@ func NewSpace(cfg Config) (*Space, error) {
 	if cfg.Width == 0 || cfg.Height == 0 || cfg.BucketSize == 0 {
 		return nil, fmt.Errorf("invalid dimensions")
 	}
-	var surface plane.Space2D[uint32]
+	var surface plane.Space2D
 	if cfg.Toroidal {
-		surface = plane.NewToroidal2D(cfg.Width, cfg.Height)
+		surface = plane.NewToroidal2D(float64(cfg.Width), float64(cfg.Height))
 	} else {
-		surface = plane.NewEuclidean2D(cfg.Width, cfg.Height)
+		surface = plane.NewEuclidean2D(float64(cfg.Width), float64(cfg.Height))
 	}
 
 	bucketRes := cfg.BucketSize
@@ -79,7 +79,7 @@ func NewSpace(cfg Config) (*Space, error) {
 // Insert adds a new entity to the space.
 // It first normalizes the AABB according to the Space topology (e.g., wraps it if Toroidal)
 // and then queues it for insertion into the spatial grid.
-func (w *Space) Insert(id uid.UID64, aabb plane.AABB[uint32]) {
+func (w *Space) Insert(id uid.UID64, aabb plane.AABB) {
 	w.surface.Normalize(aabb.AABB)
 	w.spatialIndex.QueueInsert(id, aabb)
 }
@@ -95,33 +95,33 @@ func (w *Space) Remove(id uid.UID64) {
 // Insert/Translate already do internally for entity positions. Use this
 // to build a valid Query box out of a rectangle that isn't already
 // known to be canonical (e.g. one derived from screen coordinates).
-func (w *Space) WrapAABB(aabb geom.AABB[uint32]) plane.AABB[uint32] {
+func (w *Space) WrapAABB(aabb geom.AABB) plane.AABB {
 	return w.surface.WrapAABB(aabb)
 }
 
 // Translate moves the given AABB by the specified delta, recalculates its fragments
 // based on the boundary rules, and queues a spatial index update to reflect the new position.
-func (w *Space) Translate(id uid.UID64, aabb *plane.AABB[uint32], delta geom.Vec[uint32]) {
+func (w *Space) Translate(id uid.UID64, aabb *plane.AABB, delta geom.Vec) {
 	w.surface.Translate(aabb, delta)
 	w.spatialIndex.QueueUpdate(id, *aabb, true)
 }
 
 // Expand grows or shrinks the given AABB by the specified margin,
 // and immediately queues an update to the spatial index.
-func (w *Space) Expand(id uid.UID64, aabb *plane.AABB[uint32], margin uint32) {
+func (w *Space) Expand(id uid.UID64, aabb *plane.AABB, margin float64) {
 	w.surface.Expand(aabb, margin)
 	w.spatialIndex.QueueUpdate(id, *aabb, true)
 }
 
 // ExpandOnly geometrically expands the AABB without updating the spatial index.
 // This is useful for creating temporary probe boxes for broad-phase queries.
-func (w *Space) ExpandOnly(aabb *plane.AABB[uint32], margin uint32) {
+func (w *Space) ExpandOnly(aabb *plane.AABB, margin float64) {
 	w.surface.Expand(aabb, margin)
 }
 
 // Query searches the spatial grid for all entities intersecting the provided AABB.
 // The collector function fn is called for every entity found, providing its ID and the exact fragment that was hit.
-func (w *Space) Query(aabb geom.AABB[uint32], fn func(id uid.UID64, frag plane.FragPosition)) int {
+func (w *Space) Query(aabb geom.AABB, fn func(id uid.UID64, frag plane.FragPosition)) int {
 	return w.spatialIndex.QueryRange(aabb, fn)
 }
 
@@ -131,7 +131,7 @@ func (w *Space) Bounds() (width, height uint32, toroidal bool) {
 }
 
 // EntryAABB returns the indexed box of a single entity.
-func (w *Space) EntryAABB(id uid.UID64) (geom.AABB[uint32], bool) {
+func (w *Space) EntryAABB(id uid.UID64) (geom.AABB, bool) {
 	return w.spatialIndex.EntryAABB(id)
 }
 
@@ -145,6 +145,6 @@ func (w *Space) Scan(observer uid.UID64, cone raycast.Cone, v *raycast.View) boo
 // Flush processes all pending queued operations (Insert, Remove, Translate, Expand)
 // and applies them to the underlying bucket grid. The onDirty callback is invoked
 // for every modified bucket area, which is useful for triggering visual redraws.
-func (w *Space) Flush(onDirty func(geom.AABB[uint32])) {
+func (w *Space) Flush(onDirty func(geom.AABB)) {
 	w.spatialIndex.Flush(onDirty)
 }

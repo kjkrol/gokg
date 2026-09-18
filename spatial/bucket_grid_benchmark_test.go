@@ -11,7 +11,7 @@ import (
 func generateEntries(count int) []Entry {
 	entries := make([]Entry, count)
 	for i := range count {
-		pos := NewVec(uint32(i%128), uint32((i/128)%128))
+		pos := NewVec(float64(i%128), float64((i/128)%128))
 		entries[i] = Entry{
 			Id:   uid.UID64(i),
 			AABB: NewAABBAt(pos, 2, 2),
@@ -76,7 +76,7 @@ func BenchmarkBucketGrid_BulkMove_100(b *testing.B) {
 	newEntries := make([]Entry, moveCount)
 	for i := range moveCount {
 		newEntries[i] = oldEntries[i]
-		newEntries[i].AABB = NewAABBAt(NewVec(uint32(i%100)+5, 5), 2, 2)
+		newEntries[i].AABB = NewAABBAt(NewVec(float64(i%100)+5, 5), 2, 2)
 	}
 
 	moveData := EntriesMove{

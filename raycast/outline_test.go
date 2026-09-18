@@ -9,7 +9,7 @@ import (
 )
 
 // reach is how far the outline point at index i sits from the observer.
-func reach(pts []geom.Vec[float64], i int) float64 {
+func reach(pts []geom.Vec, i int) float64 {
 	return math.Hypot(pts[i].X-pts[0].X, pts[i].Y-pts[0].Y)
 }
 

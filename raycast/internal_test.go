@@ -71,7 +71,7 @@ func TestHitDistance(t *testing.T) {
 	origin := geom.NewVec(0.0, 15.0)
 
 	cases := map[string]struct {
-		origin, dir geom.Vec[float64]
+		origin, dir geom.Vec
 		want        float64
 		hit         bool
 	}{

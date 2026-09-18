@@ -25,12 +25,12 @@ func TestSpace_WrapAABB_DelegatesAndFragments(t *testing.T) {
 	require.NoError(t, err)
 
 	// straddles the right/bottom edge of the 100x100 world
-	overflowing := geom.AABB[uint32]{TopLeft: geom.NewVec[uint32](95, 95), BottomRight: geom.NewVec[uint32](105, 105)}
+	overflowing := geom.AABB{TopLeft: geom.NewVec(95, 95), BottomRight: geom.NewVec(105, 105)}
 
 	wrapped := space.WrapAABB(overflowing)
 
 	frags := 0
-	wrapped.VisitFragments(func(plane.FragPosition, geom.AABB[uint32]) bool {
+	wrapped.VisitFragments(func(plane.FragPosition, geom.AABB) bool {
 		frags++
 		return true
 	})
@@ -50,10 +50,10 @@ func TestSpace_WrapAABB_EuclideanClips(t *testing.T) {
 	space, err := NewSpace(cfg)
 	require.NoError(t, err)
 
-	overflowing := geom.AABB[uint32]{TopLeft: geom.NewVec[uint32](95, 95), BottomRight: geom.NewVec[uint32](105, 105)}
+	overflowing := geom.AABB{TopLeft: geom.NewVec(95, 95), BottomRight: geom.NewVec(105, 105)}
 
 	wrapped := space.WrapAABB(overflowing)
 
-	assert.Equal(t, uint32(100), wrapped.BottomRight.X, "expected BottomRight.X clipped to the world edge")
-	assert.Equal(t, uint32(100), wrapped.BottomRight.Y, "expected BottomRight.Y clipped to the world edge")
+	assert.Equal(t, float64(100), wrapped.BottomRight.X, "expected BottomRight.X clipped to the world edge")
+	assert.Equal(t, float64(100), wrapped.BottomRight.Y, "expected BottomRight.Y clipped to the world edge")
 }

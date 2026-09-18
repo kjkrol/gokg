@@ -15,7 +15,7 @@ func scatter(n int, toroidal bool) (*fakeSpace, uid.UID64) {
 	s.put(eye, 2000, 2000, 10, 10)
 	r := rand.New(rand.NewPCG(1, 2))
 	for i := range n {
-		s.put(uid.UID64(100+i), uint32(r.IntN(4000)), uint32(r.IntN(4000)), 20, 20)
+		s.put(uid.UID64(100+i), float64(r.IntN(4000)), float64(r.IntN(4000)), 20, 20)
 	}
 	return s, eye
 }

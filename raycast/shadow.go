@@ -28,7 +28,7 @@ func wrapToPi(a float64) float64 {
 // the interval unambiguous. The two silhouette corners are picked with cross
 // products — sign alone says which of two directions is the more clockwise —
 // so only they need an atan2, rather than all four corners plus a reference.
-func subtendedArc(origin geom.Vec[float64], box geom.AABB[float64], coneDir, halfAngle float64) arc {
+func subtendedArc(origin geom.Vec, box geom.AABB, coneDir, halfAngle float64) arc {
 	corners := [4][2]float64{
 		{box.TopLeft.X - origin.X, box.TopLeft.Y - origin.Y},
 		{box.BottomRight.X - origin.X, box.TopLeft.Y - origin.Y},
@@ -66,7 +66,7 @@ func subtendedArc(origin geom.Vec[float64], box geom.AABB[float64], coneDir, hal
 // Only a cone narrower than a half-turn is bounded by the intersection of the
 // two half-planes; a wider one keeps usable false and rejects nothing.
 type wedge struct {
-	lo, hi geom.Vec[float64]
+	lo, hi geom.Vec
 	usable bool
 }
 
@@ -83,7 +83,7 @@ func newWedge(coneDir, halfAngle float64) wedge {
 
 // excludes reports whether every corner of box lies beyond the same cone edge,
 // which puts the whole box outside the cone.
-func (w wedge) excludes(origin geom.Vec[float64], box geom.AABB[float64]) bool {
+func (w wedge) excludes(origin geom.Vec, box geom.AABB) bool {
 	if !w.usable {
 		return false
 	}

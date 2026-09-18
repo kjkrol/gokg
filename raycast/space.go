@@ -6,15 +6,7 @@ import (
 	"github.com/kjkrol/gokg/geom"
 )
 
-func vecToF64(v geom.Vec[uint32]) geom.Vec[float64] {
-	return geom.NewVec(float64(v.X), float64(v.Y))
-}
-
-func aabbToF64(a geom.AABB[uint32]) geom.AABB[float64] {
-	return geom.NewAABB(vecToF64(a.TopLeft), vecToF64(a.BottomRight))
-}
-
-func centerOf(a geom.AABB[float64]) geom.Vec[float64] {
+func centerOf(a geom.AABB) geom.Vec {
 	return geom.NewVec(
 		(a.TopLeft.X+a.BottomRight.X)/2,
 		(a.TopLeft.Y+a.BottomRight.Y)/2,
@@ -22,13 +14,13 @@ func centerOf(a geom.AABB[float64]) geom.Vec[float64] {
 }
 
 // boxDistance is the gap between two boxes, zero when they touch or overlap.
-func boxDistance(a, b geom.AABB[float64]) float64 {
+func boxDistance(a, b geom.AABB) float64 {
 	return math.Hypot(a.AxisDistanceX(b), a.AxisDistanceY(b))
 }
 
 // nearestImage shifts box to whichever of its wrapped copies lies closest to
 // origin, so angles and distances can be measured in one unwrapped frame.
-func nearestImage(origin geom.Vec[float64], box geom.AABB[float64], w, h float64) geom.AABB[float64] {
+func nearestImage(origin geom.Vec, box geom.AABB, w, h float64) geom.AABB {
 	c := centerOf(box)
 	dx := shortestDelta(c.X-origin.X, w)
 	dy := shortestDelta(c.Y-origin.Y, h)
@@ -54,7 +46,7 @@ func shortestDelta(d, size float64) float64 {
 // searchAreas returns the index rectangles to query for a cone of the given
 // radius. A toroidal world needs up to four, because Space.Query does not wrap
 // and would silently drop whatever lies across the seam.
-func searchAreas(origin geom.Vec[float64], radius, w, h float64, toroidal bool, dst []geom.AABB[uint32]) []geom.AABB[uint32] {
+func searchAreas(origin geom.Vec, radius, w, h float64, toroidal bool, dst []geom.AABB) []geom.AABB {
 	lo := geom.NewVec(origin.X-radius, origin.Y-radius)
 	hi := geom.NewVec(origin.X+radius, origin.Y+radius)
 
@@ -90,15 +82,15 @@ func splitAxis(lo, hi, size float64) [][2]float64 {
 	return [][2]float64{{lo, size}, {0, hi - size}}
 }
 
-func clampRect(lo, hi geom.Vec[float64], w, h float64) geom.AABB[uint32] {
-	cl := func(v, max float64) uint32 {
+func clampRect(lo, hi geom.Vec, w, h float64) geom.AABB {
+	cl := func(v, max float64) float64 {
 		switch {
 		case v < 0:
 			return 0
 		case v > max:
-			return uint32(max)
+			return max
 		default:
-			return uint32(v)
+			return v
 		}
 	}
 	return geom.NewAABB(

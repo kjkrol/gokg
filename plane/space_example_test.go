@@ -12,7 +12,7 @@ func ExampleNewEuclidean2D_normalizeVec_int() {
 	vec := geom.NewVec(5, 5)
 	delta := geom.NewVec(3, 4)
 	vec.AddMutable(delta)
-	vec = plane.(*euclidean2d[int]).normalizeVec(vec)
+	vec = plane.(*euclidean2d).normalizeVec(vec)
 	fmt.Println(vec)
 	// Output: (8,9)
 }
@@ -23,7 +23,7 @@ func ExampleNewEuclidean2D_normalizeVec_float64() {
 	vec := geom.NewVec(5., 5)
 	delta := geom.NewVec(3., 4)
 	vec.AddMutable(delta)
-	vec = euclidean.(*euclidean2d[float64]).normalizeVec(vec)
+	vec = euclidean.(*euclidean2d).normalizeVec(vec)
 	fmt.Println(vec)
 	// Output: (8,9)
 }
@@ -34,7 +34,7 @@ func ExampleNewToroidal2D_normalizeVec_int() {
 	vec := geom.NewVec(9, 9)
 	delta := geom.NewVec(3, 4)
 	vec.AddMutable(delta)
-	vec = toroidal.(*toroidal2d[int]).normalizeVec(vec)
+	vec = toroidal.(*toroidal2d).normalizeVec(vec)
 	fmt.Println(vec)
 	// Output: (2,3)
 }
@@ -45,7 +45,7 @@ func ExampleNewToroidal2D_normalizeVec_float64() {
 	vec := geom.NewVec(9., 9)
 	delta := geom.NewVec(3., 4)
 	vec.AddMutable(delta)
-	vec = toroidal.(*toroidal2d[float64]).normalizeVec(vec)
+	vec = toroidal.(*toroidal2d).normalizeVec(vec)
 	fmt.Println(vec)
 	// Output: (2,3)
 }

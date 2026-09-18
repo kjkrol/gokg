@@ -16,18 +16,18 @@ type deltaTally struct{ added, removed, updated int }
 type mover struct {
 	t     *testing.T
 	m     *GridIndexManager
-	space plane.Space2D[uint32]
+	space plane.Space2D
 	id    uid.UID64
-	size  uint32
+	size  float64
 }
 
 // newMover starts an entity of the given size at (x, y) in a 256x256 world cut
 // into 32x32 buckets, and drains the insert so later moves report only
 // themselves.
-func newMover(t *testing.T, x, y, size uint32) *mover {
+func newMover(t *testing.T, x, y, size float64) *mover {
 	t.Helper()
 
-	space := plane.NewToroidal2D[uint32](256, 256)
+	space := plane.NewToroidal2D(256, 256)
 	m, err := NewGridIndexManager(space, GridIndexConfig{
 		Resolution:       Size256x256,
 		BucketResolution: Size32x32,
@@ -45,7 +45,7 @@ func newMover(t *testing.T, x, y, size uint32) *mover {
 }
 
 // moveTo moves the entity and returns what that move reported.
-func (e *mover) moveTo(x, y uint32) deltaTally {
+func (e *mover) moveTo(x, y float64) deltaTally {
 	e.t.Helper()
 
 	e.m.QueueUpdate(e.id, e.space.WrapAABB(geom.NewAABBAt(geom.NewVec(x, y), e.size, e.size)), false)
@@ -66,27 +66,27 @@ func (e *mover) moveTo(x, y uint32) deltaTally {
 // reported as leaving exactly what it left and joining exactly what it joined.
 func TestBucketDeltas_ReportWhatTheEntityActuallyJoinedAndLeft(t *testing.T) {
 	cases := map[string]struct {
-		size     uint32
-		from, to [2]uint32
+		size     float64
+		from, to [2]float64
 		want     deltaTally
 	}{
 		"shifting inside one bucket touches nothing else": {
-			size: 8, from: [2]uint32{40, 40}, to: [2]uint32{44, 44},
+			size: 8, from: [2]float64{40, 40}, to: [2]float64{44, 44},
 			want: deltaTally{updated: 1},
 		},
 		"crossing into the next bucket leaves one and joins one": {
-			size: 8, from: [2]uint32{40, 40}, to: [2]uint32{72, 40},
+			size: 8, from: [2]float64{40, 40}, to: [2]float64{72, 40},
 			want: deltaTally{added: 1, removed: 1},
 		},
 		"crossing diagonally leaves one and joins one": {
-			size: 8, from: [2]uint32{40, 40}, to: [2]uint32{72, 72},
+			size: 8, from: [2]float64{40, 40}, to: [2]float64{72, 72},
 			want: deltaTally{added: 1, removed: 1},
 		},
 		"sliding a four-bucket box sideways keeps the column it shares": {
 			// 24 wide at (40,40) reaches 64 on both axes, so it covers the
 			// four buckets around that corner. Moving to x=72 shifts it one
 			// column: two buckets stay, two are joined and two are left.
-			size: 24, from: [2]uint32{40, 40}, to: [2]uint32{72, 40},
+			size: 24, from: [2]float64{40, 40}, to: [2]float64{72, 40},
 			want: deltaTally{added: 2, removed: 2, updated: 2},
 		},
 	}

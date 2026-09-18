@@ -22,7 +22,7 @@ type GridIndexConfig struct {
 }
 
 type BucketDelta struct {
-	Bucket  geom.AABB[uint32]
+	Bucket  geom.AABB
 	Added   []uid.UID64
 	Removed []uid.UID64
 	Updated []uid.UID64
@@ -35,10 +35,10 @@ type BucketDelta struct {
 // only ever be called from the single goroutine that owns Flush.
 type GridIndexManager struct {
 	bucketGrid   *bucketGrid
-	space        plane.Space2D[uint32]
+	space        plane.Space2D
 	opsCh        chan indexOp
 	entries      map[uid.UID64]entryCache
-	bucketDeltas map[geom.AABB[uint32]]*bucketDelta
+	bucketDeltas map[geom.AABB]*bucketDelta
 	maxGridCord  uint32
 
 	// Scratch for the update path, reused rather than allocated per entity per
@@ -72,11 +72,11 @@ const (
 type indexOp struct {
 	kind      opKind
 	id        uid.UID64
-	aabb      plane.AABB[uint32] // Korzystamy z natywnego typu przestrzeni
+	aabb      plane.AABB // Korzystamy z natywnego typu przestrzeni
 	markDirty bool
 }
 
-func NewGridIndexManager(space plane.Space2D[uint32], cfg GridIndexConfig) (*GridIndexManager, error) {
+func NewGridIndexManager(space plane.Space2D, cfg GridIndexConfig) (*GridIndexManager, error) {
 	if space == nil {
 		return nil, fmt.Errorf("space is required")
 	}
@@ -114,13 +114,13 @@ func NewGridIndexManager(space plane.Space2D[uint32], cfg GridIndexConfig) (*Gri
 		space:        space,
 		opsCh:        make(chan indexOp, opsBufferSize),
 		entries:      make(map[uid.UID64]entryCache),
-		bucketDeltas: make(map[geom.AABB[uint32]]*bucketDelta),
+		bucketDeltas: make(map[geom.AABB]*bucketDelta),
 		maxGridCord:  maxGridCord,
 	}
 	return manager, nil
 }
 
-func (m *GridIndexManager) QueueInsert(id uid.UID64, aabb plane.AABB[uint32]) {
+func (m *GridIndexManager) QueueInsert(id uid.UID64, aabb plane.AABB) {
 	m.opsCh <- indexOp{kind: opInsert, id: id, aabb: aabb, markDirty: true}
 }
 
@@ -128,13 +128,13 @@ func (m *GridIndexManager) QueueRemove(id uid.UID64) {
 	m.opsCh <- indexOp{kind: opRemove, id: id}
 }
 
-func (m *GridIndexManager) QueueUpdate(id uid.UID64, aabb plane.AABB[uint32], markDirty bool) {
+func (m *GridIndexManager) QueueUpdate(id uid.UID64, aabb plane.AABB, markDirty bool) {
 	m.opsCh <- indexOp{kind: opUpdate, id: id, aabb: aabb, markDirty: markDirty}
 }
 
 // Flush drains queued ops and applies them. Call it from a single, fixed
 // goroutine only — see the GridIndexManager doc comment.
-func (m *GridIndexManager) Flush(onDirty func(geom.AABB[uint32])) {
+func (m *GridIndexManager) Flush(onDirty func(geom.AABB)) {
 	for {
 		select {
 		case op := <-m.opsCh:
@@ -155,19 +155,19 @@ func (m *GridIndexManager) Flush(onDirty func(geom.AABB[uint32])) {
 // EntryAABB reads m's own state directly (not via opsCh) — call it only
 // from the same goroutine that calls Flush, see the GridIndexManager doc
 // comment.
-func (m *GridIndexManager) EntryAABB(entryID uid.UID64) (geom.AABB[uint32], bool) {
+func (m *GridIndexManager) EntryAABB(entryID uid.UID64) (geom.AABB, bool) {
 	if m.bucketGrid == nil {
-		return geom.AABB[uint32]{}, false
+		return geom.AABB{}, false
 	}
 	aabb, ok := m.bucketGrid.aabbById[entryID]
 	if !ok {
-		return geom.AABB[uint32]{}, false
+		return geom.AABB{}, false
 	}
 	return aabb, true
 }
 
 // QueryRange przyjmuje teraz czysty wycięty fragment z Broad Phase i sprawdza go bezpośrednio w gridzie
-func (m *GridIndexManager) QueryRange(aabb geom.AABB[uint32], collector func(uid.UID64, plane.FragPosition)) int {
+func (m *GridIndexManager) QueryRange(aabb geom.AABB, collector func(uid.UID64, plane.FragPosition)) int {
 	if m.bucketGrid == nil {
 		return 0
 	}
@@ -196,7 +196,7 @@ func (m *GridIndexManager) ConsumeBucketDeltas() []BucketDelta {
 	return out
 }
 
-func (m *GridIndexManager) recordBucketDelta(rect geom.AABB[uint32]) *bucketDelta {
+func (m *GridIndexManager) recordBucketDelta(rect geom.AABB) *bucketDelta {
 	delta, ok := m.bucketDeltas[rect]
 	if ok {
 		return delta
@@ -263,7 +263,7 @@ func deltaKeys(set map[uid.UID64]struct{}) []uid.UID64 {
 	return out
 }
 
-func (m *GridIndexManager) applyInsert(id uid.UID64, shape plane.AABB[uint32], markDirty bool, onDirty func(geom.AABB[uint32])) {
+func (m *GridIndexManager) applyInsert(id uid.UID64, shape plane.AABB, markDirty bool, onDirty func(geom.AABB)) {
 	entries := make([]Entry, 0, 4)
 	mask := uint8(0)
 
@@ -282,7 +282,7 @@ func (m *GridIndexManager) applyInsert(id uid.UID64, shape plane.AABB[uint32], m
 	}
 
 	// Ładujemy pozostałe ucięte fragmenty (wykorzystując VisitFragments)
-	shape.VisitFragments(func(pos plane.FragPosition, aabb geom.AABB[uint32]) bool {
+	shape.VisitFragments(func(pos plane.FragPosition, aabb geom.AABB) bool {
 		idx := uint8(pos)
 		if frag, ok := m.indexAABB(aabb); ok {
 			entryID := withFrag(id, idx)
@@ -307,7 +307,7 @@ func (m *GridIndexManager) applyInsert(id uid.UID64, shape plane.AABB[uint32], m
 	}
 }
 
-func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB[uint32])) {
+func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB)) {
 	cache, ok := m.entries[id]
 	if !ok {
 		return
@@ -339,14 +339,14 @@ func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB[uint
 	delete(m.entries, id)
 }
 
-func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB[uint32], markDirty bool, onDirty func(geom.AABB[uint32])) {
+func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty bool, onDirty func(geom.AABB)) {
 	oldCache, ok := m.entries[id]
 	if !ok {
 		m.applyInsert(id, shape, markDirty, onDirty)
 		return
 	}
 
-	var newFrags [4]geom.AABB[uint32]
+	var newFrags [4]geom.AABB
 	newMask := uint8(0)
 
 	if base, ok := m.indexAABB(shape.AABB); ok {
@@ -354,7 +354,7 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB[uint32], m
 		newMask |= 1 << plane.FRAG_MAIN
 	}
 
-	shape.VisitFragments(func(pos plane.FragPosition, aabb geom.AABB[uint32]) bool {
+	shape.VisitFragments(func(pos plane.FragPosition, aabb geom.AABB) bool {
 		idx := uint8(pos)
 		if frag, ok := m.indexAABB(aabb); ok {
 			newFrags[idx] = frag
@@ -400,13 +400,13 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB[uint32], m
 	m.applyInsert(id, shape, markDirty, onDirty)
 }
 
-func (m *GridIndexManager) indexAABB(aabb geom.AABB[uint32]) (geom.AABB[uint32], bool) {
-	minX := clampU32(aabb.TopLeft.X, m.maxGridCord)
-	minY := clampU32(aabb.TopLeft.Y, m.maxGridCord)
-	maxX := clampU32(aabb.BottomRight.X, m.maxGridCord)
-	maxY := clampU32(aabb.BottomRight.Y, m.maxGridCord)
+func (m *GridIndexManager) indexAABB(aabb geom.AABB) (geom.AABB, bool) {
+	minX := clampToGrid(aabb.TopLeft.X, m.maxGridCord)
+	minY := clampToGrid(aabb.TopLeft.Y, m.maxGridCord)
+	maxX := clampToGrid(aabb.BottomRight.X, m.maxGridCord)
+	maxY := clampToGrid(aabb.BottomRight.Y, m.maxGridCord)
 	if maxX < minX || maxY < minY {
-		return geom.AABB[uint32]{}, false
+		return geom.AABB{}, false
 	}
 	return NewAABB(
 		NewVec(minX, minY),
@@ -414,7 +414,7 @@ func (m *GridIndexManager) indexAABB(aabb geom.AABB[uint32]) (geom.AABB[uint32],
 	), true
 }
 
-func (m *GridIndexManager) recordBucketAdds(entryID uid.UID64, aabb geom.AABB[uint32]) {
+func (m *GridIndexManager) recordBucketAdds(entryID uid.UID64, aabb geom.AABB) {
 	if m.bucketGrid == nil {
 		return
 	}
@@ -423,7 +423,7 @@ func (m *GridIndexManager) recordBucketAdds(entryID uid.UID64, aabb geom.AABB[ui
 	})
 }
 
-func (m *GridIndexManager) recordBucketRemovals(entryID uid.UID64, aabb geom.AABB[uint32]) {
+func (m *GridIndexManager) recordBucketRemovals(entryID uid.UID64, aabb geom.AABB) {
 	if m.bucketGrid == nil {
 		return
 	}
@@ -432,7 +432,7 @@ func (m *GridIndexManager) recordBucketRemovals(entryID uid.UID64, aabb geom.AAB
 	})
 }
 
-func (m *GridIndexManager) recordBucketUpdates(entryID uid.UID64, oldAABB, newAABB geom.AABB[uint32]) {
+func (m *GridIndexManager) recordBucketUpdates(entryID uid.UID64, oldAABB, newAABB geom.AABB) {
 	if oldAABB == newAABB {
 		if m.bucketGrid == nil {
 			return
@@ -466,7 +466,7 @@ func (m *GridIndexManager) recordBucketUpdates(entryID uid.UID64, oldAABB, newAA
 // straddling a corner reaches four — so duplicates go out by a linear scan.
 // A map would cost more to allocate than the scan costs to run, and the slices
 // also give the difference a stable order, which iterating a map did not.
-func (m *GridIndexManager) splitBuckets(oldAABB, newAABB geom.AABB[uint32]) {
+func (m *GridIndexManager) splitBuckets(oldAABB, newAABB geom.AABB) {
 	m.oldBuckets = m.oldBuckets[:0]
 	m.newBuckets = m.newBuckets[:0]
 	if m.bucketGrid == nil {
@@ -484,13 +484,13 @@ func (m *GridIndexManager) splitBuckets(oldAABB, newAABB geom.AABB[uint32]) {
 	})
 }
 
-func (m *GridIndexManager) bucketRect(idx uint32) geom.AABB[uint32] {
+func (m *GridIndexManager) bucketRect(idx uint32) geom.AABB {
 	if m.bucketGrid == nil {
-		return geom.AABB[uint32]{}
+		return geom.AABB{}
 	}
 	gridSide := m.bucketGrid.gridResolution.Side()
 	if gridSide == 0 {
-		return geom.AABB[uint32]{}
+		return geom.AABB{}
 	}
 	bucketSize := m.bucketGrid.bucketsResolution.Side()
 	x := idx % gridSide
@@ -500,14 +500,20 @@ func (m *GridIndexManager) bucketRect(idx uint32) geom.AABB[uint32] {
 	maxX := minX + bucketSize
 	maxY := minY + bucketSize
 	return NewAABB(
-		NewVec(minX, minY),
-		NewVec(maxX, maxY),
+		NewVec(float64(minX), float64(minY)),
+		NewVec(float64(maxX), float64(maxY)),
 	)
 }
 
-func clampU32(val, max uint32) uint32 {
-	if val > max {
-		return max
+// clampToGrid holds a coordinate inside the indexable grid. Anything below zero
+// or beyond the last cell — including NaN, which fails both comparisons — is
+// pulled to the nearer edge rather than being converted out of range later.
+func clampToGrid(val float64, max uint32) float64 {
+	if !(val >= 0) {
+		return 0
+	}
+	if val > float64(max) {
+		return float64(max)
 	}
 	return val
 }

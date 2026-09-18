@@ -4,15 +4,15 @@ import "github.com/kjkrol/gokg/geom"
 
 // AABBDistance measures gaps between
 // axis-aligned bounding boxes using the metric defined by the provided plane.
-type AABBDistance[T geom.Numeric] func(aabb1, aabb2 geom.AABB[T]) T
+type AABBDistance func(aabb1, aabb2 geom.AABB) float64
 
-func newAABBDistance[T geom.Numeric](metric Metric[T]) AABBDistance[T] {
-	return func(aabb1, aabb2 geom.AABB[T]) T {
+func newAABBDistance(metric Metric) AABBDistance {
+	return func(aabb1, aabb2 geom.AABB) float64 {
 		if aabb1.Intersects(aabb2) {
 			return 0
 		}
 		dx := aabb1.AxisDistanceX(aabb2)
 		dy := aabb1.AxisDistanceY(aabb2)
-		return metric(geom.NewVec(dx, dy), geom.NewVec[T](0, 0))
+		return metric(geom.NewVec(dx, dy), geom.NewVec(0, 0))
 	}
 }

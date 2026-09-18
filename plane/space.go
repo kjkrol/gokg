@@ -8,23 +8,22 @@ const (
 )
 
 type (
-	Space2D[T geom.Numeric] interface {
-		Normalize(aabb geom.AABB[T]) geom.AABB[T]
-		WrapAABB(aabb geom.AABB[T]) AABB[T]
-		WrapVec(vec geom.Vec[T]) AABB[T]
-		Expand(aabb *AABB[T], margin T)
-		Translate(aabb *AABB[T], delta geom.Vec[T])
-		Reposition(aabb *AABB[T], delta geom.Vec[T])
-		AABBDistance() AABBDistance[T]
+	Space2D interface {
+		Normalize(aabb geom.AABB) geom.AABB
+		WrapAABB(aabb geom.AABB) AABB
+		WrapVec(vec geom.Vec) AABB
+		Expand(aabb *AABB, margin float64)
+		Translate(aabb *AABB, delta geom.Vec)
+		Reposition(aabb *AABB, delta geom.Vec)
+		AABBDistance() AABBDistance
 		Name() string
-		Viewport() geom.AABB[T]
+		Viewport() geom.AABB
 	}
 
-	Metric[T geom.Numeric] func(vec1, vec2 geom.Vec[T]) T
+	Metric func(vec1, vec2 geom.Vec) float64
 )
 
-type space2d[T geom.Numeric] struct {
-	size       geom.Vec[T]
-	vectorMath geom.VectorMath[T]
-	viewport   geom.AABB[T]
+type space2d struct {
+	size     geom.Vec
+	viewport geom.AABB
 }
