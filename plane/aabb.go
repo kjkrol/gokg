@@ -19,25 +19,29 @@ const (
 	FRAG_BOTTOM_RIGHT
 )
 
-// AABB extends geom.AABB with cached width, height, and boundary fragments used by Space normalisation.
-// It is the Space-aware view of a AABB: Space keeps AABB instances canonical within its domain.
+// AABB extends geom.AABB with the size and wrap overhang Space normalisation
+// needs. It is the Space-aware view of a AABB: Space keeps AABB instances
+// canonical within its domain.
 //
-// Frags/FragMask are a pure cache — fragmentation always fully recomputes
-// both from TopLeft/BottomRight/Size (see fragmentation), and every
-// mutating path (Translate/Expand/WrapAABB) already calls it. They're
-// exported (not hidden behind a BinaryMarshaler) so AABB stays a plain,
-// recursively POD-encodable type for goke's persist — embedding a type
+// Overhang is how far the box runs past the world's far edges once normalised,
+// and zero on an axis it does not cross. It is everything a wrapped fragment
+// needs: each piece follows from it and the main box, so the pieces are rebuilt
+// on demand by VisitFragments rather than carried in every copy of the struct.
+// Holding them instead would cost six times the memory in what is, for a moving
+// entity, a cache recomputed every tick and read once.
+//
+// The field is exported (not hidden behind a BinaryMarshaler) so AABB stays a
+// plain, recursively POD-encodable type for goke's persist — embedding a type
 // with its own MarshalBinary would silently drop any sibling fields on the
 // embedding struct that MarshalBinary doesn't know about (Go promotes the
 // method to the whole outer type).
 type AABB[T geom.Numeric] struct {
 	geom.AABB[T]
 	Size     geom.Vec[T]
-	Frags    [3]geom.AABB[T]
-	FragMask uint8
+	Overhang geom.Vec[T]
 }
 
-// NewAABB builds a AABB at pos with the given size, priming fragment storage for Space operations.
+// NewAABB builds a AABB at pos with the given size, not yet wrapped by any Space.
 func NewAABB[T geom.Numeric](pos geom.Vec[T], width, height T) AABB[T] {
 	return AABB[T]{
 		AABB: geom.AABB[T]{
@@ -60,146 +64,88 @@ func (ab AABB[T]) Equals(other AABB[T]) bool {
 	return ab.AABB.Equals(other.AABB)
 }
 
+// ContainsWithFrags reports whether ab, or any of its wrapped fragments,
+// contains other or any of its own.
 func (ab AABB[T]) ContainsWithFrags(other AABB[T]) bool {
-	base := ab.AABB
-	otherBase := other.AABB
-
-	if base.Contains(otherBase) {
-		return true
-	}
-
-	abHasFrags := ab.FragMask != 0
-	otherHasFrags := other.FragMask != 0
-
-	if !abHasFrags && !otherHasFrags {
-		return false
-	}
-
-	for idx := range len(other.Frags) {
-		pos := idx + 1
-		if other.FragMask&(1<<pos) != 0 && base.Contains(other.Frags[idx]) {
-			return true
-		}
-	}
-
-	// other contains any fragment of ab
-	for idx := range len(ab.Frags) {
-		pos := idx + 1
-		if ab.FragMask&(1<<pos) == 0 {
-			continue
-		}
-		frag := ab.Frags[idx]
-		if otherBase.Contains(frag) {
-			return true
-		}
-		if !otherHasFrags {
-			continue
-		}
-		if fragContainsAny(frag, other) {
-			return true
-		}
-	}
-
-	return false
+	return ab.overlapsWithFrags(other, geom.AABB[T].Contains)
 }
 
-// IntersectsWithFrags reports whether ab IntersectsWithFrags other or any of its fragments.
+// IntersectsWithFrags reports whether ab, or any of its wrapped fragments,
+// intersects other or any of its own.
 func (ab AABB[T]) IntersectsWithFrags(other AABB[T]) bool {
-	base := ab.AABB
-	otherBase := other.AABB
+	return ab.overlapsWithFrags(other, geom.AABB[T].Intersects)
+}
 
-	if base.Intersects(otherBase) {
+// overlapsWithFrags asks whether any image of ab meets any image of other. The
+// two exported forms differ only in what "meets" means, so they share the walk:
+// main against main, then main against the other's fragments, then each of ab's
+// fragments against the other's main and fragments.
+func (ab AABB[T]) overlapsWithFrags(other AABB[T], meets func(a, b geom.AABB[T]) bool) bool {
+	if meets(ab.AABB, other.AABB) {
 		return true
 	}
-
-	abHasFrags := ab.FragMask != 0
-	otherHasFrags := other.FragMask != 0
-
-	if !abHasFrags && !otherHasFrags {
+	if !ab.hasFragments() && !other.hasFragments() {
 		return false
 	}
 
-	for idx := range len(other.Frags) {
-		pos := idx + 1
-		if other.FragMask&(1<<pos) != 0 && base.Intersects(other.Frags[idx]) {
-			return true
-		}
+	met := false
+	other.VisitFragments(func(_ FragPosition, frag geom.AABB[T]) bool {
+		met = meets(ab.AABB, frag)
+		return !met
+	})
+	if met {
+		return true
 	}
 
-	for idx := range len(ab.Frags) {
-		pos := idx + 1
-		if ab.FragMask&(1<<pos) == 0 {
-			continue
+	ab.VisitFragments(func(_ FragPosition, frag geom.AABB[T]) bool {
+		if meets(other.AABB, frag) {
+			met = true
+			return false
 		}
-		frag := ab.Frags[idx]
-		if otherBase.Intersects(frag) {
-			return true
-		}
-		if otherHasFrags && fragIntersectsAny(frag, other) {
-			return true
-		}
-	}
+		other.VisitFragments(func(_ FragPosition, otherFrag geom.AABB[T]) bool {
+			met = meets(frag, otherFrag)
+			return !met
+		})
+		return !met
+	})
+	return met
+}
 
-	return false
+// hasFragments reports whether the box reaches past a world edge at all.
+func (ab AABB[T]) hasFragments() bool {
+	var none T
+	return ab.Overhang.X > none || ab.Overhang.Y > none
 }
 
 type FragVisitor[T geom.Numeric] func(pos FragPosition, box geom.AABB[T]) bool
 
+// VisitFragments calls fn for each piece the box wraps into, rebuilding it from
+// the overhang: the part past the right edge reappears at the left, the part
+// past the bottom at the top, and the corner where both happen at once.
+// fn returning false stops the walk.
 func (ab *AABB[T]) VisitFragments(fn FragVisitor[T]) {
-	for i := range len(ab.Frags) {
-		pos := FragPosition(i + 1)
-		if ab.FragMask&(1<<pos) == 0 {
-			continue
-		}
-		if !fn(FragPosition(pos), ab.Frags[i]) {
+	var none T
+	dx, dy := ab.Overhang.X, ab.Overhang.Y
+
+	if dx > none {
+		box := geom.NewAABB(geom.NewVec(none, ab.TopLeft.Y), geom.NewVec(dx, ab.BottomRight.Y))
+		if !fn(FRAG_RIGHT, box) {
 			return
 		}
 	}
+	if dy > none {
+		box := geom.NewAABB(geom.NewVec(ab.TopLeft.X, none), geom.NewVec(ab.BottomRight.X, dy))
+		if !fn(FRAG_BOTTOM, box) {
+			return
+		}
+	}
+	if dx > none && dy > none {
+		fn(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(none, none), geom.NewVec(dx, dy)))
+	}
 }
 
-func (ab *AABB[T]) setFragment(pos FragPosition, box geom.AABB[T]) {
-	ab.Frags[pos-1] = box
-	ab.FragMask |= 1 << pos
-}
-
-func (ab *AABB[T]) clearFragment(pos FragPosition) {
-	ab.FragMask &^= 1 << pos
-}
-
+// fragmentation records how far the box ran past the far edges; the pieces
+// themselves are rebuilt from it whenever someone asks.
 func (ab *AABB[T]) fragmentation(dx, dy T) {
-	if dx > 0 {
-		ab.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, ab.TopLeft.Y), geom.NewVec(dx, ab.BottomRight.Y)))
-	} else {
-		ab.clearFragment(FRAG_RIGHT)
-	}
-	if dy > 0 {
-		ab.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(ab.TopLeft.X, 0), geom.NewVec(ab.BottomRight.X, dy)))
-	} else {
-		ab.clearFragment(FRAG_BOTTOM)
-	}
-	if dx > 0 && dy > 0 {
-		ab.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec[T](0, 0), geom.NewVec(dx, dy)))
-	} else {
-		ab.clearFragment(FRAG_BOTTOM_RIGHT)
-	}
-}
-
-func fragContainsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
-	for i := range len(other.Frags) {
-		pos := i + 1
-		if other.FragMask&(1<<pos) != 0 && frag.Contains(other.Frags[i]) {
-			return true
-		}
-	}
-	return false
-}
-
-func fragIntersectsAny[T geom.Numeric](frag geom.AABB[T], other AABB[T]) bool {
-	for i := range len(other.Frags) {
-		pos := i + 1
-		if other.FragMask&(1<<pos) != 0 && frag.Intersects(other.Frags[i]) {
-			return true
-		}
-	}
-	return false
+	ab.Overhang = geom.NewVec(dx, dy)
 }

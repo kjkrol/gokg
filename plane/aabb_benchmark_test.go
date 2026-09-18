@@ -24,9 +24,7 @@ func Benchmark_AABB_Intersects(b *testing.B) {
 func Benchmark_AABB_IntersectsWithFrags(b *testing.B) {
 	base := NewAABB(geom.NewVec(0, 0), 5, 5)
 	target := NewAABB(geom.NewVec(4, 4), 3, 3)
-	target.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(2, 7)))
-	target.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(7, 2)))
-	target.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(2, 2)))
+	target.Overhang = geom.NewVec(2, 2) // hangs 2 past each far edge, so all three fragments exist
 
 	b.ReportAllocs()
 	for b.Loop() {
@@ -47,9 +45,7 @@ func Benchmark_AABB_Contains(b *testing.B) {
 func Benchmark_AABB_ContainsWithFrags(b *testing.B) {
 	base := NewAABB(geom.NewVec(0, 0), 5, 5)
 	target := NewAABB(geom.NewVec(4, 4), 3, 3)
-	target.setFragment(FRAG_RIGHT, geom.NewAABB(geom.NewVec(0, 4), geom.NewVec(2, 7)))
-	target.setFragment(FRAG_BOTTOM, geom.NewAABB(geom.NewVec(4, 0), geom.NewVec(7, 2)))
-	target.setFragment(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(2, 2)))
+	target.Overhang = geom.NewVec(2, 2) // hangs 2 past each far edge, so all three fragments exist
 
 	b.ReportAllocs()
 	for b.Loop() {

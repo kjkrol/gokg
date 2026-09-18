@@ -34,36 +34,32 @@ func runAABBIntersectsIncludingFragsTest[T geom.Numeric](t *testing.T, name stri
 			name  string
 			aabb1 AABB[T]
 			aabb2 AABB[T]
-			frags map[FragPosition]geom.AABB[T]
-			want  bool
+			// overhang is how far aabb2 runs past the far edges; the fragments
+			// noted beside each case follow from it.
+			overhang geom.Vec[T]
+			want     bool
 		}{
 			{
 				name:  "returnsTrueWhenAnyFragmentsIntersect",
 				aabb1: NewAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
 				aabb2: NewAABB(geom.NewVec(T(4), T(4)), T(1), T(1)),
-				frags: map[FragPosition]geom.AABB[T]{
-					FRAG_RIGHT:        geom.NewAABB(geom.NewVec(T(0), T(4)), geom.NewVec(T(1), T(5))),
-					FRAG_BOTTOM:       geom.NewAABB(geom.NewVec(T(4), T(0)), geom.NewVec(T(5), T(1))),
-					FRAG_BOTTOM_RIGHT: geom.NewAABB(geom.NewVec(T(0), T(0)), geom.NewVec(T(1), T(1))),
-				},
-				want: true,
+				// right (0,4)..(1,5), bottom (4,0)..(5,1), corner (0,0)..(1,1)
+				overhang: geom.NewVec(T(1), T(1)),
+				want:     true,
 			},
 			{
 				name:  "returnsFalseWhenNoFragmentsIntersect",
 				aabb1: NewAABB(geom.NewVec(T(0), T(0)), T(2), T(2)),
 				aabb2: NewAABB(geom.NewVec(T(4), T(4)), T(2), T(2)),
-				frags: map[FragPosition]geom.AABB[T]{
-					FRAG_RIGHT: geom.NewAABB(geom.NewVec(T(0), T(4)), geom.NewVec(T(1), T(6))),
-				},
-				want: false,
+				// right (0,4)..(1,6) only — it does not reach the bottom edge
+				overhang: geom.NewVec(T(1), T(0)),
+				want:     false,
 			},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				for pos, coords := range tc.frags {
-					tc.aabb2.setFragment(pos, coords)
-				}
+				tc.aabb2.Overhang = tc.overhang
 
 				if got := tc.aabb1.IntersectsWithFrags(tc.aabb2); got != tc.want {
 					t.Errorf("expected Intersects to return %v, but got %v", tc.want, got)

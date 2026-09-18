@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/kjkrol/gokg/geom"
+	"github.com/kjkrol/gokg/plane"
 	"github.com/kjkrol/gokg/spatial"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,7 +12,8 @@ import (
 
 // TestSpace_WrapAABB_DelegatesAndFragments guards that Space.WrapAABB
 // exposes the underlying Space2D.WrapAABB — a box overflowing a toroidal
-// space's bounds comes back with non-empty Frags for the wrapped part.
+// space's bounds comes back wrapping into fragments for the parts that ran
+// past the edges.
 func TestSpace_WrapAABB_DelegatesAndFragments(t *testing.T) {
 	cfg := Config{
 		Width: 100, Height: 100,
@@ -27,7 +29,12 @@ func TestSpace_WrapAABB_DelegatesAndFragments(t *testing.T) {
 
 	wrapped := space.WrapAABB(overflowing)
 
-	assert.NotEqual(t, uint8(0), wrapped.FragMask, "expected a box overflowing the world's edge to produce fragments")
+	frags := 0
+	wrapped.VisitFragments(func(plane.FragPosition, geom.AABB[uint32]) bool {
+		frags++
+		return true
+	})
+	assert.Equal(t, 3, frags, "expected a box overflowing both edges to wrap into three fragments")
 }
 
 // TestSpace_WrapAABB_EuclideanClips guards that a non-toroidal space
