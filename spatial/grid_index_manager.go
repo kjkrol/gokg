@@ -2,6 +2,7 @@ package spatial
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
@@ -39,6 +40,15 @@ type GridIndexManager struct {
 	entries      map[uid.UID64]entryCache
 	bucketDeltas map[geom.AABB[uint32]]*bucketDelta
 	maxGridCord  uint32
+
+	// Scratch for the update path, reused rather than allocated per entity per
+	// tick. Flush drains opsCh on one goroutine and nothing here is touched
+	// from anywhere else, so a single buffer per manager is enough — the same
+	// reasoning queryMapPool already applies to the query path. Making Flush
+	// concurrent would break this.
+	oldBuckets []uint32
+	newBuckets []uint32
+	moves      EntriesMove
 }
 
 type entryCache struct {
@@ -360,7 +370,9 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB[uint32], m
 
 	// Jeśli struktura fragmentacji i maska bitowa są identyczne, optymalnie przesuwamy istniejące wpisy
 	if oldCache.mask == newMask {
-		moves := NewEntriesMove(4)
+		moves := &m.moves
+		moves.Old = moves.Old[:0]
+		moves.New = moves.New[:0]
 		for idx := 0; idx < len(newFrags); idx++ {
 			if newMask&(1<<idx) == 0 {
 				continue
@@ -376,7 +388,9 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB[uint32], m
 			}
 		}
 		if len(moves.Old) > 0 && m.bucketGrid != nil {
-			m.bucketGrid.BulkMove(moves)
+			// BulkMove only reads the batch, so handing it the reused buffers
+			// is safe.
+			m.bucketGrid.BulkMove(*moves)
 		}
 		return
 	}
@@ -429,21 +443,45 @@ func (m *GridIndexManager) recordBucketUpdates(entryID uid.UID64, oldAABB, newAA
 		return
 	}
 
-	oldBuckets := m.bucketIndexSet(oldAABB)
-	newBuckets := m.bucketIndexSet(newAABB)
-	for idx := range newBuckets {
-		if _, ok := oldBuckets[idx]; ok {
+	m.splitBuckets(oldAABB, newAABB)
+
+	for _, idx := range m.newBuckets {
+		if slices.Contains(m.oldBuckets, idx) {
 			m.recordBucketDelta(m.bucketRect(idx)).update(entryID)
 		} else {
 			m.recordBucketDelta(m.bucketRect(idx)).add(entryID)
 		}
 	}
-	for idx := range oldBuckets {
-		if _, ok := newBuckets[idx]; ok {
-			continue
+	for _, idx := range m.oldBuckets {
+		if !slices.Contains(m.newBuckets, idx) {
+			m.recordBucketDelta(m.bucketRect(idx)).remove(entryID)
 		}
-		m.recordBucketDelta(m.bucketRect(idx)).remove(entryID)
 	}
+}
+
+// splitBuckets collects into the manager's scratch which buckets each box
+// covers, so the caller can tell what an entity joined, kept and left.
+//
+// The sets are tiny — a box smaller than a bucket lands in one, and even one
+// straddling a corner reaches four — so duplicates go out by a linear scan.
+// A map would cost more to allocate than the scan costs to run, and the slices
+// also give the difference a stable order, which iterating a map did not.
+func (m *GridIndexManager) splitBuckets(oldAABB, newAABB geom.AABB[uint32]) {
+	m.oldBuckets = m.oldBuckets[:0]
+	m.newBuckets = m.newBuckets[:0]
+	if m.bucketGrid == nil {
+		return
+	}
+	m.bucketGrid.forEachBucketIndex(oldAABB, func(idx uint32) {
+		if !slices.Contains(m.oldBuckets, idx) {
+			m.oldBuckets = append(m.oldBuckets, idx)
+		}
+	})
+	m.bucketGrid.forEachBucketIndex(newAABB, func(idx uint32) {
+		if !slices.Contains(m.newBuckets, idx) {
+			m.newBuckets = append(m.newBuckets, idx)
+		}
+	})
 }
 
 func (m *GridIndexManager) bucketRect(idx uint32) geom.AABB[uint32] {
@@ -465,17 +503,6 @@ func (m *GridIndexManager) bucketRect(idx uint32) geom.AABB[uint32] {
 		NewVec(minX, minY),
 		NewVec(maxX, maxY),
 	)
-}
-
-func (m *GridIndexManager) bucketIndexSet(aabb geom.AABB[uint32]) map[uint32]struct{} {
-	seen := make(map[uint32]struct{}, 16)
-	if m.bucketGrid == nil {
-		return seen
-	}
-	m.bucketGrid.forEachBucketIndex(aabb, func(idx uint32) {
-		seen[idx] = struct{}{}
-	})
-	return seen
 }
 
 func clampU32(val, max uint32) uint32 {
