@@ -6,9 +6,9 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-// Index is a discrete spatial index over a 2D power-of-two grid.
-// It stores objects at integer coordinates and supports point lookups,
-// range queries (AABB) and bulk operations (insert, remove, move).
+// Index is a spatial index over a 2D power-of-two grid. It stores objects by
+// their bounding box and supports range queries (AABB) and bulk operations
+// (insert, remove, move).
 type (
 	Vec  = geom.Vec
 	AABB = geom.AABB
@@ -26,6 +26,9 @@ type (
 		// QueryRange – all objects within the AABB.
 		// Collector cannot modify Index.
 		QueryRange(aabb AABB, collector func(uid.UID64, plane.FragPosition)) int
+
+		// QueryRangeWith – as QueryRange, but only objects sharing a capability with want.
+		QueryRangeWith(aabb AABB, want Capability, collector func(uid.UID64, plane.FragPosition)) int
 
 		// Count – number of objects in the structure.
 		Count() int

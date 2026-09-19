@@ -15,7 +15,7 @@ type (
 		bucketCapacity    int
 		gridResolution    Resolution
 		gridCellCodec     CellCodec
-		boxes             *boxStore
+		boxes             boxStore
 		bounds            AABB
 		buckets           []bucket
 		optimizer         *memoryOptimizer
@@ -58,7 +58,7 @@ func NewBucketGrid(
 		}
 	}
 
-	if bg.boxes == nil {
+	if bg.buckets == nil {
 		return nil, fmt.Errorf("Initialize bucket capacity first")
 	}
 
@@ -91,7 +91,7 @@ func WithBucketCapacity(bucketCapacity int) Option {
 
 		bg.buckets = make([]bucket, bucketsNumber)
 		bg.optimizer = newMemoryOptimizer(int(bucketsNumber))
-		bg.boxes = newBoxStore(overallCapacity)
+		bg.boxes.init(overallCapacity)
 		return nil
 	}
 }
@@ -163,6 +163,12 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 
 // QueryRange – all objects within the AABB.
 func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.FragPosition)) int {
+	return bg.QueryRangeWith(aabb, AnyCapability, collector)
+}
+
+// QueryRangeWith is QueryRange restricted to entries sharing a capability
+// with want, tested before the entry's box is fetched or intersected.
+func (bg *bucketGrid) QueryRangeWith(aabb AABB, want Capability, collector func(uid.UID64, plane.FragPosition)) int {
 
 	tlIdx := bg.CalculateGridIndex(aabb.TopLeft)
 	brIdx := bg.CalculateGridIndex(aabb.BottomRight)
@@ -175,6 +181,9 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.Frag
 	if tlIdx == brIdx {
 		bucket := bg.buckets[tlIdx]
 		for _, id := range bucket.ids {
+			if !bg.boxes.capsOf(id).matches(want) {
+				continue
+			}
 			itemAABB, ok := bg.boxes.get(id)
 			if ok && aabb.Intersects(itemAABB) {
 				collector(withoutFrag(id), plane.FragPosition(fragOf(id)))
@@ -198,6 +207,9 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.Frag
 			bucket := bg.buckets[idx]
 
 			for _, id := range bucket.ids {
+				if !bg.boxes.capsOf(id).matches(want) {
+					continue
+				}
 				itemAABB, ok := bg.boxes.get(id)
 				if !ok || !aabb.Intersects(itemAABB) {
 					continue

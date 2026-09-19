@@ -162,9 +162,28 @@ func (w *Space) Scan(observer uid.UID64, cone raycast.Cone, v *raycast.View) boo
 	return v.Scan(w, observer, cone)
 }
 
-// Neighbours calls fn for every entity within margin of box, box's own
-// wrapped images included — without which a probe straddling a seam silently
-// misses whatever lies across it.
+// Capability is what may be done with an entity — see [spatial.Capability].
+type Capability = spatial.Capability
+
+const (
+	// Plain is an entity that is nothing but geometry — see [spatial.Plain].
+	Plain = spatial.Plain
+	// AnyCapability accepts every entity — see [spatial.AnyCapability].
+	AnyCapability = spatial.AnyCapability
+)
+
+// SetCapabilities records what may be done with id, so a query for a
+// capability can skip everything without it before reading any geometry.
+//
+// Takes effect at the next Flush. Call it once per entity, after Insert — it
+// is not a per-tick operation.
+func (w *Space) SetCapabilities(id uid.UID64, c Capability) {
+	w.spatialIndex.QueueSetCapabilities(id, c)
+}
+
+// Neighbours calls fn for every entity within margin of box that shares a
+// capability with want, box's own wrapped images included — without which a
+// probe straddling a seam silently misses whatever lies across it.
 //
 // box is the caller's scratch: it is expanded in place, so hand in a buffer
 // held across ticks rather than a fresh copy each time. fn may see the same
@@ -173,12 +192,12 @@ func (w *Space) Scan(observer uid.UID64, cone raycast.Cone, v *raycast.View) boo
 // fn takes the same arguments Query's collector does, so it can be handed
 // straight through rather than wrapped — a wrapper here would be one more
 // indirect call per candidate found, on the hottest path there is.
-func (w *Space) Neighbours(box *plane.AABB, margin float64, fn func(id uid.UID64, frag plane.FragPosition)) {
+func (w *Space) Neighbours(box *plane.AABB, margin float64, want Capability, fn func(id uid.UID64, frag plane.FragPosition)) {
 	w.surface.Expand(box, margin)
 
-	w.spatialIndex.QueryRange(box.AABB, fn)
+	w.spatialIndex.QueryRangeWith(box.AABB, want, fn)
 	box.VisitFragments(func(_ plane.FragPosition, image geom.AABB) bool {
-		w.spatialIndex.QueryRange(image, fn)
+		w.spatialIndex.QueryRangeWith(image, want, fn)
 		return true
 	})
 }

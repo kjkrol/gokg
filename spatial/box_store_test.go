@@ -8,7 +8,8 @@ import (
 )
 
 func TestBoxStore_KeepsMainBoxesAndFragmentsApart(t *testing.T) {
-	s := newBoxStore(4)
+	var s boxStore
+	s.init(4)
 
 	id := uid.UID64(7)
 	main := NewAABBAt(NewVec(10, 10), 4, 4)
@@ -32,7 +33,8 @@ func TestBoxStore_KeepsMainBoxesAndFragmentsApart(t *testing.T) {
 // out its predecessor's box if the id were not checked as well. A map simply
 // failed to find the dead id; this has to refuse just as firmly.
 func TestBoxStore_RefusesAnIdWhoseIndexWasRecycled(t *testing.T) {
-	s := newBoxStore(4)
+	var s boxStore
+	s.init(4)
 
 	var pool uid.UID64Pool
 	pool.Init(4, 4)
@@ -53,7 +55,8 @@ func TestBoxStore_RefusesAnIdWhoseIndexWasRecycled(t *testing.T) {
 }
 
 func TestBoxStore_RemoveAndClearKeepTheCount(t *testing.T) {
-	s := newBoxStore(4)
+	var s boxStore
+	s.init(4)
 
 	for i := range 5 {
 		s.set(uid.UID64(i), NewAABBAt(NewVec(float64(i), 0), 2, 2))

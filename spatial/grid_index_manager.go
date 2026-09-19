@@ -74,12 +74,14 @@ const (
 	opInsert opKind = iota
 	opRemove
 	opUpdate
+	opSetCaps
 )
 
 type indexOp struct {
 	kind      opKind
 	id        uid.UID64
 	aabb      plane.AABB // Korzystamy z natywnego typu przestrzeni
+	caps      Capability
 	markDirty bool
 }
 
@@ -140,6 +142,12 @@ func (m *GridIndexManager) QueueUpdate(id uid.UID64, aabb plane.AABB, markDirty 
 	m.opsCh <- indexOp{kind: opUpdate, id: id, aabb: aabb, markDirty: markDirty}
 }
 
+// QueueSetCapabilities records id's capabilities. Queued like every other
+// change, so it lands after an insert queued before it.
+func (m *GridIndexManager) QueueSetCapabilities(id uid.UID64, c Capability) {
+	m.opsCh <- indexOp{kind: opSetCaps, id: id, caps: c}
+}
+
 // Flush drains queued ops and applies them. Call it from a single, fixed
 // goroutine only — see the GridIndexManager doc comment.
 func (m *GridIndexManager) Flush(onDirty func(geom.AABB)) {
@@ -150,9 +158,11 @@ func (m *GridIndexManager) Flush(onDirty func(geom.AABB)) {
 			case opInsert:
 				m.applyInsert(op.id, op.aabb, op.markDirty, onDirty)
 			case opRemove:
-				m.applyRemove(op.id, onDirty)
+				m.applyRemove(op.id, onDirty, true)
 			case opUpdate:
 				m.applyUpdate(op.id, op.aabb, op.markDirty, onDirty)
+			case opSetCaps:
+				m.bucketGrid.boxes.setCaps(op.id, op.caps)
 			}
 		default:
 			return
@@ -172,11 +182,16 @@ func (m *GridIndexManager) EntryAABB(entryID uid.UID64) (geom.AABB, bool) {
 
 // QueryRange przyjmuje teraz czysty wycięty fragment z Broad Phase i sprawdza go bezpośrednio w gridzie
 func (m *GridIndexManager) QueryRange(aabb geom.AABB, collector func(uid.UID64, plane.FragPosition)) int {
+	return m.QueryRangeWith(aabb, AnyCapability, collector)
+}
+
+// QueryRangeWith is QueryRange restricted to entries sharing a capability with want.
+func (m *GridIndexManager) QueryRangeWith(aabb geom.AABB, want Capability, collector func(uid.UID64, plane.FragPosition)) int {
 	if m.bucketGrid == nil {
 		return 0
 	}
 	if idxAABB, ok := m.indexAABB(aabb); ok {
-		return m.bucketGrid.QueryRange(idxAABB, collector)
+		return m.bucketGrid.QueryRangeWith(idxAABB, want, collector)
 	}
 	return 0
 }
@@ -311,10 +326,19 @@ func (m *GridIndexManager) applyInsert(id uid.UID64, shape plane.AABB, markDirty
 	}
 }
 
-func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB)) {
+// applyRemove drops every piece of id from the grid.
+//
+// clearCaps distinguishes the entity going away — its capabilities must go
+// too, or the next entity handed this index inherits them — from applyUpdate
+// rebuilding its fragmentation, which removes and reinserts the same entity
+// and must not forget what it is.
+func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB), clearCaps bool) {
 	cache, ok := m.entries[id]
 	if !ok {
 		return
+	}
+	if clearCaps {
+		defer m.bucketGrid.boxes.clearCaps(id)
 	}
 	entries := make([]Entry, 0, 4)
 	for idx := 0; idx < 4; idx++ {
@@ -368,7 +392,7 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty
 	})
 
 	if newMask == 0 {
-		m.applyRemove(id, onDirty)
+		m.applyRemove(id, onDirty, false)
 		return
 	}
 
@@ -400,7 +424,7 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty
 	}
 
 	// W przypadku zmiany liczby/układu fragmentów (np. obiekt wszedł na krawędź lub z niej zszedł) – resetujemy wpis
-	m.applyRemove(id, onDirty)
+	m.applyRemove(id, onDirty, false)
 	m.applyInsert(id, shape, markDirty, onDirty)
 }
 

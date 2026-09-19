@@ -2,20 +2,19 @@ package spatial
 
 import "github.com/kjkrol/uid"
 
-// boxStore holds the box of every entry the grid indexes, keyed by entry id.
+// boxStore holds the box and capabilities of every entry the grid indexes.
 //
-// Main boxes live in a slice indexed by uid.UID64.Index(), which uid documents
-// as the "main sequence for array/pool offsets" — the ids a grid is given come
-// from uid.UID64Pool, which hands out indices densely from zero. Keying that by
-// a hash map meant every candidate a query examined paid for hashing and a
-// random probe, on what is the hottest loop in the package.
-//
-// Wrapped fragments keep a map, because they are rare by construction: only an
-// entity straddling a seam has any, and a euclidean space has none at all.
+// Main boxes are addressed by uid.UID64.Index(), which uid.UID64Pool hands out
+// densely from zero; wrapped fragments keep a map, being rare by construction.
 type boxStore struct {
 	main  []mainBox
 	frags map[uid.UID64]AABB
 	count int
+
+	// caps is addressed like main but kept apart: a query tests it before it
+	// has any reason to touch a box. Capabilities belong to the entity, so
+	// every fragment of one shares the entry.
+	caps []Capability
 }
 
 // mainBox is one slot of the main slice. The id is kept and compared, not just
@@ -28,10 +27,39 @@ type mainBox struct {
 	live bool
 }
 
-func newBoxStore(capacity int) *boxStore {
-	return &boxStore{
-		main:  make([]mainBox, 0, capacity),
-		frags: make(map[uid.UID64]AABB),
+// init readies the store for capacity entries, in place: bucketGrid holds it
+// by value, so get costs no indirection in the grid's hottest loop.
+func (s *boxStore) init(capacity int) {
+	s.main = make([]mainBox, 0, capacity)
+	s.frags = make(map[uid.UID64]AABB)
+	s.caps = make([]Capability, 0, capacity)
+	s.count = 0
+}
+
+// capsOf returns id's capabilities, Plain if it was never given any.
+func (s *boxStore) capsOf(id uid.UID64) Capability {
+	i := int(id.Index())
+	if i >= len(s.caps) {
+		return Plain
+	}
+	return s.caps[i]
+}
+
+// setCaps records id's capabilities.
+func (s *boxStore) setCaps(id uid.UID64, c Capability) {
+	i := int(id.Index())
+	for i >= len(s.caps) {
+		s.caps = append(s.caps, Plain)
+	}
+	s.caps[i] = c
+}
+
+// clearCaps drops id's capabilities, so a recycled index starts from Plain
+// rather than inheriting its predecessor's.
+func (s *boxStore) clearCaps(id uid.UID64) {
+	i := int(id.Index())
+	if i < len(s.caps) {
+		s.caps[i] = Plain
 	}
 }
 
@@ -98,6 +126,7 @@ func (s *boxStore) len() int { return s.count }
 // clear empties the store, keeping the memory it has already grown into.
 func (s *boxStore) clear() {
 	s.main = s.main[:0]
+	s.caps = s.caps[:0]
 	clear(s.frags)
 	s.count = 0
 }
