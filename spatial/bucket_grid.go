@@ -35,10 +35,14 @@ type (
 )
 
 var (
-	_            Index = (*bucketGrid)(nil)
-	queryMapPool       = sync.Pool{
+	_ Index = (*bucketGrid)(nil)
+	// No size hint: a pooled map never shrinks, and clearing one costs in
+	// proportion to the capacity it has ever reached, not to what this query
+	// put in it. Pre-sizing for 1024 made every small query pay for a range
+	// query that may never come.
+	queryMapPool = sync.Pool{
 		New: func() any {
-			return make(map[uid.UID64]struct{}, 1024)
+			return make(map[uid.UID64]struct{})
 		},
 	}
 )

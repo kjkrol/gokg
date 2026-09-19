@@ -84,7 +84,7 @@ func (ab AABB) overlapsWithFrags(other AABB, meets func(a, b geom.AABB) bool) bo
 	if meets(ab.AABB, other.AABB) {
 		return true
 	}
-	if !ab.hasFragments() && !other.hasFragments() {
+	if !ab.HasFragments() && !other.HasFragments() {
 		return false
 	}
 
@@ -111,8 +111,10 @@ func (ab AABB) overlapsWithFrags(other AABB, meets func(a, b geom.AABB) bool) bo
 	return met
 }
 
-// hasFragments reports whether the box reaches past a world edge at all.
-func (ab AABB) hasFragments() bool {
+// HasFragments reports whether the box reaches past a world edge at all —
+// the cheap test to run before VisitFragments, which otherwise answers the
+// same question through a closure call per piece.
+func (ab AABB) HasFragments() bool {
 	var none float64
 	return ab.Overhang.X > none || ab.Overhang.Y > none
 }

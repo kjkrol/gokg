@@ -97,3 +97,22 @@ func TestAABB_StaysSmall(t *testing.T) {
 		t.Errorf("AABB is %d bytes, want 64 — corners, size and overhang and nothing else", got)
 	}
 }
+
+func TestHasFragments(t *testing.T) {
+	space := NewToroidal2D(20, 20)
+
+	inside := space.WrapAABB(geom.NewAABB(geom.NewVec(0, 0), geom.NewVec(10, 10)))
+	if inside.HasFragments() {
+		t.Error("expected a box clear of every edge to have no fragments")
+	}
+
+	right := space.WrapAABB(geom.NewAABB(geom.NewVec(15, 0), geom.NewVec(25, 10)))
+	if !right.HasFragments() {
+		t.Error("expected a box running off the right edge to have a fragment")
+	}
+
+	bottom := space.WrapAABB(geom.NewAABB(geom.NewVec(0, 15), geom.NewVec(10, 25)))
+	if !bottom.HasFragments() {
+		t.Error("expected a box running off the bottom edge to have a fragment")
+	}
+}

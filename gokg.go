@@ -35,6 +35,9 @@ type Config struct {
 	BucketCapacity int
 	// OpsBufferSize is the size of the channel buffer used for queuing spatial index updates.
 	OpsBufferSize int
+	// TrackBucketDeltas records per-bucket entity movement for later
+	// consumption. Off by default — see spatial.GridIndexConfig.
+	TrackBucketDeltas bool
 }
 
 // NewSpace constructs a new Space with the given Config.
@@ -58,10 +61,11 @@ func NewSpace(cfg Config) (*Space, error) {
 	gridRes := spatial.ResolutionFrom(maxDim)
 
 	indexCfg := spatial.GridIndexConfig{
-		Resolution:       gridRes,
-		BucketResolution: bucketRes,
-		BucketCapacity:   cfg.BucketCapacity,
-		OpsBufferSize:    cfg.OpsBufferSize,
+		Resolution:        gridRes,
+		BucketResolution:  bucketRes,
+		BucketCapacity:    cfg.BucketCapacity,
+		OpsBufferSize:     cfg.OpsBufferSize,
+		TrackBucketDeltas: cfg.TrackBucketDeltas,
 	}
 
 	spatialIndex, err := spatial.NewGridIndexManager(surface, indexCfg)
@@ -117,6 +121,21 @@ func (w *Space) Expand(id uid.UID64, aabb *plane.AABB, margin float64) {
 // This is useful for creating temporary probe boxes for broad-phase queries.
 func (w *Space) ExpandOnly(aabb *plane.AABB, margin float64) {
 	w.surface.Expand(aabb, margin)
+}
+
+// TranslateOnly moves the AABB under the space's boundary rules without
+// queuing an index update — the counterpart of ExpandOnly. Use it when a box
+// is moved repeatedly before it settles (an iterative contact solver, say):
+// only where it ends up is worth indexing, and queuing every intermediate
+// step can outrun OpsBufferSize. Pair it with Reindex once the box is final.
+func (w *Space) TranslateOnly(aabb *plane.AABB, delta geom.Vec) {
+	w.surface.Translate(aabb, delta)
+}
+
+// Reindex queues one spatial-index update for a box already moved by
+// TranslateOnly, so the index catches up with the geometry at the next Flush.
+func (w *Space) Reindex(id uid.UID64, aabb plane.AABB) {
+	w.spatialIndex.QueueUpdate(id, aabb, true)
 }
 
 // Query searches the spatial grid for all entities intersecting the provided AABB.

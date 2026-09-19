@@ -32,6 +32,8 @@ func newMover(t *testing.T, x, y, size float64) *mover {
 		Resolution:       Size256x256,
 		BucketResolution: Size32x32,
 		BucketCapacity:   8,
+		// This suite is the ledger's only consumer, so it has to ask for it.
+		TrackBucketDeltas: true,
 	})
 	if err != nil {
 		t.Fatalf("NewGridIndexManager: %v", err)
@@ -116,5 +118,47 @@ func TestBucketDeltas_RepeatedMovesReportTheSameThing(t *testing.T) {
 		if back != want {
 			t.Fatalf("round %d: moving back reported %+v, want %+v", i, back, want)
 		}
+	}
+}
+
+// newSilentMover is newMover without the ledger — the default every caller
+// that never drains it gets.
+func newSilentMover(t *testing.T, x, y, size float64) *mover {
+	t.Helper()
+
+	space := plane.NewToroidal2D(256, 256)
+	m, err := NewGridIndexManager(space, GridIndexConfig{
+		Resolution:       Size256x256,
+		BucketResolution: Size32x32,
+		BucketCapacity:   8,
+	})
+	if err != nil {
+		t.Fatalf("NewGridIndexManager: %v", err)
+	}
+	e := &mover{t: t, m: m, space: space, id: uid.UID64(1), size: size}
+	m.QueueInsert(e.id, space.WrapAABB(geom.NewAABBAt(geom.NewVec(x, y), size, size)))
+	m.Flush(nil)
+	return e
+}
+
+// An unconsumed ledger used to be bounded by nothing at all: every bucket an
+// entity ever crossed kept its id forever, so a world left running grew a set
+// the size of buckets times entities. Nobody drains it, so nobody should be
+// paying for it.
+func TestBucketDeltas_UntrackedManagerKeepsNoLedger(t *testing.T) {
+	e := newSilentMover(t, 16, 16, 8)
+
+	// Deliberately not moveTo: that drains the ledger, which is the very
+	// thing this test is about nobody doing.
+	for i := range 200 {
+		e.m.QueueUpdate(e.id, e.space.WrapAABB(geom.NewAABBAt(geom.NewVec(float64(8+i), float64(8+i)), e.size, e.size)), false)
+		e.m.Flush(nil)
+	}
+
+	if n := len(e.m.bucketDeltas); n != 0 {
+		t.Errorf("ledger holds %d buckets after 200 moves, want none — nothing consumes it", n)
+	}
+	if d := e.m.ConsumeBucketDeltas(); d != nil {
+		t.Errorf("ConsumeBucketDeltas returned %d entries, want none", len(d))
 	}
 }

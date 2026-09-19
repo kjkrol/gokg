@@ -19,6 +19,12 @@ type GridIndexConfig struct {
 	// CellCodec selects the grid-cell codec; zero value (LinearCellCodec)
 	// matches today's default behavior.
 	CellCodec CellCodecKind
+	// TrackBucketDeltas records which entities joined, left or moved within
+	// each bucket, for ConsumeBucketDeltas to drain. Leave it off unless
+	// something actually drains it: the ledger is only bounded by how often
+	// it is consumed, so an unread one grows with every bucket an entity
+	// ever visits.
+	TrackBucketDeltas bool
 }
 
 type BucketDelta struct {
@@ -39,6 +45,7 @@ type GridIndexManager struct {
 	opsCh        chan indexOp
 	entries      map[uid.UID64]entryCache
 	bucketDeltas map[geom.AABB]*bucketDelta
+	trackDeltas  bool
 	maxGridCord  uint32
 
 	// Scratch for the update path, reused rather than allocated per entity per
@@ -115,6 +122,7 @@ func NewGridIndexManager(space plane.Space2D, cfg GridIndexConfig) (*GridIndexMa
 		opsCh:        make(chan indexOp, opsBufferSize),
 		entries:      make(map[uid.UID64]entryCache),
 		bucketDeltas: make(map[geom.AABB]*bucketDelta),
+		trackDeltas:  cfg.TrackBucketDeltas,
 		maxGridCord:  maxGridCord,
 	}
 	return manager, nil
@@ -415,7 +423,7 @@ func (m *GridIndexManager) indexAABB(aabb geom.AABB) (geom.AABB, bool) {
 }
 
 func (m *GridIndexManager) recordBucketAdds(entryID uid.UID64, aabb geom.AABB) {
-	if m.bucketGrid == nil {
+	if !m.trackDeltas || m.bucketGrid == nil {
 		return
 	}
 	m.bucketGrid.forEachBucketIndex(aabb, func(idx uint32) {
@@ -424,7 +432,7 @@ func (m *GridIndexManager) recordBucketAdds(entryID uid.UID64, aabb geom.AABB) {
 }
 
 func (m *GridIndexManager) recordBucketRemovals(entryID uid.UID64, aabb geom.AABB) {
-	if m.bucketGrid == nil {
+	if !m.trackDeltas || m.bucketGrid == nil {
 		return
 	}
 	m.bucketGrid.forEachBucketIndex(aabb, func(idx uint32) {
@@ -433,6 +441,9 @@ func (m *GridIndexManager) recordBucketRemovals(entryID uid.UID64, aabb geom.AAB
 }
 
 func (m *GridIndexManager) recordBucketUpdates(entryID uid.UID64, oldAABB, newAABB geom.AABB) {
+	if !m.trackDeltas {
+		return
+	}
 	if oldAABB == newAABB {
 		if m.bucketGrid == nil {
 			return
