@@ -77,38 +77,64 @@ func (ab AABB) IntersectsWithFrags(other AABB) bool {
 }
 
 // overlapsWithFrags asks whether any image of ab meets any image of other. The
-// two exported forms differ only in what "meets" means, so they share the walk:
-// main against main, then main against the other's fragments, then each of ab's
-// fragments against the other's main and fragments.
+// two exported forms differ only in what "meets" means, so they share the walk
+// and stop at the first pair that meets.
 func (ab AABB) overlapsWithFrags(other AABB, meets func(a, b geom.AABB) bool) bool {
-	if meets(ab.AABB, other.AABB) {
-		return true
-	}
-	if !ab.HasFragments() && !other.HasFragments() {
-		return false
-	}
-
 	met := false
-	other.VisitFragments(func(_ FragPosition, frag geom.AABB) bool {
-		met = meets(ab.AABB, frag)
-		return !met
-	})
-	if met {
-		return true
-	}
-
-	ab.VisitFragments(func(_ FragPosition, frag geom.AABB) bool {
-		if meets(other.AABB, frag) {
-			met = true
-			return false
-		}
-		other.VisitFragments(func(_ FragPosition, otherFrag geom.AABB) bool {
-			met = meets(frag, otherFrag)
-			return !met
-		})
+	ab.visitImagePairs(other, func(a, b geom.AABB) bool {
+		met = meets(a, b)
 		return !met
 	})
 	return met
+}
+
+// visitImagePairs walks every image of ab against every image of other: main
+// against main, main against the other's fragments, each of ab's fragments
+// against the other's main, and fragment against fragment. fn returning false
+// stops the walk.
+//
+// The last combination is the one easy to talk yourself out of, and it is
+// reachable: a box overhanging the right edge reappears at the left, one
+// overhanging the bottom reappears at the top, and if the first sits high and
+// the second sits left, the two reappearances meet near the origin while no
+// other pair of images does.
+func (ab AABB) visitImagePairs(other AABB, fn func(a, b geom.AABB) bool) {
+	if !fn(ab.AABB, other.AABB) {
+		return
+	}
+
+	abFrags, otherFrags := ab.HasFragments(), other.HasFragments()
+	if !abFrags && !otherFrags {
+		return
+	}
+
+	going := true
+	if otherFrags {
+		other.VisitFragments(func(_ FragPosition, b geom.AABB) bool {
+			going = fn(ab.AABB, b)
+			return going
+		})
+		if !going {
+			return
+		}
+	}
+	if !abFrags {
+		return
+	}
+
+	ab.VisitFragments(func(_ FragPosition, a geom.AABB) bool {
+		if !fn(a, other.AABB) {
+			going = false
+			return false
+		}
+		if otherFrags {
+			other.VisitFragments(func(_ FragPosition, b geom.AABB) bool {
+				going = fn(a, b)
+				return going
+			})
+		}
+		return going
+	})
 }
 
 // HasFragments reports whether the box reaches past a world edge at all —

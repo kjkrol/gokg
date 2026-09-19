@@ -88,3 +88,26 @@ func BenchmarkBucketGrid_BulkMove_100(b *testing.B) {
 		bucketGrid.BulkMove(moveData)
 	}
 }
+
+// BulkMove is the write path every moving entity goes through once a tick, so
+// it is what a change to the box store has to be weighed against.
+func BenchmarkBucketGrid_BulkMove(b *testing.B) {
+	index, _ := NewBucketGrid(Size128x128, Size16x16, WithBucketCapacityFactor(1))
+	bucketGrid := index.(*bucketGrid)
+
+	entries := generateEntries(2000)
+	bucketGrid.BulkInsert(entries)
+
+	// Half a unit across: the common case, where nothing changes cells.
+	moves := EntriesMove{Old: make([]Entry, len(entries)), New: make([]Entry, len(entries))}
+	for i, e := range entries {
+		moves.Old[i] = e
+		moves.New[i] = Entry{Id: e.Id, AABB: geom.NewAABB(
+			e.AABB.TopLeft.Add(NewVec(0.5, 0)), e.AABB.BottomRight.Add(NewVec(0.5, 0)))}
+	}
+
+	for b.Loop() {
+		bucketGrid.BulkMove(moves)
+		moves.Old, moves.New = moves.New, moves.Old
+	}
+}

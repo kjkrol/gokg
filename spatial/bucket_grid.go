@@ -3,7 +3,6 @@ package spatial
 import (
 	"fmt"
 	"math"
-	"sync"
 
 	"github.com/kjkrol/gokg/plane"
 	"github.com/kjkrol/uid"
@@ -16,7 +15,7 @@ type (
 		bucketCapacity    int
 		gridResolution    Resolution
 		gridCellCodec     CellCodec
-		aabbById          map[uid.UID64]AABB
+		boxes             *boxStore
 		bounds            AABB
 		buckets           []bucket
 		optimizer         *memoryOptimizer
@@ -34,18 +33,7 @@ type (
 	Option func(*bucketGrid) error
 )
 
-var (
-	_ Index = (*bucketGrid)(nil)
-	// No size hint: a pooled map never shrinks, and clearing one costs in
-	// proportion to the capacity it has ever reached, not to what this query
-	// put in it. Pre-sizing for 1024 made every small query pay for a range
-	// query that may never come.
-	queryMapPool = sync.Pool{
-		New: func() any {
-			return make(map[uid.UID64]struct{})
-		},
-	}
-)
+var _ Index = (*bucketGrid)(nil)
 
 func NewBucketGrid(
 	overallResolution Resolution,
@@ -70,7 +58,7 @@ func NewBucketGrid(
 		}
 	}
 
-	if bg.aabbById == nil {
+	if bg.boxes == nil {
 		return nil, fmt.Errorf("Initialize bucket capacity first")
 	}
 
@@ -103,7 +91,7 @@ func WithBucketCapacity(bucketCapacity int) Option {
 
 		bg.buckets = make([]bucket, bucketsNumber)
 		bg.optimizer = newMemoryOptimizer(int(bucketsNumber))
-		bg.aabbById = make(map[uid.UID64]AABB, overallCapacity)
+		bg.boxes = newBoxStore(overallCapacity)
 		return nil
 	}
 }
@@ -119,7 +107,7 @@ func (bg *bucketGrid) BulkInsert(entries []Entry) {
 		bg.forEachBucketIndex(entry.AABB, func(idx uint32) {
 			bg.buckets[idx].Add(entry.Id, bg.bucketCapacity)
 		})
-		bg.aabbById[entry.Id] = entry.AABB
+		bg.boxes.set(entry.Id, entry.AABB)
 	}
 }
 
@@ -137,7 +125,7 @@ func (bg *bucketGrid) BulkRemove(entries []Entry) {
 				bg.optimizer.mark(int(idx), len(bg.buckets[idx].ids) == 0)
 			}
 		})
-		delete(bg.aabbById, entry.Id)
+		bg.boxes.remove(entry.Id)
 	}
 }
 
@@ -169,7 +157,7 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 				bg.buckets[idx].Add(newEntry.Id, bg.bucketCapacity)
 			})
 		}
-		bg.aabbById[newEntry.Id] = newEntry.AABB
+		bg.boxes.set(newEntry.Id, newEntry.AABB)
 	}
 }
 
@@ -187,7 +175,7 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.Frag
 	if tlIdx == brIdx {
 		bucket := bg.buckets[tlIdx]
 		for _, id := range bucket.ids {
-			itemAABB, ok := bg.aabbById[id]
+			itemAABB, ok := bg.boxes.get(id)
 			if ok && aabb.Intersects(itemAABB) {
 				collector(withoutFrag(id), plane.FragPosition(fragOf(id)))
 				counter++
@@ -196,13 +184,8 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.Frag
 		return counter
 	}
 
-	// Full path
-	seen := queryMapPool.Get().(map[uid.UID64]struct{})
-	defer queryMapPool.Put(seen)
-	for k := range seen {
-		delete(seen, k)
-	}
-
+	// Full path: the box spans several cells, so an entry big enough to span
+	// them too will be met more than once and must be reported only once.
 	x1, y1 := bg.gridCellCodec.Decode(tlIdx)
 	x2, y2 := bg.gridCellCodec.Decode(brIdx)
 
@@ -215,16 +198,15 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.Frag
 			bucket := bg.buckets[idx]
 
 			for _, id := range bucket.ids {
-				if _, ok := seen[id]; ok {
+				itemAABB, ok := bg.boxes.get(id)
+				if !ok || !aabb.Intersects(itemAABB) {
 					continue
 				}
-
-				itemAABB, ok := bg.aabbById[id]
-				if ok && aabb.Intersects(itemAABB) {
-					seen[id] = struct{}{}
-					collector(withoutFrag(id), plane.FragPosition(fragOf(id)))
-					counter++
+				if !bg.ownsEntry(itemAABB, x, y, x1, y1) {
+					continue
 				}
+				collector(withoutFrag(id), plane.FragPosition(fragOf(id)))
+				counter++
 			}
 		}
 	}
@@ -232,14 +214,34 @@ func (bg *bucketGrid) QueryRange(aabb AABB, collector func(uid.UID64, plane.Frag
 	return counter
 }
 
+// ownsEntry reports whether cell (x, y) is the one that should report an entry
+// covering itemAABB, given that the walk starts at (x1, y1).
+//
+// An entry occupies a rectangle of cells and the walk covers a rectangle of
+// cells, so the two overlap in a rectangle — and the cell at its top-left
+// corner is in it whenever anything is. Naming that cell the owner reports
+// every entry exactly once, which is what the set of already-seen ids used to
+// do at the cost of a map read, a map write and a clear per query.
+func (bg *bucketGrid) ownsEntry(itemAABB AABB, x, y, x1, y1 uint32) bool {
+	ownerX, ok := cellCoord(itemAABB.TopLeft.X, bg.bucketsResolution)
+	if !ok {
+		return true
+	}
+	ownerY, ok := cellCoord(itemAABB.TopLeft.Y, bg.bucketsResolution)
+	if !ok {
+		return true
+	}
+	return max(ownerX, x1) == x && max(ownerY, y1) == y
+}
+
 // Count – number of objects in the structure.
-func (bg *bucketGrid) Count() int { return len(bg.aabbById) }
+func (bg *bucketGrid) Count() int { return bg.boxes.len() }
 
 // Bounds – global bounds of the handled space.
 func (bg *bucketGrid) Bounds() AABB { return bg.bounds }
 
 func (bg *bucketGrid) Clear() {
-	bg.aabbById = make(map[uid.UID64]AABB, len(bg.aabbById))
+	bg.boxes.clear()
 	for i := range bg.buckets {
 		bg.buckets[i].ids = nil
 	}

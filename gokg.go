@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/kjkrol/gokg/collide"
 	"github.com/kjkrol/gokg/geom"
 	"github.com/kjkrol/gokg/plane"
 	"github.com/kjkrol/gokg/raycast"
@@ -159,6 +160,34 @@ func (w *Space) EntryAABB(id uid.UID64) (geom.AABB, bool) {
 // both — see [raycast.View]. Keeping v across ticks reuses its buffers.
 func (w *Space) Scan(observer uid.UID64, cone raycast.Cone, v *raycast.View) bool {
 	return v.Scan(w, observer, cone)
+}
+
+// Neighbours calls fn for every entity within margin of box, box's own
+// wrapped images included — without which a probe straddling a seam silently
+// misses whatever lies across it.
+//
+// box is the caller's scratch: it is expanded in place, so hand in a buffer
+// held across ticks rather than a fresh copy each time. fn may see the same
+// entity twice only if that entity is itself indexed in more than one image.
+//
+// fn takes the same arguments Query's collector does, so it can be handed
+// straight through rather than wrapped — a wrapper here would be one more
+// indirect call per candidate found, on the hottest path there is.
+func (w *Space) Neighbours(box *plane.AABB, margin float64, fn func(id uid.UID64, frag plane.FragPosition)) {
+	w.surface.Expand(box, margin)
+
+	w.spatialIndex.QueryRange(box.AABB, fn)
+	box.VisitFragments(func(_ plane.FragPosition, image geom.AABB) bool {
+		w.spatialIndex.QueryRange(image, fn)
+		return true
+	})
+}
+
+// Resolve pushes the pairs gathered in s apart under this space's boundary
+// rules — see [collide.Solver.Solve]. The index is not told anything: walk
+// s.VisitMoved afterwards and Reindex what settled somewhere new.
+func (w *Space) Resolve(s *collide.Solver, iterations int, onContact func(i int, pen geom.Vec)) {
+	s.Solve(w.surface, iterations, onContact)
 }
 
 // Flush processes all pending queued operations (Insert, Remove, Translate, Expand)

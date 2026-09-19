@@ -167,11 +167,7 @@ func (m *GridIndexManager) EntryAABB(entryID uid.UID64) (geom.AABB, bool) {
 	if m.bucketGrid == nil {
 		return geom.AABB{}, false
 	}
-	aabb, ok := m.bucketGrid.aabbById[entryID]
-	if !ok {
-		return geom.AABB{}, false
-	}
-	return aabb, true
+	return m.bucketGrid.boxes.get(entryID)
 }
 
 // QueryRange przyjmuje teraz czysty wycięty fragment z Broad Phase i sprawdza go bezpośrednio w gridzie
@@ -326,7 +322,7 @@ func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB)) {
 			continue
 		}
 		entryID := withFrag(id, uint8(idx))
-		aabb, ok := m.bucketGrid.aabbById[entryID]
+		aabb, ok := m.bucketGrid.boxes.get(entryID)
 		if !ok {
 			continue
 		}
@@ -386,7 +382,7 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty
 				continue
 			}
 			entryID := withFrag(id, uint8(idx))
-			oldAABB := m.bucketGrid.aabbById[entryID]
+			oldAABB, _ := m.bucketGrid.boxes.get(entryID)
 			newAABB := newFrags[idx]
 			m.recordBucketUpdates(entryID, oldAABB, newAABB)
 			moves.Append(entryID, oldAABB, newAABB)
