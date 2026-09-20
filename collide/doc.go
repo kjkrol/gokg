@@ -10,6 +10,11 @@
 // business. What a contact *means* is the caller's business too: the solver
 // reports each one once and moves on.
 //
+// The one thing a caller may add is a name for each box — Pair.KeyA and KeyB.
+// The solver attaches no meaning to it; it only lets a pair whose boxes have
+// not moved since it was measured go unmeasured on the passes that follow,
+// which is most of a broad phase's candidates.
+//
 // Finding which pairs are worth handing over is the spatial index's job, not
 // this package's — see Space.Neighbours.
 package collide

@@ -12,8 +12,17 @@ import (
 // a pair with both sides static is reported but never separated. A Sensor pair
 // is reported and never separated either — the difference is intent, not
 // mechanics: a sensor is asking to be told, a static pair has nowhere to go.
+//
+// KeyA and KeyB name the two boxes across the batch — the same box under the
+// same key in every pair it appears in, small dense numbers such as an entity
+// index. They let Solve skip a pair neither of whose boxes has moved since it
+// was last measured. Leaving them zero is always safe, and measures every pair
+// on every pass; so is two boxes sharing a key, which only skips less. One box
+// under two keys is the mistake: a move made through one pair would go unseen
+// by the others.
 type Pair struct {
 	A, B             *plane.AABB
+	KeyA, KeyB       uint32
 	StaticA, StaticB bool
 	Sensor           bool
 }
@@ -23,6 +32,7 @@ type Pair struct {
 type state struct {
 	reported       bool
 	movedA, movedB bool
+	testedAt       uint32 // the solver's clock when this pair was last measured; 0 for never
 }
 
 // Solver separates a batch of pairs, reusing its buffers between batches.
@@ -32,12 +42,20 @@ type state struct {
 type Solver struct {
 	pairs  []Pair
 	states []state
+
+	// clock counts measurements, and movedAt holds, per box key, its reading
+	// when that box was last pushed — so "has either box moved since this pair
+	// was measured" is two comparisons, whichever pass or pair moved it.
+	clock   uint32
+	movedAt []uint32
 }
 
 // Reset empties the Solver for a new batch, keeping the memory.
 func (s *Solver) Reset() {
 	s.pairs = s.pairs[:0]
 	s.states = s.states[:0]
+	s.clock = 0
+	clear(s.movedAt)
 }
 
 // Add enters a pair into the batch and returns its index, which is how Solve
@@ -45,6 +63,9 @@ func (s *Solver) Reset() {
 func (s *Solver) Add(p Pair) int {
 	s.pairs = append(s.pairs, p)
 	s.states = append(s.states, state{})
+	if need := int(max(p.KeyA, p.KeyB)) + 1; need > len(s.movedAt) {
+		s.movedAt = append(s.movedAt, make([]uint32, need-len(s.movedAt))...)
+	}
 	return len(s.pairs) - 1
 }
 
@@ -61,13 +82,20 @@ func (s *Solver) Len() int { return len(s.pairs) }
 // More than one pass is needed because separating one pair can drive a box
 // into another; a pass that separates nothing ends the walk, since every
 // later pass would read the same unchanged geometry and reach the same
-// verdict.
+// verdict. The same reasoning holds pair by pair: one neither of whose boxes
+// has moved since it was measured is not measured again — see Pair's keys.
 func (s *Solver) Solve(surface plane.Space2D, iterations int, onContact func(i int, pen geom.Vec)) {
 	for range iterations {
 		moved := false
 		for i := range s.pairs {
 			p := &s.pairs[i]
 			st := &s.states[i]
+
+			if st.testedAt > s.movedAt[p.KeyA] && st.testedAt > s.movedAt[p.KeyB] {
+				continue
+			}
+			s.clock++
+			st.testedAt = s.clock
 
 			hit, ok := p.A.DeepestOverlapWith(p.B)
 			if !ok {
@@ -90,11 +118,13 @@ func (s *Solver) Solve(surface plane.Space2D, iterations int, onContact func(i i
 			}
 			if pushA != (geom.Vec{}) {
 				surface.Translate(p.A, pushA)
+				s.movedAt[p.KeyA] = s.clock
 				st.movedA = true
 				moved = true
 			}
 			if pushB != (geom.Vec{}) {
 				surface.Translate(p.B, pushB)
+				s.movedAt[p.KeyB] = s.clock
 				st.movedB = true
 				moved = true
 			}
