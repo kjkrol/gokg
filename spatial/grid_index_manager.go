@@ -56,6 +56,8 @@ type GridIndexManager struct {
 	oldBuckets []uint32
 	newBuckets []uint32
 	moves      EntriesMove
+
+	sweep pairSweep
 }
 
 type entryCache struct {
@@ -283,6 +285,7 @@ func deltaKeys(set map[uid.UID64]struct{}) []uid.UID64 {
 }
 
 func (m *GridIndexManager) applyInsert(id uid.UID64, shape plane.AABB, markDirty bool, onDirty func(geom.AABB)) {
+	m.bucketGrid.boxes.setSize(id, shape.Size)
 	entries := make([]Entry, 0, 4)
 	mask := uint8(0)
 
@@ -373,6 +376,7 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty
 		m.applyInsert(id, shape, markDirty, onDirty)
 		return
 	}
+	m.bucketGrid.boxes.setSize(id, shape.Size)
 
 	var newFrags [4]geom.AABB
 	newMask := uint8(0)

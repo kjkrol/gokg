@@ -15,6 +15,10 @@ type boxStore struct {
 	// has any reason to touch a box. Capabilities belong to the entity, so
 	// every fragment of one shares the entry.
 	caps []Capability
+
+	// sizes is addressed like main, and holds what main cannot: the whole
+	// entity's extent, where main is only the piece this side of a seam.
+	sizes []Vec
 }
 
 // mainBox is one slot of the main slice. The id is kept and compared, not just
@@ -33,7 +37,26 @@ func (s *boxStore) init(capacity int) {
 	s.main = make([]mainBox, 0, capacity)
 	s.frags = make(map[uid.UID64]AABB)
 	s.caps = make([]Capability, 0, capacity)
+	s.sizes = make([]Vec, 0, capacity)
 	s.count = 0
+}
+
+// setSize records the whole extent of the entity id names.
+func (s *boxStore) setSize(id uid.UID64, size Vec) {
+	i := int(id.Index())
+	for i >= len(s.sizes) {
+		s.sizes = append(s.sizes, Vec{})
+	}
+	s.sizes[i] = size
+}
+
+// sizeOf returns the whole extent of the entity id names, or main's own for
+// one that was never given any.
+func (s *boxStore) sizeOf(id uid.UID64, main AABB) Vec {
+	if i := int(id.Index()); i < len(s.sizes) && s.sizes[i] != (Vec{}) {
+		return s.sizes[i]
+	}
+	return NewVec(main.BottomRight.X-main.TopLeft.X, main.BottomRight.Y-main.TopLeft.Y)
 }
 
 // capsOf returns id's capabilities, Plain if it was never given any.
@@ -127,6 +150,7 @@ func (s *boxStore) len() int { return s.count }
 func (s *boxStore) clear() {
 	s.main = s.main[:0]
 	s.caps = s.caps[:0]
+	s.sizes = s.sizes[:0]
 	clear(s.frags)
 	s.count = 0
 }

@@ -170,6 +170,10 @@ const (
 	Plain = spatial.Plain
 	// AnyCapability accepts every entity — see [spatial.AnyCapability].
 	AnyCapability = spatial.AnyCapability
+
+	// CanCollide is an entity that takes part in collision detection — what
+	// Pairs is asked for when it gathers the solver's candidates.
+	CanCollide Capability = 1 << 1
 )
 
 // SetCapabilities records what may be done with id, so a query for a
@@ -200,6 +204,19 @@ func (w *Space) Neighbours(box *plane.AABB, margin float64, want Capability, fn 
 		w.spatialIndex.QueryRangeWith(image, want, fn)
 		return true
 	})
+}
+
+// Pairs calls fn once for every two entities sharing a capability with want
+// that could come into contact within a step, the lower index first: each
+// reaches reach times its own shorter side past its box, and two whose reaches
+// touch are a pair. With nothing moving further than that in one step, no two
+// can meet without having been named here first.
+//
+// It reads the index as of the last Flush, and replaces a Neighbours call per
+// entity — which meets every pair from both ends — with one pass that meets
+// each once.
+func (w *Space) Pairs(reach float64, want Capability, fn func(a, b uid.UID64)) {
+	w.spatialIndex.Pairs(reach, want, fn)
 }
 
 // Resolve pushes the pairs gathered in s apart under this space's boundary
