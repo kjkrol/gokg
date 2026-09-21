@@ -1,30 +1,24 @@
-package gokg
+package aabbworld
 
 import (
 	"testing"
 
-	"github.com/kjkrol/gokg/geom"
-	"github.com/kjkrol/gokg/plane"
-	"github.com/kjkrol/gokg/spatial"
+	"github.com/kjkrol/aabbworld/geom"
+	"github.com/kjkrol/aabbworld/plane"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestSpace_WrapAABB_DelegatesAndFragments guards that Space.WrapAABB
-// exposes the underlying Space2D.WrapAABB — a box overflowing a toroidal
-// space's bounds comes back wrapping into fragments for the parts that ran
-// past the edges.
 func TestSpace_WrapAABB_DelegatesAndFragments(t *testing.T) {
 	cfg := Config{
 		Width: 100, Height: 100,
-		Toroidal:       true,
-		BucketSize:     spatial.Size8x8,
+		Edges:          Torus,
+		BucketSize:     8,
 		BucketCapacity: 10,
 	}
 	space, err := NewSpace(cfg)
 	require.NoError(t, err)
 
-	// straddles the right/bottom edge of the 100x100 world
 	overflowing := geom.AABB{TopLeft: geom.NewVec(95, 95), BottomRight: geom.NewVec(105, 105)}
 
 	wrapped := space.WrapAABB(overflowing)
@@ -37,14 +31,11 @@ func TestSpace_WrapAABB_DelegatesAndFragments(t *testing.T) {
 	assert.Equal(t, 3, frags, "expected a box overflowing both edges to wrap into three fragments")
 }
 
-// TestSpace_WrapAABB_EuclideanClips guards that a non-toroidal space
-// clips (rather than fragments) an out-of-bounds box, matching
-// Insert/Translate's own behavior there.
 func TestSpace_WrapAABB_EuclideanClips(t *testing.T) {
 	cfg := Config{
 		Width: 100, Height: 100,
-		Toroidal:       false,
-		BucketSize:     spatial.Size8x8,
+		Edges:          0,
+		BucketSize:     8,
 		BucketCapacity: 10,
 	}
 	space, err := NewSpace(cfg)

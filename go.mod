@@ -1,4 +1,4 @@
-module github.com/kjkrol/gokg
+module github.com/kjkrol/aabbworld
 
 go 1.26.4
 

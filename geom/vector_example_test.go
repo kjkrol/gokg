@@ -31,15 +31,6 @@ func ExampleVec_AddMutable() {
 	// Output: (4,6)
 }
 
-// ExampleVec_SubMutable demonstrates how to use the SubMutable method.
-func ExampleVec_SubMutable() {
-	v1 := NewVec(5.0, 7.0)
-	v2 := NewVec(2.0, 3.0)
-	v1.SubMutable(v2)
-	fmt.Println(v1)
-	// Output: (3,4)
-}
-
 // ExampleVec_Equals demonstrates how to use the Equals method.
 func ExampleVec_Equals() {
 	v1 := NewVec(1.0, 2.0)

@@ -1,12 +1,10 @@
 package plane
 
 import (
-	"github.com/kjkrol/gokg/geom"
+	"github.com/kjkrol/aabbworld/geom"
 )
 
-// FragPosition identifies a fragment's position relative to its parent AABB (axis-aligned bounding box).
-// Names follow logical cardinal directions of the parent; depending on screen
-// coordinates they may appear flipped (e.g. right on a Euclidean grid may render left in screen space).
+// FragPosition names a wrapped piece of a box by the edge of the parent it lies past.
 type FragPosition int
 
 const (
@@ -19,22 +17,8 @@ const (
 	FRAG_BOTTOM_RIGHT
 )
 
-// AABB extends geom.AABB with the size and wrap overhang Space normalisation
-// needs. It is the Space-aware view of a AABB: Space keeps AABB instances
-// canonical within its domain.
-//
-// Overhang is how far the box runs past the world's far edges once normalised,
-// and zero on an axis it does not cross. It is everything a wrapped fragment
-// needs: each piece follows from it and the main box, so the pieces are rebuilt
-// on demand by VisitFragments rather than carried in every copy of the struct.
-// Holding them instead would cost six times the memory in what is, for a moving
-// entity, a cache recomputed every tick and read once.
-//
-// The field is exported (not hidden behind a BinaryMarshaler) so AABB stays a
-// plain, recursively POD-encodable type for goke's persist — embedding a type
-// with its own MarshalBinary would silently drop any sibling fields on the
-// embedding struct that MarshalBinary doesn't know about (Go promotes the
-// method to the whole outer type).
+// AABB is a box kept canonical within a Space: its corners, its size, and its Overhang —
+// how far it runs past the world's far edges, from which its wrapped pieces follow.
 type AABB struct {
 	geom.AABB
 	Size     geom.Vec
@@ -64,46 +48,13 @@ func (ab AABB) Equals(other AABB) bool {
 	return ab.AABB.Equals(other.AABB)
 }
 
-// ContainsWithFrags reports whether ab, or any of its wrapped fragments,
-// contains other or any of its own.
-func (ab AABB) ContainsWithFrags(other AABB) bool {
-	return ab.overlapsWithFrags(other, geom.AABB.Contains)
-}
-
-// IntersectsWithFrags reports whether ab, or any of its wrapped fragments,
-// intersects other or any of its own.
-func (ab AABB) IntersectsWithFrags(other AABB) bool {
-	return ab.overlapsWithFrags(other, geom.AABB.Intersects)
-}
-
-// overlapsWithFrags asks whether any image of ab meets any image of other. The
-// two exported forms differ only in what "meets" means, so they share the walk
-// and stop at the first pair that meets.
-func (ab AABB) overlapsWithFrags(other AABB, meets func(a, b geom.AABB) bool) bool {
-	met := false
-	ab.visitImagePairs(other, func(a, b geom.AABB) bool {
-		met = meets(a, b)
-		return !met
-	})
-	return met
-}
-
-// visitImagePairs walks every image of ab against every image of other: main
-// against main, main against the other's fragments, each of ab's fragments
-// against the other's main, and fragment against fragment. fn returning false
-// stops the walk.
-//
-// The last combination is the one easy to talk yourself out of, and it is
-// reachable: a box overhanging the right edge reappears at the left, one
-// overhanging the bottom reappears at the top, and if the first sits high and
-// the second sits left, the two reappearances meet near the origin while no
-// other pair of images does.
+// visitImagePairs walks every image of ab against every image of other until fn returns false.
 func (ab AABB) visitImagePairs(other AABB, fn func(a, b geom.AABB) bool) {
 	if !fn(ab.AABB, other.AABB) {
 		return
 	}
 
-	abFrags, otherFrags := ab.HasFragments(), other.HasFragments()
+	abFrags, otherFrags := ab.hasFragments(), other.hasFragments()
 	if !abFrags && !otherFrags {
 		return
 	}
@@ -137,20 +88,16 @@ func (ab AABB) visitImagePairs(other AABB, fn func(a, b geom.AABB) bool) {
 	})
 }
 
-// HasFragments reports whether the box reaches past a world edge at all —
-// the cheap test to run before VisitFragments, which otherwise answers the
-// same question through a closure call per piece.
-func (ab AABB) HasFragments() bool {
+// hasFragments reports whether the box reaches past a world edge at all.
+func (ab AABB) hasFragments() bool {
 	var none float64
 	return ab.Overhang.X > none || ab.Overhang.Y > none
 }
 
+// FragVisitor is handed each wrapped piece of a box and says whether to go on to the next.
 type FragVisitor func(pos FragPosition, box geom.AABB) bool
 
-// VisitFragments calls fn for each piece the box wraps into, rebuilding it from
-// the overhang: the part past the right edge reappears at the left, the part
-// past the bottom at the top, and the corner where both happen at once.
-// fn returning false stops the walk.
+// VisitFragments calls fn for each piece the box wraps into, until fn returns false.
 func (ab *AABB) VisitFragments(fn FragVisitor) {
 	var none float64
 	dx, dy := ab.Overhang.X, ab.Overhang.Y
@@ -170,10 +117,4 @@ func (ab *AABB) VisitFragments(fn FragVisitor) {
 	if dx > none && dy > none {
 		fn(FRAG_BOTTOM_RIGHT, geom.NewAABB(geom.NewVec(none, none), geom.NewVec(dx, dy)))
 	}
-}
-
-// fragmentation records how far the box ran past the far edges; the pieces
-// themselves are rebuilt from it whenever someone asks.
-func (ab *AABB) fragmentation(dx, dy float64) {
-	ab.Overhang = geom.NewVec(dx, dy)
 }

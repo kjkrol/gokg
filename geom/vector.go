@@ -5,9 +5,7 @@ import (
 	"fmt"
 )
 
-// Vec is a 2D vector. Coordinates are float64 throughout: the world is
-// continuous, Go's math package speaks float64, and an integer world forced
-// callers to carry sub-unit remainders by hand.
+// Vec is a 2D vector in float64 coordinates.
 type Vec struct{ X, Y float64 }
 
 func NewVec(X, Y float64) Vec { return Vec{X, Y} }
@@ -20,15 +18,6 @@ func (v Vec) Sub(v2 Vec) Vec { return Vec{v.X - v2.X, v.Y - v2.Y} }
 
 // AddMutable adds v2 to v in place.
 func (v *Vec) AddMutable(v2 Vec) { v.X += v2.X; v.Y += v2.Y }
-
-// SubMutable subtracts v2 from v in place.
-func (v *Vec) SubMutable(v2 Vec) { v.X -= v2.X; v.Y -= v2.Y }
-
-// Invert directions
-func (v *Vec) Invert() { v.X = -v.X; v.Y = -v.Y }
-
-// Multiply by factor
-func (v *Vec) Multiply(factor float64) { v.X = v.X * factor; v.Y = v.Y * factor }
 
 // Equals reports whether v and v2 have the same components.
 func (v Vec) Equals(v2 Vec) bool { return v.X == v2.X && v.Y == v2.Y }
