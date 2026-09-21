@@ -1,6 +1,6 @@
 module github.com/kjkrol/aabbworld
 
-go 1.26.4
+go 1.27.1
 
 require (
 	github.com/kjkrol/uid v0.3.0
