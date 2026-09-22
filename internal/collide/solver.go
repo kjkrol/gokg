@@ -5,6 +5,7 @@ import (
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
 	"github.com/kjkrol/aabbworld/plane"
 	"github.com/kjkrol/uid"
+	"math"
 )
 
 // Pair is two entities' boxes that may be in contact, with the flags the solver separates them by.
@@ -18,7 +19,6 @@ const (
 	StaticA uint8 = 1 << iota
 	StaticB
 	Sensor
-	dropped
 	reported
 	movedA
 	movedB
@@ -26,7 +26,7 @@ const (
 
 // state is what the solver remembers about a pair across passes.
 type state struct {
-	testedAt uint32 // the solver's clock when this pair was last measured; 0 for never
+	testedAt uint32 // the solver's clock when last measured: 0 for never, MaxUint32 for dropped
 	flags    uint8
 }
 
@@ -74,9 +74,6 @@ func (s *Solver) Solve(surface *iplane.Surface, iterations int, touch Touch, onC
 		for i := range s.pairs {
 			p := &s.pairs[i]
 			st := &s.states[i]
-			if st.flags&dropped != 0 {
-				continue
-			}
 			keyA, keyB := p.IDA.Index(), p.IDB.Index()
 
 			if st.testedAt > s.movedAt[keyA] && st.testedAt > s.movedAt[keyB] {
@@ -94,7 +91,7 @@ func (s *Solver) Solve(surface *iplane.Surface, iterations int, touch Touch, onC
 			if st.flags&reported == 0 {
 				if touch != nil {
 					if pen, ok = touch(i, pen); !ok {
-						st.flags |= dropped
+						st.testedAt = math.MaxUint32
 						continue
 					}
 				}
