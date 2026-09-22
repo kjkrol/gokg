@@ -1,4 +1,4 @@
-package collide_test
+package bench_test
 
 import (
 	"math/rand/v2"
@@ -12,14 +12,17 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-// benchBatch is a field of boxes standing clear of their neighbours, every 25th nudged into one.
-type benchBatch struct {
+// solverIterations caps the passes one Solve spends on chained overlaps.
+const solverIterations = 16
+
+// solverBatch is a field of boxes standing clear of their neighbours, every 25th nudged into one.
+type solverBatch struct {
 	home  []plane.AABB
 	pairs [][2]int
 }
 
-func newBenchBatch(cols, rows int) *benchBatch {
-	b := &benchBatch{}
+func newSolverBatch(cols, rows int) *solverBatch {
+	b := &solverBatch{}
 	for r := range rows {
 		for c := range cols {
 			x := float64(c) * 12
@@ -43,12 +46,15 @@ func newBenchBatch(cols, rows int) *benchBatch {
 	return b
 }
 
-func BenchmarkSolve(b *testing.B) {
-	batch := newBenchBatch(100, 50)
+// Benchmark_Solver_Field solves a 100x50 field of boxes whose every neighbour pair is a candidate,
+// one in twenty-five of them really overlapping.
+func Benchmark_Solver_Field(b *testing.B) {
+	batch := newSolverBatch(100, 50)
 	surface := iplane.NewEuclidean2D(2000, 2000)
 
 	items := make([]spatial.Item, len(batch.home))
 	var s collide.Solver
+	b.ReportAllocs()
 	for b.Loop() {
 		for i, box := range batch.home {
 			items[i] = spatial.Item{ID: uid.UID64(i + 1), Box: box}
@@ -57,7 +63,7 @@ func BenchmarkSolve(b *testing.B) {
 		for _, p := range batch.pairs {
 			s.Add(collide.Pair{A: int32(p[0]), B: int32(p[1])})
 		}
-		s.Solve(items, surface, iterations, nil, nil)
+		s.Solve(items, surface, solverIterations, nil, nil)
 	}
 	b.ReportMetric(float64(len(batch.pairs)), "pairs")
 }
@@ -76,22 +82,24 @@ func newDenseScene(n int) *denseScene {
 	for i := range n {
 		box := plane.NewAABB(geom.NewVec(rng.Float64()*1024, rng.Float64()*1024), 5, 5)
 		surface.Translate(&box, geom.Vec{})
-		sc.home = append(sc.home, spatial.Item{ID: uid.UID64(i + 1), Box: box, Caps: 1})
+		sc.home = append(sc.home, spatial.Item{ID: uid.UID64(i + 1), Box: box, Caps: spatial.CanCollide})
 	}
 	grid := spatial.NewGrid(surface, spatial.Size1024x1024, spatial.Size16x16)
 	grid.Rebuild(sc.home)
-	grid.Pairs(0.5, 1, func(a, b int32) {
+	grid.Pairs(0.5, spatial.CanCollide, func(a, b int32) {
 		sc.pairs = append(sc.pairs, collide.Pair{A: a, B: b})
 	})
 	return sc
 }
 
-func BenchmarkSolve_Dense(b *testing.B) {
+// Benchmark_Solver_Dense solves the candidate pairs of a dense crowd of 8388 boxes on a torus.
+func Benchmark_Solver_Dense(b *testing.B) {
 	sc := newDenseScene(8388)
 	items := make([]spatial.Item, len(sc.home))
 	var s collide.Solver
 	contacts := 0
 	onContact := func(int, geom.Vec) { contacts++ }
+	b.ReportAllocs()
 	for b.Loop() {
 		copy(items, sc.home)
 		s.Reset(len(items))
@@ -99,7 +107,7 @@ func BenchmarkSolve_Dense(b *testing.B) {
 			s.Add(p)
 		}
 		contacts = 0
-		s.Solve(items, sc.surface, iterations, nil, onContact)
+		s.Solve(items, sc.surface, solverIterations, nil, onContact)
 	}
 	b.ReportMetric(float64(len(sc.pairs)), "pairs")
 	b.ReportMetric(float64(contacts), "contacts")

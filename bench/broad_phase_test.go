@@ -1,4 +1,4 @@
-package aabbworld_test
+package bench_test
 
 import (
 	"math/rand/v2"
@@ -10,6 +10,36 @@ import (
 	"github.com/kjkrol/aabbworld/plane"
 	"github.com/kjkrol/uid"
 )
+
+// pairsReach is how far a box may travel in a tick, as a fraction of its shorter side.
+const pairsReach = 0.5
+
+// crowd is a population kept beside the Space rebuilt from it.
+type crowd struct {
+	space *aabbworld.Space
+	items []aabbworld.Item
+}
+
+func (c *crowd) add(x, y, w, h float64, caps aabbworld.Capability) {
+	box := c.space.WrapAABB(plane.NewAABB(geom.NewVec(x, y), w, h).AABB)
+	c.items = append(c.items, aabbworld.Item{ID: uid.UID64(len(c.items)), Box: box, Caps: caps})
+}
+
+func (c *crowd) rebuild() { c.space.Rebuild(c.items) }
+
+// hooks is a Handler made of optional funcs; an unset Touch confirms every pair.
+type hooks struct {
+	touch func(a, b uid.UID64, pen geom.Vec) (geom.Vec, bool)
+}
+
+func (h *hooks) Touch(a, b uid.UID64, pen geom.Vec) (geom.Vec, bool) {
+	if h.touch == nil {
+		return pen, true
+	}
+	return h.touch(a, b, pen)
+}
+func (h *hooks) Contact(uid.UID64, uid.UID64, geom.Vec) {}
+func (h *hooks) Moved(uid.UID64, plane.AABB)            {}
 
 // broadPhaseScene is a population and the bucket size a caller sizing its
 // buckets from its largest entity would have picked for it.
@@ -60,7 +90,10 @@ func grown(b plane.AABB, margin float64) geom.AABB {
 	)
 }
 
-func BenchmarkBroadPhase(b *testing.B) {
+// Benchmark_BroadPhase compares two ways of finding who is near whom in a crowd: one Query per
+// entity over its grown box (probe-per-entity), and one Engine.Tick that pairs every box grown by
+// pairsReach and asks Touch about each overlapping pair (tick; Touch refuses, so nothing moves).
+func Benchmark_BroadPhase(b *testing.B) {
 	for _, sc := range broadPhaseScenes {
 		b.Run(sc.name+"/probe-per-entity", func(b *testing.B) {
 			c := sc.build(b)
@@ -71,6 +104,7 @@ func BenchmarkBroadPhase(b *testing.B) {
 					found++
 				}
 			}
+			b.ReportAllocs()
 			for b.Loop() {
 				found = 0
 				for _, it := range c.items {
@@ -88,6 +122,7 @@ func BenchmarkBroadPhase(b *testing.B) {
 				return pen, false
 			}}
 			e := c.space.CollideEngine(h, collide.Config{Reach: pairsReach, Iterations: 1})
+			b.ReportAllocs()
 			for b.Loop() {
 				found = 0
 				e.Tick()

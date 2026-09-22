@@ -11,6 +11,13 @@ import (
 	"github.com/kjkrol/uid"
 )
 
+func torusIf(toroidal bool) aabbworld.Edges {
+	if toroidal {
+		return aabbworld.Torus
+	}
+	return 0
+}
+
 func engineSpace(t *testing.T, toroidal bool) *aabbworld.Space {
 	t.Helper()
 	space, err := aabbworld.NewSpace(aabbworld.Config{

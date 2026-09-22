@@ -33,3 +33,5 @@ Thumbs.db
 # Go cache
 .gocache
 .cache
+# Raw benchmark output of make bench-save
+bench_results/

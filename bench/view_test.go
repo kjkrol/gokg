@@ -1,4 +1,4 @@
-package aabbworld_test
+package bench_test
 
 import (
 	"fmt"
@@ -12,18 +12,11 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-func torusIf(toroidal bool) aabbworld.Edges {
-	if toroidal {
-		return aabbworld.Torus
-	}
-	return 0
-}
-
 // realSpace scatters n entities through a bucket-indexed Space and returns it with an observer.
-func realSpace(b *testing.B, n int, toroidal bool) (*aabbworld.Space, uid.UID64) {
+func realSpace(b *testing.B, n int) (*aabbworld.Space, uid.UID64) {
 	b.Helper()
 	space, err := aabbworld.NewSpace(aabbworld.Config{
-		Width: 4000, Height: 4000, Edges: torusIf(toroidal),
+		Width: 4000, Height: 4000,
 		BucketSize: 256,
 	})
 	if err != nil {
@@ -39,15 +32,19 @@ func realSpace(b *testing.B, n int, toroidal bool) (*aabbworld.Space, uid.UID64)
 	return space, observer
 }
 
-func Benchmark_Real_Visible(b *testing.B) {
+func entities(n int) string { return fmt.Sprintf("entities=%d", n) }
+
+var viewCone = aabbworld.Cone{Direction: geom.NewVec(1.0, 0.0), HalfAngle: math.Pi / 4, Radius: 800}
+
+// Benchmark_View_Visible scans a cone and lists what it sees, nearest first.
+func Benchmark_View_Visible(b *testing.B) {
 	for _, n := range []int{100, 1000} {
-		b.Run(name(n), func(b *testing.B) {
-			space, observer := realSpace(b, n, false)
-			cone := aabbworld.Cone{Direction: geom.NewVec(1.0, 0.0), HalfAngle: math.Pi / 4, Radius: 800}
+		b.Run(entities(n), func(b *testing.B) {
+			space, observer := realSpace(b, n)
 			v := &aabbworld.View{}
 			b.ReportAllocs()
 			for b.Loop() {
-				if space.Scan(observer, cone, v) {
+				if space.Scan(observer, viewCone, v) {
 					v.Entities(func(uid.UID64, float64) {})
 				}
 			}
@@ -55,16 +52,16 @@ func Benchmark_Real_Visible(b *testing.B) {
 	}
 }
 
-func Benchmark_Real_Outline(b *testing.B) {
+// Benchmark_View_Outline scans a cone and traces the lit region as a fan of points.
+func Benchmark_View_Outline(b *testing.B) {
 	for _, n := range []int{100, 1000} {
-		b.Run(name(n), func(b *testing.B) {
-			space, observer := realSpace(b, n, false)
-			cone := aabbworld.Cone{Direction: geom.NewVec(1.0, 0.0), HalfAngle: math.Pi / 4, Radius: 800}
+		b.Run(entities(n), func(b *testing.B) {
+			space, observer := realSpace(b, n)
 			v := &aabbworld.View{}
 			var fog []geom.Vec
 			b.ReportAllocs()
 			for b.Loop() {
-				if space.Scan(observer, cone, v) {
+				if space.Scan(observer, viewCone, v) {
 					fog = v.Outline(0, fog[:0])
 				}
 			}
@@ -72,16 +69,16 @@ func Benchmark_Real_Outline(b *testing.B) {
 	}
 }
 
-func Benchmark_Real_View(b *testing.B) {
+// Benchmark_View_Both scans once and reads both the entities and the outline.
+func Benchmark_View_Both(b *testing.B) {
 	for _, n := range []int{100, 1000} {
-		b.Run(name(n), func(b *testing.B) {
-			space, observer := realSpace(b, n, false)
-			cone := aabbworld.Cone{Direction: geom.NewVec(1.0, 0.0), HalfAngle: math.Pi / 4, Radius: 800}
+		b.Run(entities(n), func(b *testing.B) {
+			space, observer := realSpace(b, n)
 			v := &aabbworld.View{}
 			var fog []geom.Vec
 			b.ReportAllocs()
 			for b.Loop() {
-				if space.Scan(observer, cone, v) {
+				if space.Scan(observer, viewCone, v) {
 					v.Entities(func(uid.UID64, float64) {})
 					fog = v.Outline(0, fog[:0])
 				}
@@ -90,21 +87,19 @@ func Benchmark_Real_View(b *testing.B) {
 	}
 }
 
-func Benchmark_Real_Depths(b *testing.B) {
+// Benchmark_View_Depths scans a cone and samples its reach at 63 angles.
+func Benchmark_View_Depths(b *testing.B) {
 	for _, n := range []int{100, 1000} {
-		b.Run(name(n), func(b *testing.B) {
-			space, observer := realSpace(b, n, false)
-			cone := aabbworld.Cone{Direction: geom.NewVec(1.0, 0.0), HalfAngle: math.Pi / 4, Radius: 800}
+		b.Run(entities(n), func(b *testing.B) {
+			space, observer := realSpace(b, n)
 			v := &aabbworld.View{}
-			var fog []float32
+			var depths []float32
 			b.ReportAllocs()
 			for b.Loop() {
-				if space.Scan(observer, cone, v) {
-					fog = v.Depths(63, fog[:0])
+				if space.Scan(observer, viewCone, v) {
+					depths = v.Depths(63, depths[:0])
 				}
 			}
 		})
 	}
 }
-
-func name(n int) string { return fmt.Sprintf("entities=%d", n) }
