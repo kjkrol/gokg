@@ -3,6 +3,7 @@ package aabbworld
 import (
 	"github.com/kjkrol/aabbworld/geom"
 	iraycast "github.com/kjkrol/aabbworld/internal/raycast"
+	"github.com/kjkrol/aabbworld/internal/spatial"
 	"github.com/kjkrol/uid"
 )
 
@@ -34,9 +35,9 @@ func (v *View) Outline(maxArcStep float64, dst []geom.Vec) []geom.Vec {
 type sight struct{ s *Space }
 
 func (e sight) Query(box geom.AABB, fn func(id uid.UID64)) int {
-	return e.s.core.Index.QueryRange(box, fn)
+	return e.s.grid.Query(box, spatial.AnyCapability, fn)
 }
-func (e sight) EntryAABB(id uid.UID64) (geom.AABB, bool) { return e.s.core.Index.EntryAABB(id) }
+func (e sight) EntryAABB(id uid.UID64) (geom.AABB, bool) { return e.s.grid.EntryAABB(id) }
 func (e sight) Bounds() (width, height uint32, wrapX, wrapY bool) {
 	return e.s.Width, e.s.Height, e.s.Edges.WrapsX(), e.s.Edges.WrapsY()
 }

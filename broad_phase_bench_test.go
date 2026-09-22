@@ -1,11 +1,13 @@
-package collide_test
+package aabbworld_test
 
 import (
-	"github.com/kjkrol/aabbworld"
-	"github.com/kjkrol/aabbworld/collide"
 	"math/rand/v2"
 	"testing"
 
+	"github.com/kjkrol/aabbworld"
+	"github.com/kjkrol/aabbworld/collide"
+	"github.com/kjkrol/aabbworld/geom"
+	"github.com/kjkrol/aabbworld/plane"
 	"github.com/kjkrol/uid"
 )
 
@@ -34,7 +36,7 @@ func (sc broadPhaseScene) build(b *testing.B) *crowd {
 	b.Helper()
 	space, err := aabbworld.NewSpace(aabbworld.Config{
 		Width: 2048, Height: 2048, Edges: aabbworld.Torus,
-		BucketSize: sc.bucket, BucketCapacity: 8,
+		BucketSize: sc.bucket,
 	})
 	if err != nil {
 		b.Fatalf("NewSpace: %v", err)
@@ -46,8 +48,16 @@ func (sc broadPhaseScene) build(b *testing.B) *crowd {
 			c.add(rng.Float64()*2048, rng.Float64()*2048, g.side, g.side, aabbworld.CanCollide)
 		}
 	}
-	space.Flush(nil)
+	c.rebuild()
 	return c
+}
+
+// grown is the whole of b, seam pieces and all, reaching margin further on every side.
+func grown(b plane.AABB, margin float64) geom.AABB {
+	return geom.NewAABB(
+		geom.NewVec(b.TopLeft.X-margin, b.TopLeft.Y-margin),
+		geom.NewVec(b.TopLeft.X+b.Size.X+margin, b.TopLeft.Y+b.Size.Y+margin),
+	)
 }
 
 func BenchmarkBroadPhase(b *testing.B) {
@@ -63,26 +73,26 @@ func BenchmarkBroadPhase(b *testing.B) {
 			}
 			for b.Loop() {
 				found = 0
-				for i, id := range c.ids {
-					self = id
-					c.space.Query(grown(c.boxes[i], sc.margin), aabbworld.CanCollide, onFound)
+				for _, it := range c.items {
+					self = it.ID
+					c.space.Query(grown(it.Box, sc.margin), aabbworld.CanCollide, onFound)
 				}
 			}
 			b.ReportMetric(float64(found), "pairs")
 		})
-		b.Run(sc.name+"/pairs", func(b *testing.B) {
+		b.Run(sc.name+"/tick", func(b *testing.B) {
 			c := sc.build(b)
 			found := 0
-			var e collide.Engine
-			onPair := func(_, _ uid.UID64) (collide.Body, collide.Body, bool) {
+			h := &hooks{touch: func(_, _ uid.UID64, pen geom.Vec) (geom.Vec, bool) {
 				found++
-				return collide.Body{}, collide.Body{}, false
-			}
+				return pen, false
+			}}
+			e := c.space.CollideEngine(h, collide.Config{Reach: pairsReach, Iterations: 1})
 			for b.Loop() {
 				found = 0
-				e.Tick(c.space, pairsReach, aabbworld.CanCollide, 0, onPair, nil, nil)
+				e.Tick()
 			}
-			b.ReportMetric(float64(found), "pairs")
+			b.ReportMetric(float64(found), "overlaps")
 		})
 	}
 }

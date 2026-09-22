@@ -9,19 +9,19 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-func ExampleSpace_Translate() {
+func ExampleSpace_Move() {
 	space, err := aabbworld.NewSpace(aabbworld.Config{
-		Width: 16, Height: 16, Edges: aabbworld.Torus, BucketSize: 4, BucketCapacity: 4,
+		Width: 16, Height: 16, Edges: aabbworld.Torus, BucketSize: 4,
 	})
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	id := uid.UID64(1)
-	box := space.WrapAABB(geom.NewAABBAt(geom.NewVec(0, 0), 2, 2))
-	space.Insert(id, &box)
-	space.Translate(id, &box, geom.NewVec(-1, -1))
+	items := []aabbworld.Item{{ID: uid.UID64(1), Box: space.WrapAABB(geom.NewAABBAt(geom.NewVec(0, 0), 2, 2))}}
+	box := &items[0].Box
+	space.Move(box, geom.NewVec(-1, -1))
+	space.Rebuild(items)
 
 	fmt.Printf("New position: %s\n", box)
 	box.VisitFragments(func(pos plane.FragPosition, piece geom.AABB) bool {

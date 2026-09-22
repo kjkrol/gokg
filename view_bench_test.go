@@ -24,18 +24,18 @@ func realSpace(b *testing.B, n int, toroidal bool) (*aabbworld.Space, uid.UID64)
 	b.Helper()
 	space, err := aabbworld.NewSpace(aabbworld.Config{
 		Width: 4000, Height: 4000, Edges: torusIf(toroidal),
-		BucketSize: 256, BucketCapacity: 16,
+		BucketSize: 256,
 	})
 	if err != nil {
 		b.Fatal(err)
 	}
 	observer := uid.UID64(1)
-	space.Insert(observer, ptr(plane.NewAABB(geom.NewVec(2000, 2000), 10, 10)))
+	items := []aabbworld.Item{{ID: observer, Box: plane.NewAABB(geom.NewVec(2000, 2000), 10, 10)}}
 	r := rand.New(rand.NewPCG(1, 2))
 	for i := range n {
-		space.Insert(uid.UID64(100+i), ptr(plane.NewAABB(geom.NewVec(float64(r.IntN(4000)), float64(r.IntN(4000))), 20, 20)))
+		items = append(items, aabbworld.Item{ID: uid.UID64(100 + i), Box: plane.NewAABB(geom.NewVec(float64(r.IntN(4000)), float64(r.IntN(4000))), 20, 20)})
 	}
-	space.Flush(nil)
+	space.Rebuild(items)
 	return space, observer
 }
 

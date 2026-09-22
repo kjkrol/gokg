@@ -13,17 +13,18 @@ import (
 func ExampleView() {
 	space, err := aabbworld.NewSpace(aabbworld.Config{
 		Width: 1000, Height: 1000,
-		BucketSize: 256, BucketCapacity: 8,
+		BucketSize: 256,
 	})
 	if err != nil {
 		panic(err)
 	}
 
 	const guard = uid.UID64(1)
-	space.Insert(guard, ptr(plane.NewAABB(geom.NewVec(100, 100), 10, 10)))
-	space.Insert(uid.UID64(2), ptr(plane.NewAABB(geom.NewVec(300, 100), 10, 10)))
-	space.Insert(uid.UID64(3), ptr(plane.NewAABB(geom.NewVec(500, 100), 10, 10)))
-	space.Flush(nil)
+	space.Rebuild([]aabbworld.Item{
+		{ID: guard, Box: plane.NewAABB(geom.NewVec(100, 100), 10, 10)},
+		{ID: uid.UID64(2), Box: plane.NewAABB(geom.NewVec(300, 100), 10, 10)},
+		{ID: uid.UID64(3), Box: plane.NewAABB(geom.NewVec(500, 100), 10, 10)},
+	})
 
 	cone := aabbworld.Cone{
 		Direction: geom.NewVec(1.0, 0.0),

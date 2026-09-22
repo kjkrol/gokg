@@ -12,9 +12,8 @@ import (
 func TestSpace_WrapAABB_DelegatesAndFragments(t *testing.T) {
 	cfg := Config{
 		Width: 100, Height: 100,
-		Edges:          Torus,
-		BucketSize:     8,
-		BucketCapacity: 10,
+		Edges:      Torus,
+		BucketSize: 8,
 	}
 	space, err := NewSpace(cfg)
 	require.NoError(t, err)
@@ -34,9 +33,8 @@ func TestSpace_WrapAABB_DelegatesAndFragments(t *testing.T) {
 func TestSpace_WrapAABB_EuclideanClips(t *testing.T) {
 	cfg := Config{
 		Width: 100, Height: 100,
-		Edges:          0,
-		BucketSize:     8,
-		BucketCapacity: 10,
+		Edges:      0,
+		BucketSize: 8,
 	}
 	space, err := NewSpace(cfg)
 	require.NoError(t, err)

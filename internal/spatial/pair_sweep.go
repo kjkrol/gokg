@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/kjkrol/aabbworld/geom"
+	iplane "github.com/kjkrol/aabbworld/internal/plane"
 	"github.com/kjkrol/aabbworld/plane"
 	"github.com/kjkrol/uid"
 )
@@ -42,22 +43,29 @@ type sweepEntry struct {
 
 type seamPair struct{ a, b uid.UID64 }
 
-// Pairs calls fn once, lower index first, for every two entries sharing want whose reaches touch.
-func (m *GridIndexManager) Pairs(reach float64, want Capability, fn func(a, b uid.UID64)) {
-	if m.bucketGrid == nil {
-		return
-	}
-	s := &m.sweep
-	s.shift, s.side = m.bucketGrid.bucketsResolution, m.bucketGrid.gridResolution.Side()
+// listItems gathers every matching item's grown images, and counts them into their cells.
+func (s *pairSweep) listItems(surface *iplane.Surface, entries []Item, reach float64, want Capability) {
+	s.begin()
+	for i := range entries {
+		e := &entries[i]
+		if !e.Caps.matches(want) {
+			continue
+		}
+		size := e.Box.Size
+		s.whole = e.Box
+		surface.Expand(&s.whole, reach*min(size.X, size.Y))
 
-	s.list(m, reach, want)
-	s.sort()
-	s.visit(fn)
-	s.flushSeam(fn)
+		multi := s.whole.Overhang != (geom.Vec{})
+		s.add(s.whole.AABB, e.ID, multi)
+		if multi {
+			s.listing = e.ID
+			s.whole.VisitFragments(s.onImage)
+		}
+	}
 }
 
-// list gathers every matching entry's images, and counts them into their cells.
-func (s *pairSweep) list(m *GridIndexManager, reach float64, want Capability) {
+// begin readies the sweep's buffers for a new listing.
+func (s *pairSweep) begin() {
 	s.pieces = s.pieces[:0]
 	if s.onImage == nil {
 		s.onImage = s.addImage
@@ -70,24 +78,6 @@ func (s *pairSweep) list(m *GridIndexManager, reach float64, want Capability) {
 	s.starts = s.starts[:cells+1]
 	s.cursor = s.cursor[:cells]
 	clear(s.starts)
-
-	boxes := &m.bucketGrid.boxes
-	for i := range boxes.main {
-		slot := &boxes.main[i]
-		if !slot.live || !boxes.capsOf(slot.id).matches(want) {
-			continue
-		}
-		size := boxes.sizeOf(slot.id, slot.aabb)
-		s.whole = plane.NewAABB(slot.aabb.TopLeft, size.X, size.Y)
-		m.space.Expand(&s.whole, reach*min(size.X, size.Y))
-
-		multi := s.whole.Overhang != (geom.Vec{})
-		s.add(s.whole.AABB, slot.id, multi)
-		if multi {
-			s.listing = slot.id
-			s.whole.VisitFragments(s.onImage)
-		}
-	}
 }
 
 func (s *pairSweep) addImage(_ plane.FragPosition, image geom.AABB) bool {

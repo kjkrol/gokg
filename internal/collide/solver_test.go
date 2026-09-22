@@ -2,6 +2,7 @@ package collide_test
 
 import (
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
+	"github.com/kjkrol/aabbworld/internal/spatial"
 	"github.com/kjkrol/uid"
 	"slices"
 	"testing"
@@ -31,6 +32,31 @@ func flags(staticA, staticB, sensor bool) uint8 {
 
 func flat() *iplane.Surface { return iplane.NewEuclidean2D(1000, 1000) }
 
+// batch is a few boxes as items, and the pairs entered over them.
+type batch struct {
+	items []spatial.Item
+	s     collide.Solver
+}
+
+func boxes(bs ...plane.AABB) *batch {
+	b := &batch{}
+	for i, box := range bs {
+		b.items = append(b.items, spatial.Item{ID: uid.UID64(i + 1), Box: box})
+	}
+	b.s.Reset(len(b.items))
+	return b
+}
+
+func (b *batch) pair(i, j int, flags uint8) int {
+	return b.s.Add(collide.Pair{A: int32(i), B: int32(j), Flags: flags})
+}
+
+func (b *batch) solve(surface *iplane.Surface, onContact func(i int, pen geom.Vec)) {
+	b.s.Solve(b.items, surface, iterations, nil, onContact)
+}
+
+func (b *batch) box(i int) plane.AABB { return b.items[i].Box }
+
 // depth is how far two boxes interpenetrate on their shallower axis, negative when apart.
 func depth(a, b plane.AABB) float64 {
 	x := min(a.BottomRight.X, b.BottomRight.X) - max(a.TopLeft.X, b.TopLeft.X)
@@ -39,11 +65,10 @@ func depth(a, b plane.AABB) float64 {
 }
 
 func TestSolve_SeparatesAPairAndSplitsTheTravel(t *testing.T) {
-	a, b := at(100, 100), at(104, 100)
-
-	var s collide.Solver
-	s.Add(collide.Pair{A: &a, B: &b})
-	s.Solve(flat(), iterations, nil, nil)
+	bt := boxes(at(100, 100), at(104, 100))
+	bt.pair(0, 1, 0)
+	bt.solve(flat(), nil)
+	a, b := bt.box(0), bt.box(1)
 
 	if d := depth(a, b); d > 1e-9 {
 		t.Errorf("still overlapping by %v after the solve", d)
@@ -57,11 +82,10 @@ func TestSolve_SeparatesAPairAndSplitsTheTravel(t *testing.T) {
 }
 
 func TestSolve_OddPenetrationLosesNothingInTheSplit(t *testing.T) {
-	a, b := at(100, 100), at(107, 100)
-
-	var s collide.Solver
-	s.Add(collide.Pair{A: &a, B: &b})
-	s.Solve(flat(), iterations, nil, nil)
+	bt := boxes(at(100, 100), at(107, 100))
+	bt.pair(0, 1, 0)
+	bt.solve(flat(), nil)
+	a, b := bt.box(0), bt.box(1)
 
 	travelled := (100 - a.TopLeft.X) + (b.TopLeft.X - 107)
 	if travelled != 3 {
@@ -78,12 +102,11 @@ func TestSolve_PinnedSideNeverMoves(t *testing.T) {
 		"A pinned": {true, false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			a, b := at(100, 100), at(104, 100)
-			startA, startB := a, b
-
-			var s collide.Solver
-			s.Add(collide.Pair{A: &a, B: &b, Flags: flags(tc.staticA, tc.staticB, false)})
-			s.Solve(flat(), iterations, nil, nil)
+			bt := boxes(at(100, 100), at(104, 100))
+			startA, startB := bt.box(0), bt.box(1)
+			bt.pair(0, 1, flags(tc.staticA, tc.staticB, false))
+			bt.solve(flat(), nil)
+			a, b := bt.box(0), bt.box(1)
 
 			if d := depth(a, b); d > 1e-9 {
 				t.Errorf("still overlapping by %v", d)
@@ -99,24 +122,22 @@ func TestSolve_PinnedSideNeverMoves(t *testing.T) {
 }
 
 func TestSolve_ReportsButNeverSeparates(t *testing.T) {
-	for name, p := range map[string]collide.Pair{
-		"a sensor pair":     {Flags: collide.Sensor},
-		"two pinned bodies": {Flags: collide.StaticA | collide.StaticB},
+	for name, f := range map[string]uint8{
+		"a sensor pair":     collide.Sensor,
+		"two pinned bodies": collide.StaticA | collide.StaticB,
 	} {
 		t.Run(name, func(t *testing.T) {
-			a, b := at(100, 100), at(104, 100)
-			p.A, p.B = &a, &b
-			startA, startB := a, b
+			bt := boxes(at(100, 100), at(104, 100))
+			startA, startB := bt.box(0), bt.box(1)
+			bt.pair(0, 1, f)
 
 			reported := 0
-			var s collide.Solver
-			s.Add(p)
-			s.Solve(flat(), iterations, nil, func(int, geom.Vec) { reported++ })
+			bt.solve(flat(), func(int, geom.Vec) { reported++ })
 
 			if reported != 1 {
 				t.Errorf("contact reported %d times, want exactly 1", reported)
 			}
-			if a != startA || b != startB {
+			if a, b := bt.box(0), bt.box(1); a != startA || b != startB {
 				t.Error("boxes moved, though this pair must only be reported")
 			}
 		})
@@ -124,14 +145,13 @@ func TestSolve_ReportsButNeverSeparates(t *testing.T) {
 }
 
 func TestSolve_ReportsEachContactOnceEvenAcrossPasses(t *testing.T) {
-	boxes := []plane.AABB{at(100, 100), at(102, 100), at(104, 100)}
+	bt := boxes(at(100, 100), at(102, 100), at(104, 100))
+	bt.pair(0, 1, 0)
+	bt.pair(1, 2, 0)
+	bt.pair(0, 2, 0)
 
 	counts := map[int]int{}
-	var s collide.Solver
-	s.Add(collide.Pair{A: &boxes[0], B: &boxes[1]})
-	s.Add(collide.Pair{A: &boxes[1], B: &boxes[2]})
-	s.Add(collide.Pair{A: &boxes[0], B: &boxes[2]})
-	s.Solve(flat(), iterations, nil, func(i int, _ geom.Vec) { counts[i]++ })
+	bt.solve(flat(), func(i int, _ geom.Vec) { counts[i]++ })
 
 	for i := range 3 {
 		if counts[i] != 1 {
@@ -141,16 +161,14 @@ func TestSolve_ReportsEachContactOnceEvenAcrossPasses(t *testing.T) {
 }
 
 func TestSolve_KeepsGoingWhileSeparationCreatesNewOverlap(t *testing.T) {
-	boxes := []plane.AABB{at(100, 100), at(102, 100), at(104, 100)}
-
-	var s collide.Solver
-	s.Add(collide.Pair{A: &boxes[0], B: &boxes[1]})
-	s.Add(collide.Pair{A: &boxes[1], B: &boxes[2]})
-	s.Add(collide.Pair{A: &boxes[0], B: &boxes[2]})
-	s.Solve(flat(), iterations, nil, nil)
+	bt := boxes(at(100, 100), at(102, 100), at(104, 100))
+	bt.pair(0, 1, 0)
+	bt.pair(1, 2, 0)
+	bt.pair(0, 2, 0)
+	bt.solve(flat(), nil)
 
 	for _, pair := range [][2]int{{0, 1}, {1, 2}, {0, 2}} {
-		if d := depth(boxes[pair[0]], boxes[pair[1]]); d > 1e-6 {
+		if d := depth(bt.box(pair[0]), bt.box(pair[1])); d > 1e-6 {
 			t.Errorf("boxes %d and %d still overlap by %v", pair[0], pair[1], d)
 		}
 	}
@@ -158,12 +176,13 @@ func TestSolve_KeepsGoingWhileSeparationCreatesNewOverlap(t *testing.T) {
 
 func TestSolve_SeparatesAcrossAToroidalSeam(t *testing.T) {
 	space := iplane.NewToroidal2D(200, 200)
-	a := space.WrapAABB(geom.NewAABB(geom.NewVec(196, 100), geom.NewVec(206, 110)))
-	b := space.WrapAABB(geom.NewAABB(geom.NewVec(2, 100), geom.NewVec(12, 110)))
-
-	var s collide.Solver
-	s.Add(collide.Pair{A: &a, B: &b})
-	s.Solve(space, iterations, nil, nil)
+	bt := boxes(
+		space.WrapAABB(geom.NewAABB(geom.NewVec(196, 100), geom.NewVec(206, 110))),
+		space.WrapAABB(geom.NewAABB(geom.NewVec(2, 100), geom.NewVec(12, 110))),
+	)
+	bt.pair(0, 1, 0)
+	bt.solve(space, nil)
+	a, b := bt.box(0), bt.box(1)
 
 	if got, ok := a.DeepestOverlapWith(&b); ok {
 		t.Errorf("still overlapping across the seam by %v", got.Penetration)
@@ -173,39 +192,33 @@ func TestSolve_SeparatesAcrossAToroidalSeam(t *testing.T) {
 	}
 }
 
-func TestVisitMoved_NamesOnlyTheBoxesThatWerePushed(t *testing.T) {
-	a, b := at(100, 100), at(104, 100)
-	c, d := at(500, 500), at(600, 500)
-	e, f := at(700, 700), at(704, 700)
+func TestVisitMoved_NamesOnlyTheItemsThatWerePushed(t *testing.T) {
+	bt := boxes(at(100, 100), at(104, 100), at(500, 500), at(600, 500), at(700, 700), at(704, 700))
+	bt.pair(0, 1, 0)
+	bt.pair(2, 3, 0)
+	bt.pair(4, 5, collide.StaticA)
+	bt.solve(flat(), nil)
 
-	var s collide.Solver
-	s.Add(collide.Pair{A: &a, B: &b, IDA: 1, IDB: 2})
-	s.Add(collide.Pair{A: &c, B: &d, IDA: 3, IDB: 4})
-	s.Add(collide.Pair{A: &e, B: &f, IDA: 5, IDB: 6, Flags: collide.StaticA})
-	s.Solve(flat(), iterations, nil, nil)
-
-	var moved []uid.UID64
-	s.VisitMoved(func(id uid.UID64, box *plane.AABB) {
-		moved = append(moved, id)
-		if box.TopLeft == at(100, 100).TopLeft || box.TopLeft == at(500, 500).TopLeft {
-			t.Errorf("box of %d reported moved but still at its start", id)
+	var moved []int32
+	bt.s.VisitMoved(func(item int32) {
+		moved = append(moved, item)
+		if box := bt.box(int(item)); box.TopLeft == at(100, 100).TopLeft || box.TopLeft == at(500, 500).TopLeft {
+			t.Errorf("item %d reported moved but still at its start", item)
 		}
 	})
-	if want := []uid.UID64{1, 2, 6}; !slices.Equal(moved, want) {
+	if want := []int32{0, 1, 5}; !slices.Equal(moved, want) {
 		t.Errorf("moved = %v, want %v: both sides of the overlapping pair and the free side of the pinned one", moved, want)
 	}
 }
 
 func TestReset_KeepsTheBuffersAndDropsTheBatch(t *testing.T) {
-	a, b := at(100, 100), at(104, 100)
+	bt := boxes(at(100, 100), at(104, 100))
+	bt.pair(0, 1, 0)
+	bt.s.Reset(len(bt.items))
 
-	var s collide.Solver
-	s.Add(collide.Pair{A: &a, B: &b})
-	s.Reset()
-
-	start := a
-	s.Solve(flat(), iterations, nil, func(int, geom.Vec) { t.Error("a reset Solver reported a contact") })
-	if a != start {
+	start := bt.box(0)
+	bt.solve(flat(), func(int, geom.Vec) { t.Error("a reset Solver reported a contact") })
+	if a := bt.box(0); a != start {
 		t.Error("a reset Solver moved a box from the dropped batch")
 	}
 }
