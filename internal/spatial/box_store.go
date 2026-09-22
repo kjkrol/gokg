@@ -16,10 +16,13 @@ type boxStore struct {
 }
 
 // mainBox is one slot of the main slice; the id tells a live entry from a recycled index.
+// mask names the pieces the entity is indexed in, tl and br the cells its main box spans.
 type mainBox struct {
-	aabb AABB
-	id   uid.UID64
-	live bool
+	aabb   AABB
+	id     uid.UID64
+	tl, br int
+	mask   uint8
+	live   bool
 }
 
 // init readies the store for capacity entries.
@@ -109,6 +112,19 @@ func (s *boxStore) set(id uid.UID64, aabb AABB) {
 		s.count++
 	}
 	slot.aabb, slot.id, slot.live = aabb, id, true
+}
+
+// slot returns the main slot of the entity id names, if it is live.
+func (s *boxStore) slot(id uid.UID64) (*mainBox, bool) {
+	i := int(id.Index())
+	if i >= len(s.main) {
+		return nil, false
+	}
+	slot := &s.main[i]
+	if !slot.live || slot.id != withoutFrag(id) {
+		return nil, false
+	}
+	return slot, true
 }
 
 // remove drops id's box if it has one.

@@ -13,7 +13,7 @@ type (
 		bucketsResolution Resolution
 		bucketCapacity    int
 		gridResolution    Resolution
-		gridCellCodec     CellCodec
+		gridCellCodec     cellCodec
 		boxes             boxStore
 		bounds            AABB
 		buckets           []bucket
@@ -40,7 +40,7 @@ func NewBucketGrid(
 	opts ...Option,
 ) (Index, error) {
 	gridResolution := NewResolution(uint8(overallResolution - bucketsResolution))
-	gridCellCodec := NewLinearCodec(gridResolution)
+	gridCellCodec := newCellCodec(gridResolution)
 	side := overallResolution.Side()
 
 	bg := &bucketGrid{
@@ -62,14 +62,6 @@ func NewBucketGrid(
 	}
 
 	return bg, nil
-}
-
-// WithMortonCodec swaps the default linear cell codec for a Z-order one.
-func WithMortonCodec() Option {
-	return func(bg *bucketGrid) error {
-		bg.gridCellCodec = NewMortonCodec(bg.gridResolution)
-		return nil
-	}
 }
 
 func WithBucketCapacityFactor(capacityFactor float64) Option {
@@ -105,7 +97,28 @@ func (bg *bucketGrid) BulkInsert(entries []Entry) {
 			bg.buckets[idx].Add(entry.Id, bg.bucketCapacity)
 		})
 		bg.boxes.set(entry.Id, entry.AABB)
+		if fragOf(entry.Id) == 0 {
+			if slot, ok := bg.boxes.slot(entry.Id); ok {
+				slot.tl, slot.br = tlIdx, brIdx
+			}
+		}
 	}
+}
+
+// MoveMain moves the main box of a live entity to aabb, re-bucketing only when its cells change.
+func (bg *bucketGrid) MoveMain(slot *mainBox, aabb AABB) bool {
+	tlIdx := bg.CalculateGridIndex(aabb.TopLeft)
+	brIdx := bg.CalculateGridIndex(aabb.BottomRight)
+	if tlIdx < 0 || brIdx < 0 || tlIdx >= len(bg.buckets) || brIdx >= len(bg.buckets) {
+		return false
+	}
+	if tlIdx != slot.tl || brIdx != slot.br {
+		bg.forEachCell(slot.tl, slot.br, func(idx uint32) { bg.buckets[idx].Remove(slot.id) })
+		bg.forEachCell(tlIdx, brIdx, func(idx uint32) { bg.buckets[idx].Add(slot.id, bg.bucketCapacity) })
+		slot.tl, slot.br = tlIdx, brIdx
+	}
+	slot.aabb = aabb
+	return true
 }
 
 // BulkRemove – remove whatever is stored at the given positions.
@@ -155,6 +168,11 @@ func (bg *bucketGrid) BulkMove(moves EntriesMove) {
 			})
 		}
 		bg.boxes.set(newEntry.Id, newEntry.AABB)
+		if fragOf(newEntry.Id) == 0 {
+			if slot, ok := bg.boxes.slot(newEntry.Id); ok {
+				slot.tl, slot.br = newTl, newBr
+			}
+		}
 	}
 }
 
@@ -193,11 +211,7 @@ func (bg *bucketGrid) QueryRangeWith(aabb AABB, want Capability, collector func(
 
 	for y := y1; y <= y2; y++ {
 		for x := x1; x <= x2; x++ {
-			idx, err := bg.gridCellCodec.Encode(x, y)
-			if err != nil || idx < 0 || idx >= len(bg.buckets) {
-				continue
-			}
-			bucket := bg.buckets[idx]
+			bucket := bg.buckets[bg.gridCellCodec.Encode(x, y)]
 
 			for _, id := range bucket.ids {
 				if !bg.boxes.capsOf(id).matches(want) {
@@ -259,11 +273,7 @@ func (bg *bucketGrid) CalculateGridIndex(vec Vec) int {
 	if !ok {
 		return -1
 	}
-	idx, err := bg.gridCellCodec.Encode(xHead, yHead)
-	if err != nil {
-		return -1
-	}
-	return idx
+	return bg.gridCellCodec.Encode(xHead, yHead)
 }
 
 // cellCoord is the grid column or row holding v, and whether v has one.
@@ -284,20 +294,20 @@ func (bg *bucketGrid) forEachBucketIndex(aabb AABB, fn func(uint32)) {
 		return
 	}
 
+	bg.forEachCell(tlIdx, brIdx, fn)
+}
+
+// forEachCell calls fn for every cell of the rectangle between cells tlIdx and brIdx.
+func (bg *bucketGrid) forEachCell(tlIdx, brIdx int, fn func(uint32)) {
 	if tlIdx == brIdx {
 		fn(uint32(tlIdx))
 		return
 	}
-
 	x1, y1 := bg.gridCellCodec.Decode(tlIdx)
 	x2, y2 := bg.gridCellCodec.Decode(brIdx)
 	for y := y1; y <= y2; y++ {
 		for x := x1; x <= x2; x++ {
-			idx, err := bg.gridCellCodec.Encode(x, y)
-			if err != nil || idx < 0 || idx >= len(bg.buckets) {
-				continue
-			}
-			fn(uint32(idx))
+			fn(uint32(bg.gridCellCodec.Encode(x, y)))
 		}
 	}
 }

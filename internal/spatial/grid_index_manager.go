@@ -13,8 +13,6 @@ type GridIndexConfig struct {
 	Resolution       Resolution
 	BucketResolution Resolution
 	BucketCapacity   int
-	// CellCodec selects the grid-cell codec; the zero value is LinearCellCodec.
-	CellCodec CellCodecKind
 }
 
 // GridIndexManager buffers spatial updates and applies them in bulk, all from one goroutine.
@@ -22,17 +20,12 @@ type GridIndexManager struct {
 	bucketGrid  *bucketGrid
 	space       *iplane.Surface
 	ops         []indexOp
-	entries     map[uid.UID64]entryCache
 	maxGridCord uint32
 
 	// moves is scratch for the update path, owned by the goroutine that calls Flush.
 	moves EntriesMove
 
 	sweep pairSweep
-}
-
-type entryCache struct {
-	mask uint8
 }
 
 type opKind uint8
@@ -69,9 +62,6 @@ func NewGridIndexManager(space *iplane.Surface, cfg GridIndexConfig) (*GridIndex
 		cfg.BucketCapacity = 2
 	}
 	opts := []Option{WithBucketCapacity(cfg.BucketCapacity)}
-	if cfg.CellCodec == MortonCellCodec {
-		opts = append(opts, WithMortonCodec())
-	}
 	index, err := NewBucketGrid(cfg.Resolution, cfg.BucketResolution, opts...)
 	if err != nil {
 		return nil, err
@@ -84,7 +74,6 @@ func NewGridIndexManager(space *iplane.Surface, cfg GridIndexConfig) (*GridIndex
 	manager := &GridIndexManager{
 		bucketGrid:  grid,
 		space:       space,
-		entries:     make(map[uid.UID64]entryCache),
 		maxGridCord: maxGridCord,
 	}
 	return manager, nil
@@ -183,25 +172,26 @@ func (m *GridIndexManager) applyInsert(id uid.UID64, shape plane.AABB, markDirty
 	})
 
 	if len(entries) > 0 {
-		if m.bucketGrid != nil {
-			m.bucketGrid.BulkInsert(entries)
+		m.bucketGrid.BulkInsert(entries)
+		if slot, ok := m.bucketGrid.boxes.slot(id); ok {
+			slot.mask = mask
 		}
-		m.entries[id] = entryCache{mask: mask}
 	}
 }
 
 // applyRemove drops every piece of id from the grid, and its capabilities too if clearCaps.
 func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB), clearCaps bool) {
-	cache, ok := m.entries[id]
+	slot, ok := m.bucketGrid.boxes.slot(id)
 	if !ok {
 		return
 	}
+	mask := slot.mask
 	if clearCaps {
 		defer m.bucketGrid.boxes.clearCaps(id)
 	}
 	entries := make([]Entry, 0, 4)
 	for idx := 0; idx < 4; idx++ {
-		if cache.mask&(1<<idx) == 0 {
+		if mask&(1<<idx) == 0 {
 			continue
 		}
 		entryID := withFrag(id, uint8(idx))
@@ -218,20 +208,31 @@ func (m *GridIndexManager) applyRemove(id uid.UID64, onDirty func(geom.AABB), cl
 		}
 	}
 	if len(entries) > 0 {
-		if m.bucketGrid != nil {
-			m.bucketGrid.BulkRemove(entries)
-		}
+		m.bucketGrid.BulkRemove(entries)
 	}
-	delete(m.entries, id)
 }
 
 func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty bool, onDirty func(geom.AABB)) {
-	oldCache, ok := m.entries[id]
+	slot, ok := m.bucketGrid.boxes.slot(id)
 	if !ok {
 		m.applyInsert(id, shape, markDirty, onDirty)
 		return
 	}
 	m.bucketGrid.boxes.setSize(id, shape.Size)
+
+	const mainOnly = 1 << plane.FRAG_MAIN
+	if slot.mask == mainOnly && shape.Overhang == (geom.Vec{}) {
+		if base, ok := m.indexAABB(shape.AABB); ok {
+			old := slot.aabb
+			if m.bucketGrid.MoveMain(slot, base) {
+				if markDirty && onDirty != nil {
+					onDirty(old)
+					onDirty(base)
+				}
+				return
+			}
+		}
+	}
 
 	var newFrags [4]geom.AABB
 	newMask := uint8(0)
@@ -255,7 +256,7 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty
 		return
 	}
 
-	if oldCache.mask == newMask {
+	if slot.mask == newMask {
 		moves := &m.moves
 		moves.Old = moves.Old[:0]
 		moves.New = moves.New[:0]
@@ -272,7 +273,7 @@ func (m *GridIndexManager) applyUpdate(id uid.UID64, shape plane.AABB, markDirty
 				onDirty(newAABB)
 			}
 		}
-		if len(moves.Old) > 0 && m.bucketGrid != nil {
+		if len(moves.Old) > 0 {
 			m.bucketGrid.BulkMove(*moves)
 		}
 		return
