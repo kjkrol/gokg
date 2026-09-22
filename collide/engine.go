@@ -26,7 +26,8 @@ type Config struct {
 
 // Engine finds and separates the overlapping CanCollide boxes of its Space, on one goroutine.
 type Engine interface {
-	// Tick separates every overlapping pair the Space holds now and reports as it goes.
+	// Tick separates every overlapping pair the Space holds now and reports as it goes; the
+	// Space answers its next Query with the pushed boxes without another Rebuild.
 	Tick()
 	// Left is who the last Tick pushed out through an open edge; good until the next Tick.
 	Left() []uid.UID64

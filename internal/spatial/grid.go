@@ -14,7 +14,8 @@ type Item struct {
 	Caps Capability
 }
 
-// Grid is a cell grid rebuilt from scratch each Rebuild; queries and pair sweeps read it.
+// Grid is a cell grid over the items of its last Rebuild. Pair sweeps read the items as they are;
+// the cells are built from them at the first Query after a Rebuild or an Invalidate.
 type Grid struct {
 	surface  *iplane.Surface
 	cellRes  Resolution
@@ -25,6 +26,7 @@ type Grid struct {
 	rebuilds uint32
 	slotOf   []int32
 	stamps   []uint32
+	stale    bool
 
 	pieces []gridPiece
 	starts []uint32
@@ -62,9 +64,24 @@ func NewGrid(surface *iplane.Surface, worldRes, cellRes Resolution) *Grid {
 }
 
 // Rebuild replaces what the grid holds with items, which must stay put until the next Rebuild.
+// Their boxes may change in the meantime; Invalidate tells the grid so. The cells are built at
+// the first Query that needs them, so several Rebuilds in a row cost one indexing.
 func (g *Grid) Rebuild(items []Item) {
 	g.items = items
 	g.rebuilds++
+	for i := range items {
+		g.remember(items[i].ID, int32(i))
+	}
+	g.stale = true
+}
+
+// Invalidate marks the cells as behind the boxes of the items, which have moved since they were built.
+func (g *Grid) Invalidate() { g.stale = true }
+
+// index builds the cells from the items as they are now.
+func (g *Grid) index() {
+	g.stale = false
+	items := g.items
 	g.pieces = g.pieces[:0]
 	cells := int(g.side) * int(g.side)
 	if cap(g.starts) < cells+1 {
@@ -77,7 +94,6 @@ func (g *Grid) Rebuild(items []Item) {
 
 	for i := range items {
 		e := &items[i]
-		g.remember(e.ID, int32(i))
 		if main, ok := g.clamp(e.Box.AABB); ok {
 			g.add(main, int32(i), e.Caps)
 		}
@@ -164,20 +180,15 @@ func (g *Grid) EntryAABB(id uid.UID64) (geom.AABB, bool) {
 // Items is what the last Rebuild was told of, in order.
 func (g *Grid) Items() []Item { return g.items }
 
-// At is the position of the item the entity id names among Items, or -1.
-func (g *Grid) At(id uid.UID64) int {
-	i := int(id.Index())
-	if i >= len(g.slotOf) || g.stamps[i] != g.rebuilds || g.items[g.slotOf[i]].ID != id {
-		return -1
-	}
-	return int(g.slotOf[i])
-}
-
 // Query calls fn for every piece sharing want that intersects box, each once, and returns how many.
+// It reads the boxes as they are now, building the cells first if they are behind.
 func (g *Grid) Query(box geom.AABB, want Capability, fn func(uid.UID64)) int {
 	area, ok := g.clamp(box)
 	if !ok {
 		return 0
+	}
+	if g.stale {
+		g.index()
 	}
 	x1, y1 := g.cellOf(area.TopLeft.X), g.cellOf(area.TopLeft.Y)
 	x2, y2 := g.cellOf(area.BottomRight.X), g.cellOf(area.BottomRight.Y)
@@ -200,8 +211,9 @@ func (g *Grid) Query(box geom.AABB, want Capability, fn func(uid.UID64)) int {
 	return found
 }
 
-// Pairs calls fn once, lower index first, for every two items sharing want whose reaches touch.
-func (g *Grid) Pairs(reach float64, want Capability, fn func(a, b uid.UID64)) {
+// Pairs calls fn once, lower position first, for every two items sharing want whose boxes grown
+// by reach of their shorter side touch. It reads the boxes as they are now.
+func (g *Grid) Pairs(reach float64, want Capability, fn func(a, b int32)) {
 	s := &g.sweep
 	s.shift, s.side = g.cellRes, g.side
 	s.listItems(g.surface, g.items, reach, want)

@@ -80,8 +80,8 @@ func newDenseScene(n int) *denseScene {
 	}
 	grid := spatial.NewGrid(surface, spatial.Size1024x1024, spatial.Size16x16)
 	grid.Rebuild(sc.home)
-	grid.Pairs(0.5, 1, func(a, b uid.UID64) {
-		sc.pairs = append(sc.pairs, collide.Pair{A: int32(grid.At(a)), B: int32(grid.At(b))})
+	grid.Pairs(0.5, 1, func(a, b int32) {
+		sc.pairs = append(sc.pairs, collide.Pair{A: a, B: b})
 	})
 	return sc
 }

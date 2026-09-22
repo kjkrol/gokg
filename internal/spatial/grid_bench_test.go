@@ -32,7 +32,7 @@ func BenchmarkRebuildPairsQuery(b *testing.B) {
 				probes = append(probes, geom.NewAABBAt(geom.NewVec(rng.Float64()*900, rng.Float64()*900), 100, 100))
 			}
 			pairs, found := 0, 0
-			onPair := func(_, _ uid.UID64) { pairs++ }
+			onPair := func(_, _ int32) { pairs++ }
 			onFound := func(uid.UID64) { found++ }
 			b.ReportAllocs()
 			for b.Loop() {

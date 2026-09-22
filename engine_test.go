@@ -86,7 +86,6 @@ func (s *scene) tick(touch func(a, b uid.UID64, pen geom.Vec) (geom.Vec, bool), 
 	s.space.Rebuild(s.items)
 	s.moved = s.moved[:0]
 	s.engine.Tick()
-	s.space.Rebuild(s.items)
 }
 
 // where lists every id the index finds inside box, each once.

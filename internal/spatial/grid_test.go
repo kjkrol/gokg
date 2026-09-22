@@ -107,7 +107,7 @@ func TestGrid_AgreesWithBruteForce(t *testing.T) {
 
 				want := sc.near(0.5, collides)
 				var got []idPair
-				sc.grid.Pairs(0.5, collides, func(x, y uid.UID64) { got = append(got, idPair{x, y}) })
+				sc.grid.Pairs(0.5, collides, func(x, y int32) { got = append(got, idPair{sc.items[x].ID, sc.items[y].ID}) })
 				sortPairs(got)
 				if !slices.Equal(got, want) {
 					t.Fatalf("round %d: grid found %d pairs, brute force %d", round, len(got), len(want))
@@ -133,9 +133,29 @@ func TestGrid_IsEmptyBeforeItsFirstRebuild(t *testing.T) {
 	if n := g.Query(geom.NewAABBAt(geom.NewVec(0, 0), 256, 256), AnyCapability, func(uid.UID64) {}); n != 0 {
 		t.Errorf("a fresh grid answered a query with %d pieces", n)
 	}
-	g.Pairs(0.5, AnyCapability, func(uid.UID64, uid.UID64) { t.Error("a fresh grid paired something") })
+	g.Pairs(0.5, AnyCapability, func(int32, int32) { t.Error("a fresh grid paired something") })
 	if _, ok := g.EntryAABB(1); ok {
 		t.Error("a fresh grid knows an entity")
+	}
+}
+
+func TestGrid_QueryFollowsABoxMovedSinceRebuild(t *testing.T) {
+	surface := iplane.NewEuclidean2D(256, 256)
+	g := NewGrid(surface, Size256x256, Size32x32)
+	items := []Item{{ID: 1, Box: plane.NewAABB(geom.NewVec(10, 10), 8, 8), Caps: Plain}}
+	g.Rebuild(items)
+	if n := g.Query(geom.NewAABBAt(geom.NewVec(0, 0), 32, 32), AnyCapability, func(uid.UID64) {}); n != 1 {
+		t.Fatalf("Query finds %d pieces where the item was put, want 1", n)
+	}
+
+	surface.Translate(&items[0].Box, geom.NewVec(100, 100))
+	g.Invalidate()
+
+	if n := g.Query(geom.NewAABBAt(geom.NewVec(0, 0), 32, 32), AnyCapability, func(uid.UID64) {}); n != 0 {
+		t.Errorf("Query finds %d pieces where the item used to be", n)
+	}
+	if n := g.Query(geom.NewAABBAt(geom.NewVec(96, 96), 32, 32), AnyCapability, func(uid.UID64) {}); n != 1 {
+		t.Errorf("Query finds %d pieces where the item moved to, want 1", n)
 	}
 }
 
@@ -216,6 +236,86 @@ func TestGrid_QuerySeesOnlyWhatItAskedFor(t *testing.T) {
 	slices.Sort(got)
 	if !slices.Equal(got, []uid.UID64{1, 2}) {
 		t.Errorf("asking for anything found %v, want both", got)
+	}
+}
+
+// count is how many pieces Query finds in box.
+func count(g *Grid, box geom.AABB, want Capability) int {
+	return g.Query(box, want, func(uid.UID64) {})
+}
+
+// pairsOf is how many pairs Pairs reports for reach and want.
+func pairsOf(g *Grid, reach float64, want Capability) int {
+	n := 0
+	g.Pairs(reach, want, func(int32, int32) { n++ })
+	return n
+}
+
+func TestGrid_QueryReadsActualBoxesFromAGridGrownForPairs(t *testing.T) {
+	g := NewGrid(iplane.NewToroidal2D(256, 256), Size256x256, Size32x32)
+	g.Rebuild([]Item{{ID: 1, Box: plane.NewAABB(geom.NewVec(100, 100), 8, 8), Caps: collides}})
+	pairsOf(g, 0.5, collides) // the cells now hold the box grown by 4 on every side
+
+	if n := count(g, geom.NewAABBAt(geom.NewVec(110, 100), 8, 8), AnyCapability); n != 0 {
+		t.Errorf("Query finds %d pieces in the grown margin, where the box is not", n)
+	}
+	if n := count(g, geom.NewAABBAt(geom.NewVec(104, 100), 8, 8), AnyCapability); n != 1 {
+		t.Errorf("Query finds %d pieces over the box, want 1", n)
+	}
+}
+
+func TestGrid_PairsSkipsWhatCannotCollide(t *testing.T) {
+	g := NewGrid(iplane.NewEuclidean2D(256, 256), Size256x256, Size32x32)
+	g.Rebuild([]Item{
+		{ID: 1, Box: plane.NewAABB(geom.NewVec(100, 100), 8, 8), Caps: Plain},
+		{ID: 2, Box: plane.NewAABB(geom.NewVec(104, 100), 8, 8), Caps: collides},
+	})
+	if n := pairsOf(g, 0.5, collides); n != 0 {
+		t.Errorf("Pairs found %d pairs, want none when one side cannot collide", n)
+	}
+	if n := pairsOf(g, 0.5, AnyCapability); n != 1 {
+		t.Errorf("Pairs found %d pairs for anything, want 1", n)
+	}
+}
+
+func TestGrid_AGrownImageWithNoActualPieceIsNeverQueried(t *testing.T) {
+	g := NewGrid(iplane.NewToroidal2D(256, 256), Size256x256, Size32x32)
+	box := plane.NewAABB(geom.NewVec(250, 10), 6, 6) // ends exactly at the seam, no fragment
+	g.Rebuild([]Item{{ID: 1, Box: box, Caps: collides}})
+	pairsOf(g, 0.5, collides) // grown by 3, it now wraps to [0,3) past the seam
+
+	if n := count(g, geom.NewAABBAt(geom.NewVec(0, 8), 4, 4), AnyCapability); n != 0 {
+		t.Errorf("Query finds %d pieces past the seam, where only the grown image is", n)
+	}
+	if n := count(g, geom.NewAABBAt(geom.NewVec(248, 8), 4, 4), AnyCapability); n != 1 {
+		t.Errorf("Query finds %d pieces over the box, want 1", n)
+	}
+}
+
+func TestGrid_ABoxAtTheLeftEdgeIsFoundWhenGrownAcrossTheSeam(t *testing.T) {
+	g := NewGrid(iplane.NewToroidal2D(256, 256), Size256x256, Size32x32)
+	g.Rebuild([]Item{{ID: 1, Box: plane.NewAABB(geom.NewVec(0, 10), 8, 8), Caps: collides}})
+	pairsOf(g, 0.5, collides) // grown by 4, its main image now starts at 252, past the seam
+
+	if n := count(g, geom.NewAABBAt(geom.NewVec(0, 8), 4, 4), AnyCapability); n != 1 {
+		t.Errorf("Query finds %d pieces over the box at the left edge, want 1", n)
+	}
+	if n := count(g, geom.NewAABBAt(geom.NewVec(248, 8), 4, 4), AnyCapability); n != 0 {
+		t.Errorf("Query finds %d pieces at the right edge, where only the grown image is", n)
+	}
+}
+
+func TestGrid_PairsWithANewReachReindexes(t *testing.T) {
+	g := NewGrid(iplane.NewEuclidean2D(256, 256), Size256x256, Size32x32)
+	g.Rebuild([]Item{
+		{ID: 1, Box: plane.NewAABB(geom.NewVec(100, 100), 8, 8), Caps: collides},
+		{ID: 2, Box: plane.NewAABB(geom.NewVec(112, 100), 8, 8), Caps: collides},
+	})
+	if n := pairsOf(g, 0.1, collides); n != 0 {
+		t.Errorf("Pairs found %d pairs at a short reach, want none across a gap of 4", n)
+	}
+	if n := pairsOf(g, 1, collides); n != 1 {
+		t.Errorf("Pairs found %d pairs at a reach of a whole side, want 1", n)
 	}
 }
 

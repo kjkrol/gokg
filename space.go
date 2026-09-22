@@ -8,15 +8,16 @@ import (
 	"unsafe"
 
 	"github.com/kjkrol/aabbworld/collide"
-	icollide "github.com/kjkrol/aabbworld/internal/collide"
 	"github.com/kjkrol/aabbworld/geom"
+	icollide "github.com/kjkrol/aabbworld/internal/collide"
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
 	"github.com/kjkrol/aabbworld/internal/spatial"
 	"github.com/kjkrol/aabbworld/plane"
 	"github.com/kjkrol/uid"
 )
 
-// Space is a plane with edge rules and a grid over the items of its last Rebuild.
+// Space is a plane with edge rules and a grid over the items of its last Rebuild, read as they
+// are now: a Tick that pushes them is seen by the next Query without another Rebuild.
 type Space struct {
 	Config
 	grid    *spatial.Grid
@@ -92,7 +93,8 @@ func NewSpace(cfg Config) (*Space, error) {
 	return &Space{Config: cfg, grid: grid, surface: surface}, nil
 }
 
-// Rebuild indexes items, which must stay put until the next Rebuild.
+// Rebuild hands the Space items, which must stay put until the next Rebuild. Indexing waits for
+// the first Query or Scan that needs it, so several Rebuilds in a row cost one indexing.
 func (s *Space) Rebuild(items []Item) {
 	if len(items) == 0 {
 		s.grid.Rebuild(nil)

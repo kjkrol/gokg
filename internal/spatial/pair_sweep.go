@@ -7,10 +7,9 @@ import (
 	"github.com/kjkrol/aabbworld/geom"
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
 	"github.com/kjkrol/aabbworld/plane"
-	"github.com/kjkrol/uid"
 )
 
-// pairSweep finds every two entries close enough to matter, each pair once.
+// pairSweep finds every two entries close enough to matter, each pair once, by position in the items.
 // Its buffers are kept between calls.
 type pairSweep struct {
 	pieces []sweepPiece
@@ -24,7 +23,7 @@ type pairSweep struct {
 
 	// whole and listing are the entry in hand.
 	whole   plane.AABB
-	listing uid.UID64
+	listing int32
 	onImage plane.FragVisitor
 }
 
@@ -36,12 +35,12 @@ type sweepPiece struct {
 
 type sweepEntry struct {
 	box geom.AABB
-	id  uid.UID64
+	at  int32
 	// multi marks an entry whose reach wraps, and so is listed in more than one image.
 	multi bool
 }
 
-type seamPair struct{ a, b uid.UID64 }
+type seamPair struct{ a, b int32 }
 
 // listItems gathers every matching item's grown images, and counts them into their cells.
 func (s *pairSweep) listItems(surface *iplane.Surface, entries []Item, reach float64, want Capability) {
@@ -56,9 +55,9 @@ func (s *pairSweep) listItems(surface *iplane.Surface, entries []Item, reach flo
 		surface.Expand(&s.whole, reach*min(size.X, size.Y))
 
 		multi := s.whole.Overhang != (geom.Vec{})
-		s.add(s.whole.AABB, e.ID, multi)
+		s.add(s.whole.AABB, int32(i), multi)
 		if multi {
-			s.listing = e.ID
+			s.listing = int32(i)
 			s.whole.VisitFragments(s.onImage)
 		}
 	}
@@ -85,9 +84,9 @@ func (s *pairSweep) addImage(_ plane.FragPosition, image geom.AABB) bool {
 	return true
 }
 
-func (s *pairSweep) add(box geom.AABB, id uid.UID64, multi bool) {
+func (s *pairSweep) add(box geom.AABB, at int32, multi bool) {
 	p := sweepPiece{
-		sweepEntry: sweepEntry{box: box, id: id, multi: multi},
+		sweepEntry: sweepEntry{box: box, at: at, multi: multi},
 		x1:         s.cellOf(box.TopLeft.X), y1: s.cellOf(box.TopLeft.Y),
 		x2: s.cellOf(box.BottomRight.X), y2: s.cellOf(box.BottomRight.Y),
 	}
@@ -132,7 +131,7 @@ func (s *pairSweep) sort() {
 }
 
 // visit tests every two entries of every cell, each pair spoken for by one cell only.
-func (s *pairSweep) visit(fn func(a, b uid.UID64)) {
+func (s *pairSweep) visit(fn func(a, b int32)) {
 	s.seam = s.seam[:0]
 	for cell := range s.cursor {
 		entries := s.cells[s.starts[cell]:s.starts[cell+1]]
@@ -144,15 +143,15 @@ func (s *pairSweep) visit(fn func(a, b uid.UID64)) {
 			a := &entries[i]
 			for j := i + 1; j < len(entries); j++ {
 				b := &entries[j]
-				if !a.box.Intersects(b.box) || a.id == b.id {
+				if !a.box.Intersects(b.box) || a.at == b.at {
 					continue
 				}
 				if s.cellOf(max(a.box.TopLeft.X, b.box.TopLeft.X)) != cx ||
 					s.cellOf(max(a.box.TopLeft.Y, b.box.TopLeft.Y)) != cy {
 					continue
 				}
-				lo, hi := a.id, b.id
-				if lo.Index() > hi.Index() {
+				lo, hi := a.at, b.at
+				if lo > hi {
 					lo, hi = hi, lo
 				}
 				if a.multi || b.multi {
@@ -166,7 +165,7 @@ func (s *pairSweep) visit(fn func(a, b uid.UID64)) {
 }
 
 // flushSeam reports the pairs met through a wrapped image, each once.
-func (s *pairSweep) flushSeam(fn func(a, b uid.UID64)) {
+func (s *pairSweep) flushSeam(fn func(a, b int32)) {
 	if len(s.seam) == 0 {
 		return
 	}

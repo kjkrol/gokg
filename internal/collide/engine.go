@@ -29,7 +29,7 @@ type Engine struct {
 	moved  []uint32
 	stamp  uint32
 
-	onPair func(a, b uid.UID64)
+	onPair func(a, b int32)
 	touch  Touch
 	tell   func(i int, pen geom.Vec)
 	visit  func(item int32)
@@ -42,7 +42,8 @@ func New(grid *spatial.Grid, surface *iplane.Surface, handler Handler, reach flo
 	return e
 }
 
-// Tick separates every overlapping pair the grid holds now and reports as it goes.
+// Tick separates every overlapping pair the grid holds now and reports as it goes. The grid
+// answers its next Query with the pushed boxes on its own; no Rebuild is owed for that.
 func (e *Engine) Tick() {
 	e.items = e.grid.Items()
 	e.solver.Reset(len(e.items))
@@ -56,17 +57,18 @@ func (e *Engine) Tick() {
 	}
 	e.moved = e.moved[:len(e.items)]
 	e.solver.VisitMoved(e.visit)
+	e.grid.Invalidate()
 }
 
 // Left is who the last Tick pushed out through an open edge; good until the next Tick.
 func (e *Engine) Left() []uid.UID64 { return e.left }
 
-func (e *Engine) add(a, b uid.UID64) {
-	ia, ib := e.grid.At(a), e.grid.At(b)
-	if ia < 0 || ib < 0 {
-		return
+// add takes a pair the grid found, lower entity id first, as the handler has always heard them.
+func (e *Engine) add(a, b int32) {
+	if e.items[a].ID.Index() > e.items[b].ID.Index() {
+		a, b = b, a
 	}
-	e.solver.Add(Pair{A: int32(ia), B: int32(ib), Flags: flagsOf(e.items[ia].Caps, e.items[ib].Caps)})
+	e.solver.Add(Pair{A: a, B: b, Flags: flagsOf(e.items[a].Caps, e.items[b].Caps)})
 }
 
 func (e *Engine) ask(i int, pen geom.Vec) (geom.Vec, bool) {
