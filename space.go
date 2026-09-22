@@ -1,6 +1,3 @@
-// Package aabbworld is a 2D world of axis-aligned boxes: a plane with its own edge rules, a spatial
-// index over the boxes placed in it, and the questions a simulation asks of them — who is near
-// whom, who sees what, what overlaps. Space is the whole of it; geom and plane are its vocabulary.
 package aabbworld
 
 import (

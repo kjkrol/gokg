@@ -1,5 +1,3 @@
-// Package raycast is the state and the algorithm behind the public raycast package:
-// the sweep, the shadows, and the View they fill.
 package raycast
 
 import (

@@ -1,4 +1,3 @@
-// Package geometry provides a set of operations for 2D graphics
 package geom
 
 import (
