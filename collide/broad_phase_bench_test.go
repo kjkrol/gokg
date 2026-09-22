@@ -34,7 +34,7 @@ func (sc broadPhaseScene) build(b *testing.B) *crowd {
 	b.Helper()
 	space, err := aabbworld.NewSpace(aabbworld.Config{
 		Width: 2048, Height: 2048, Edges: aabbworld.Torus,
-		BucketSize: sc.bucket, BucketCapacity: 8, OpsBufferSize: 1 << 17,
+		BucketSize: sc.bucket, BucketCapacity: 8,
 	})
 	if err != nil {
 		b.Fatalf("NewSpace: %v", err)
@@ -73,10 +73,14 @@ func BenchmarkBroadPhase(b *testing.B) {
 		b.Run(sc.name+"/pairs", func(b *testing.B) {
 			c := sc.build(b)
 			found := 0
-			onPair := func(_, _ uid.UID64) { found++ }
+			var e collide.Engine
+			onPair := func(_, _ uid.UID64) (collide.Body, collide.Body, bool) {
+				found++
+				return collide.Body{}, collide.Body{}, false
+			}
 			for b.Loop() {
 				found = 0
-				collide.BroadPhase(c.space, pairsReach, aabbworld.CanCollide, onPair)
+				e.Tick(c.space, pairsReach, aabbworld.CanCollide, 0, onPair, nil, nil)
 			}
 			b.ReportMetric(float64(found), "pairs")
 		})

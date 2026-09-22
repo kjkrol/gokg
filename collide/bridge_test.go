@@ -11,7 +11,7 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-func TestBroadPhase_ReadsTheSpaceItIsHanded(t *testing.T) {
+func TestTick_ReadsTheSpaceItIsHanded(t *testing.T) {
 	build := func() *aabbworld.Space {
 		space, err := aabbworld.NewSpace(aabbworld.Config{Width: 256, Height: 256, BucketSize: 64})
 		if err != nil {
@@ -26,7 +26,11 @@ func TestBroadPhase_ReadsTheSpaceItIsHanded(t *testing.T) {
 
 	count := func(space *aabbworld.Space) int {
 		n := 0
-		collide.BroadPhase(space, 0.5, aabbworld.AnyCapability, func(_, _ uid.UID64) { n++ })
+		var e collide.Engine
+		e.Tick(space, 0.5, aabbworld.AnyCapability, 0, func(_, _ uid.UID64) (collide.Body, collide.Body, bool) {
+			n++
+			return collide.Body{}, collide.Body{}, false
+		}, nil, nil)
 		return n
 	}
 	if got := count(crowded); got != 1 {

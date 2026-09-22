@@ -9,23 +9,19 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-const defaultOpsBuffer = 4096
-
 type GridIndexConfig struct {
 	Resolution       Resolution
 	BucketResolution Resolution
 	BucketCapacity   int
-	OpsBufferSize    int
 	// CellCodec selects the grid-cell codec; the zero value is LinearCellCodec.
 	CellCodec CellCodecKind
 }
 
-// GridIndexManager buffers spatial updates and applies them in bulk.
-// Queue* are safe from any goroutine; Flush and every read belong to one.
+// GridIndexManager buffers spatial updates and applies them in bulk, all from one goroutine.
 type GridIndexManager struct {
 	bucketGrid  *bucketGrid
 	space       *iplane.Surface
-	opsCh       chan indexOp
+	ops         []indexOp
 	entries     map[uid.UID64]entryCache
 	maxGridCord uint32
 
@@ -85,14 +81,9 @@ func NewGridIndexManager(space *iplane.Surface, cfg GridIndexConfig) (*GridIndex
 		return nil, fmt.Errorf("unexpected bucket grid type")
 	}
 	maxGridCord := grid.resolution.MaxCoord()
-	opsBufferSize := cfg.OpsBufferSize
-	if cfg.OpsBufferSize == 0 {
-		opsBufferSize = defaultOpsBuffer
-	}
 	manager := &GridIndexManager{
 		bucketGrid:  grid,
 		space:       space,
-		opsCh:       make(chan indexOp, opsBufferSize),
 		entries:     make(map[uid.UID64]entryCache),
 		maxGridCord: maxGridCord,
 	}
@@ -100,41 +91,38 @@ func NewGridIndexManager(space *iplane.Surface, cfg GridIndexConfig) (*GridIndex
 }
 
 func (m *GridIndexManager) QueueInsert(id uid.UID64, aabb plane.AABB) {
-	m.opsCh <- indexOp{kind: opInsert, id: id, aabb: aabb, markDirty: true}
+	m.ops = append(m.ops, indexOp{kind: opInsert, id: id, aabb: aabb, markDirty: true})
 }
 
 func (m *GridIndexManager) QueueRemove(id uid.UID64) {
-	m.opsCh <- indexOp{kind: opRemove, id: id}
+	m.ops = append(m.ops, indexOp{kind: opRemove, id: id})
 }
 
 func (m *GridIndexManager) QueueUpdate(id uid.UID64, aabb plane.AABB, markDirty bool) {
-	m.opsCh <- indexOp{kind: opUpdate, id: id, aabb: aabb, markDirty: markDirty}
+	m.ops = append(m.ops, indexOp{kind: opUpdate, id: id, aabb: aabb, markDirty: markDirty})
 }
 
 // QueueSetCapabilities queues id's capabilities, in order with every other change.
 func (m *GridIndexManager) QueueSetCapabilities(id uid.UID64, c Capability) {
-	m.opsCh <- indexOp{kind: opSetCaps, id: id, caps: c}
+	m.ops = append(m.ops, indexOp{kind: opSetCaps, id: id, caps: c})
 }
 
 // Flush applies the queued ops; call it from a single, fixed goroutine.
 func (m *GridIndexManager) Flush(onDirty func(geom.AABB)) {
-	for {
-		select {
-		case op := <-m.opsCh:
-			switch op.kind {
-			case opInsert:
-				m.applyInsert(op.id, op.aabb, op.markDirty, onDirty)
-			case opRemove:
-				m.applyRemove(op.id, onDirty, true)
-			case opUpdate:
-				m.applyUpdate(op.id, op.aabb, op.markDirty, onDirty)
-			case opSetCaps:
-				m.bucketGrid.boxes.setCaps(op.id, op.caps)
-			}
-		default:
-			return
+	for i := range m.ops {
+		op := &m.ops[i]
+		switch op.kind {
+		case opInsert:
+			m.applyInsert(op.id, op.aabb, op.markDirty, onDirty)
+		case opRemove:
+			m.applyRemove(op.id, onDirty, true)
+		case opUpdate:
+			m.applyUpdate(op.id, op.aabb, op.markDirty, onDirty)
+		case opSetCaps:
+			m.bucketGrid.boxes.setCaps(op.id, op.caps)
 		}
 	}
+	m.ops = m.ops[:0]
 }
 
 // EntryAABB returns the indexed box of entryID; call it from the goroutine that calls Flush.

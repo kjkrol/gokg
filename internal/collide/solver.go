@@ -4,30 +4,41 @@ import (
 	"github.com/kjkrol/aabbworld/geom"
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
 	"github.com/kjkrol/aabbworld/plane"
+	"github.com/kjkrol/uid"
 )
 
-// Pair is collide.Pair as the solver holds it — the two have to stay field for field the same.
+// Pair is two entities' boxes that may be in contact, with the flags the solver separates them by.
 type Pair struct {
-	A, B             *plane.AABB
-	KeyA, KeyB       uint32
-	StaticA, StaticB bool
-	Sensor           bool
+	A, B     *plane.AABB
+	IDA, IDB uid.UID64
+	Flags    uint8
 }
 
-// state is what the solver remembers about a pair across iterations, kept
-// beside Pair rather than in it so the caller's input stays untouched.
+const (
+	StaticA uint8 = 1 << iota
+	StaticB
+	Sensor
+	dropped
+	reported
+	movedA
+	movedB
+)
+
+// state is what the solver remembers about a pair across passes.
 type state struct {
-	reported       bool
-	movedA, movedB bool
-	testedAt       uint32 // the solver's clock when this pair was last measured; 0 for never
+	testedAt uint32 // the solver's clock when this pair was last measured; 0 for never
+	flags    uint8
 }
 
-// Solver is the state and the algorithm behind collide.NarrowPhase.
+// Touch is asked once per pair, when its boxes first overlap; false drops the pair for the tick.
+type Touch func(i int, pen geom.Vec) (geom.Vec, bool)
+
+// Solver is the state and the algorithm behind collide.Engine.
 type Solver struct {
 	pairs  []Pair
 	states []state
 
-	// clock counts measurements; movedAt is its reading when each box key was last pushed.
+	// clock counts measurements; movedAt is its reading when each box was last pushed, by id index.
 	clock   uint32
 	movedAt []uint32
 }
@@ -43,22 +54,32 @@ func (s *Solver) Reset() {
 // Add enters a pair into the batch and returns its index.
 func (s *Solver) Add(p Pair) int {
 	s.pairs = append(s.pairs, p)
-	s.states = append(s.states, state{})
-	if need := int(max(p.KeyA, p.KeyB)) + 1; need > len(s.movedAt) {
+	s.states = append(s.states, state{flags: p.Flags})
+	if need := int(max(p.IDA.Index(), p.IDB.Index())) + 1; need > len(s.movedAt) {
 		s.movedAt = append(s.movedAt, make([]uint32, need-len(s.movedAt))...)
 	}
 	return len(s.pairs) - 1
 }
 
+// Len is how many pairs the batch holds.
+func (s *Solver) Len() int { return len(s.pairs) }
+
+// Pair is the i-th pair of the batch.
+func (s *Solver) Pair(i int) *Pair { return &s.pairs[i] }
+
 // Solve reports each overlapping pair once and pushes it apart, in up to iterations passes.
-func (s *Solver) Solve(surface *iplane.Surface, iterations int, onContact func(i int, pen geom.Vec)) {
+func (s *Solver) Solve(surface *iplane.Surface, iterations int, touch Touch, onContact func(i int, pen geom.Vec)) {
 	for range iterations {
 		moved := false
 		for i := range s.pairs {
 			p := &s.pairs[i]
 			st := &s.states[i]
+			if st.flags&dropped != 0 {
+				continue
+			}
+			keyA, keyB := p.IDA.Index(), p.IDB.Index()
 
-			if st.testedAt > s.movedAt[p.KeyA] && st.testedAt > s.movedAt[p.KeyB] {
+			if st.testedAt > s.movedAt[keyA] && st.testedAt > s.movedAt[keyB] {
 				continue
 			}
 			s.clock++
@@ -68,31 +89,38 @@ func (s *Solver) Solve(surface *iplane.Surface, iterations int, onContact func(i
 			if !ok {
 				continue
 			}
+			pen := hit.Penetration
 
-			if !st.reported {
-				st.reported = true
+			if st.flags&reported == 0 {
+				if touch != nil {
+					if pen, ok = touch(i, pen); !ok {
+						st.flags |= dropped
+						continue
+					}
+				}
+				st.flags |= reported
 				if onContact != nil {
-					onContact(i, hit.Penetration)
+					onContact(i, pen)
 				}
 			}
 
-			if p.Sensor {
+			if st.flags&Sensor != 0 {
 				continue
 			}
-			pushA, pushB, ok := split(hit.Penetration, p.StaticA, p.StaticB)
+			pushA, pushB, ok := split(pen, st.flags&StaticA != 0, st.flags&StaticB != 0)
 			if !ok {
 				continue
 			}
 			if pushA != (geom.Vec{}) {
 				surface.Translate(p.A, pushA)
-				s.movedAt[p.KeyA] = s.clock
-				st.movedA = true
+				s.movedAt[keyA] = s.clock
+				st.flags |= movedA
 				moved = true
 			}
 			if pushB != (geom.Vec{}) {
 				surface.Translate(p.B, pushB)
-				s.movedAt[p.KeyB] = s.clock
-				st.movedB = true
+				s.movedAt[keyB] = s.clock
+				st.flags |= movedB
 				moved = true
 			}
 		}
@@ -102,15 +130,15 @@ func (s *Solver) Solve(surface *iplane.Surface, iterations int, onContact func(i
 	}
 }
 
-// Pair is the i-th pair of the batch.
-func (s *Solver) Pair(i int) *Pair { return &s.pairs[i] }
-
-// VisitMoved calls fn for every pair the solver actually pushed, naming which sides moved.
-func (s *Solver) VisitMoved(fn func(i int, movedA, movedB bool)) {
+// VisitMoved calls fn for every box the solver pushed, once per pair it was pushed in.
+func (s *Solver) VisitMoved(fn func(id uid.UID64, box *plane.AABB)) {
 	for i := range s.states {
-		st := &s.states[i]
-		if st.movedA || st.movedB {
-			fn(i, st.movedA, st.movedB)
+		f := s.states[i].flags
+		if f&movedA != 0 {
+			fn(s.pairs[i].IDA, s.pairs[i].A)
+		}
+		if f&movedB != 0 {
+			fn(s.pairs[i].IDB, s.pairs[i].B)
 		}
 	}
 }

@@ -40,7 +40,7 @@ func newCrowd(t testing.TB, width, height uint32, edges aabbworld.Edges) *crowd 
 	t.Helper()
 	space, err := aabbworld.NewSpace(aabbworld.Config{
 		Width: width, Height: height, Edges: edges,
-		BucketSize: 64, BucketCapacity: 8, OpsBufferSize: 1 << 14,
+		BucketSize: 64, BucketCapacity: 8,
 	})
 	if err != nil {
 		t.Fatalf("NewSpace: %v", err)
@@ -124,11 +124,18 @@ func meetAcrossSeams(a, b plane.AABB) bool {
 	return false
 }
 
-func (c *crowd) pairs(want aabbworld.Capability) []idPair {
+// candidates lists the pairs Engine.Tick resolves, refusing each so nothing is tested or moved.
+func candidates(space *aabbworld.Space, want aabbworld.Capability) []idPair {
 	var pairs []idPair
-	collide.BroadPhase(c.space, pairsReach, want, func(a, b uid.UID64) { pairs = append(pairs, idPair{a, b}) })
+	var e collide.Engine
+	e.Tick(space, pairsReach, want, 0, func(a, b uid.UID64) (collide.Body, collide.Body, bool) {
+		pairs = append(pairs, idPair{a, b})
+		return collide.Body{}, collide.Body{}, false
+	}, nil, nil)
 	return pairs
 }
+
+func (c *crowd) pairs(want aabbworld.Capability) []idPair { return candidates(c.space, want) }
 
 func TestBroadPhase_FindsExactlyWhoIsNear(t *testing.T) {
 	sizes := map[string][]float64{

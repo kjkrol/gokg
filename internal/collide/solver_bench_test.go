@@ -2,6 +2,7 @@ package collide_test
 
 import (
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
+	"github.com/kjkrol/uid"
 	"testing"
 
 	"github.com/kjkrol/aabbworld/geom"
@@ -59,11 +60,11 @@ func BenchmarkSolve(b *testing.B) {
 				for _, p := range batch.pairs {
 					pair := collide.Pair{A: &batch.boxes[p[0]], B: &batch.boxes[p[1]]}
 					if keyed {
-						pair.KeyA, pair.KeyB = uint32(p[0]), uint32(p[1])
+						pair.IDA, pair.IDB = uid.UID64(p[0]), uid.UID64(p[1])
 					}
 					s.Add(pair)
 				}
-				s.Solve(surface, iterations, nil)
+				s.Solve(surface, iterations, nil, nil)
 			}
 			b.ReportMetric(float64(len(batch.pairs)), "pairs")
 		})

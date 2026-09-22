@@ -1,4 +1,3 @@
-// Package collide finds and separates overlapping boxes of a Space: BroadPhase names the pairs
-// that may touch, a NarrowPhase gathers them as Pairs, and Separate tests each exactly and
-// pushes the overlapping apart.
+// Package collide finds and separates the overlapping boxes of a Space, one Engine.Tick at a time:
+// who may touch, each pair resolved by the caller into bodies, tested exactly, and pushed apart.
 package collide

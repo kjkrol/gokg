@@ -66,8 +66,6 @@ type Config struct {
 	BucketSize uint32
 	// BucketCapacity is how many entities a bucket holds before it grows.
 	BucketCapacity int
-	// OpsBufferSize is how many queued changes fit between two Flushes.
-	OpsBufferSize int
 }
 
 func init() {
@@ -88,7 +86,6 @@ func NewSpace(cfg Config) (*Space, error) {
 		Resolution:       spatial.ResolutionFrom(max(cfg.Width, cfg.Height)),
 		BucketResolution: spatial.ResolutionFrom(cfg.BucketSize),
 		BucketCapacity:   cfg.BucketCapacity,
-		OpsBufferSize:    cfg.OpsBufferSize,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create spatial index: %w", err)

@@ -37,7 +37,11 @@ func found(space *aabbworld.Space) []uid.UID64 {
 
 func paired(space *aabbworld.Space) int {
 	n := 0
-	collide.BroadPhase(space, 0.5, aabbworld.AnyCapability, func(_, _ uid.UID64) { n++ })
+	var e collide.Engine
+	e.Tick(space, 0.5, aabbworld.AnyCapability, 0, func(_, _ uid.UID64) (collide.Body, collide.Body, bool) {
+		n++
+		return collide.Body{}, collide.Body{}, false
+	}, nil, nil)
 	return n
 }
 
@@ -130,7 +134,7 @@ func TestTranslate_OpenEdgeLetsABoxComeBackWhereItWas(t *testing.T) {
 	}
 }
 
-func TestSeparate_NamesABoxItPushedOutOfAnOpenEdge(t *testing.T) {
+func TestTick_NamesABoxItPushedOutOfAnOpenEdge(t *testing.T) {
 	space := edgedSpace(t, aabbworld.OpenX)
 	wall, pushed := uid.UID64(1), uid.UID64(2)
 	a := plane.NewAABB(geom.NewVec(0, 100), 10, 10)
@@ -139,12 +143,16 @@ func TestSeparate_NamesABoxItPushedOutOfAnOpenEdge(t *testing.T) {
 	space.Insert(pushed, &b)
 	space.Flush(nil)
 
-	var narrow collide.NarrowPhase
-	narrow.Add(collide.Pair{A: &a, B: &b, StaticA: true})
-	narrow.Separate(space, 4, nil, func(int) (uid.UID64, uid.UID64) { return wall, pushed })
+	var e collide.Engine
+	e.Tick(space, 0.5, aabbworld.AnyCapability, 4, func(x, y uid.UID64) (collide.Body, collide.Body, bool) {
+		if x != wall || y != pushed {
+			t.Fatalf("resolve asked about (%v, %v), want (%v, %v)", x, y, wall, pushed)
+		}
+		return collide.Body{Box: &a, Static: true}, collide.Body{Box: &b}, true
+	}, nil, nil)
 	space.Flush(nil)
 
-	if got := narrow.Left(); !slices.Equal(got, []uid.UID64{pushed}) {
+	if got := e.Left(); !slices.Equal(got, []uid.UID64{pushed}) {
 		t.Errorf("Left = %v after the wall pushed %v past the open edge, want exactly it", got, pushed)
 	}
 	if got := found(space); !slices.Equal(got, []uid.UID64{wall}) {

@@ -2,6 +2,7 @@ package collide
 
 import (
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
+	"github.com/kjkrol/uid"
 	"math/rand/v2"
 	"testing"
 
@@ -25,10 +26,10 @@ func solveEverything(pairs []Pair, surface *iplane.Surface, iterations int, onCo
 				reported[i] = true
 				onContact(i)
 			}
-			if p.Sensor {
+			if p.Flags&Sensor != 0 {
 				continue
 			}
-			pushA, pushB, ok := split(hit.Penetration, p.StaticA, p.StaticB)
+			pushA, pushB, ok := split(hit.Penetration, p.Flags&StaticA != 0, p.Flags&StaticB != 0)
 			if !ok {
 				continue
 			}
@@ -68,11 +69,17 @@ func newCrowd(rng *rand.Rand, surface *iplane.Surface, count int, field float64)
 			if dx*dx+dy*dy > 30*30 {
 				continue
 			}
-			c.pairs = append(c.pairs, Pair{
-				KeyA: uint32(i), KeyB: uint32(j),
-				StaticA: pinned[i], StaticB: pinned[j],
-				Sensor: rng.IntN(12) == 0,
-			})
+			var flags uint8
+			if pinned[i] {
+				flags |= StaticA
+			}
+			if pinned[j] {
+				flags |= StaticB
+			}
+			if rng.IntN(12) == 0 {
+				flags |= Sensor
+			}
+			c.pairs = append(c.pairs, Pair{IDA: uid.UID64(i), IDB: uid.UID64(j), Flags: flags})
 		}
 	}
 	return c
@@ -83,9 +90,9 @@ func (c crowd) over(boxes []plane.AABB, keyed bool) []Pair {
 	copy(boxes, c.boxes)
 	pairs := make([]Pair, len(c.pairs))
 	for i, p := range c.pairs {
-		p.A, p.B = &boxes[p.KeyA], &boxes[p.KeyB]
+		p.A, p.B = &boxes[p.IDA.Index()], &boxes[p.IDB.Index()]
 		if !keyed {
-			p.KeyA, p.KeyB = 0, 0
+			p.IDA, p.IDB = 0, 0
 		}
 		pairs[i] = p
 	}
@@ -113,7 +120,7 @@ func TestSolve_SkippingChangesNothing(t *testing.T) {
 				for _, p := range c.over(got, keyed) {
 					s.Add(p)
 				}
-				s.Solve(surface, 16, func(i int, _ geom.Vec) { gotContacts = append(gotContacts, i) })
+				s.Solve(surface, 16, nil, func(i int, _ geom.Vec) { gotContacts = append(gotContacts, i) })
 
 				for i := range want {
 					if got[i].AABB != want[i].AABB {
@@ -128,7 +135,10 @@ func TestSolve_SkippingChangesNothing(t *testing.T) {
 						t.Fatalf("%s keyed=%v round %d: contact %d was pair %d, want pair %d", name, keyed, round, k, gotContacts[k], wantContacts[k])
 					}
 				}
-				s.VisitMoved(func(i int, a, b bool) { wantA[i], wantB[i] = wantA[i] != a, wantB[i] != b })
+				for i := range s.states {
+					f := s.states[i].flags
+					wantA[i], wantB[i] = wantA[i] != (f&movedA != 0), wantB[i] != (f&movedB != 0)
+				}
 				for i := range wantA {
 					if wantA[i] || wantB[i] {
 						t.Fatalf("%s keyed=%v round %d: pair %d disagrees on which side moved", name, keyed, round, i)
@@ -149,7 +159,7 @@ func TestSolve_KeyedPairsAreMeasuredLessOften(t *testing.T) {
 		for _, p := range c.over(boxes, keyed) {
 			s.Add(p)
 		}
-		s.Solve(surface, 16, nil)
+		s.Solve(surface, 16, nil, nil)
 		return s.clock
 	}
 
