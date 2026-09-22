@@ -238,9 +238,9 @@ reports 0 allocs/op.
 
 | Operation | Scene | Cost |
 |:---|:---|---:|
-| Collision tick (pair, ask, separate) | 8,388 boxes of 10 on a 2048² torus, 20% full | 1.78 ms |
-| Collision tick | 33,554 boxes of 5, 20% full | 8.6 ms |
-| Rebuild + pairs + 8 queries | 8,388 boxes of 5 on a 1024² torus | 1.23 ms |
+| Collision tick (pair, ask, separate) | 8,388 boxes, 10×10 each, covering 20% of a 2048×2048 torus | 1.78 ms |
+| Collision tick | 33,554 boxes, 5×5 each, covering 20% of the same torus | 8.6 ms |
+| Rebuild + pairs + 8 queries | 8,388 boxes, 5×5 each, on a 1024×1024 torus | 1.23 ms |
 | Solve confirmed pairs | 13,547 candidate pairs, 3,763 contacts | 4.25 ms |
 | Scan a 90° cone and list what it sees | 1,000 entities in sight range | 24.8 µs |
 | Fold a box across the far corner (`WrapAABB`) | torus | 31 ns |

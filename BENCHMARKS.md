@@ -27,14 +27,17 @@ Two ways of finding who is near whom in a crowd of `CanCollide` boxes on a 2048�
 - **tick**: one `Engine.Tick` whose `Touch` refuses every pair, so it measures pairing plus one
   overlap test per pair and nothing moves.
 
-Bucket size is what a caller sizing buckets from its largest entity would pick.
+The boxes are scattered at random, so some overlap. "Covering 20%" means the boxes' total area is
+20% of the world's: 8,388 boxes of 10×10 cover 838,800 of the torus's 4,194,304 square units. The
+scenes are sized to hold that coverage constant across box sizes, so the same crowding is measured
+with different boxes. Bucket size is what a caller sizing buckets from its largest entity would pick.
 
 | Scene | bucket | probe-per-entity | pairs found | tick | overlaps found |
 |:---|---:|---:|---:|---:|---:|
-| 8,388 boxes of 10 (20% full) | 32 | 2.27 ms | 13,471 | **1.78 ms** | 3,342 |
-| 16,777 boxes of 10 (40% full) | 32 | 7.25 ms | 53,723 | **6.20 ms** | 13,398 |
-| 33,554 boxes of 5 (20% full) | 16 | 11.46 ms | 53,866 | **8.61 ms** | 13,372 |
-| 12,000 boxes of 8 + 20 of 100 | 256 | 14.69 ms | 18,571 | **7.42 ms** | 5,005 |
+| 8,388 boxes, 10×10 each, covering 20% of the world | 32 | 2.27 ms | 13,471 | **1.78 ms** | 3,342 |
+| 16,777 boxes, 10×10 each, covering 40% | 32 | 7.25 ms | 53,723 | **6.20 ms** | 13,398 |
+| 33,554 boxes, 5×5 each, covering 20% | 16 | 11.46 ms | 53,866 | **8.61 ms** | 13,372 |
+| 12,000 boxes 8×8 plus 20 boxes 100×100 | 256 | 14.69 ms | 18,571 | **7.42 ms** | 5,005 |
 
 The tick wins everywhere, and by most in the mixed-size crowd: its sweep places each box by its own
 grown size, while a per-entity probe over 256-unit buckets scans every neighbour of every 100-box.
@@ -47,11 +50,11 @@ One tick of the index alone, on a 1024×1024 torus with 16-unit cells: every box
 
 | Scene | per tick |
 |:---|---:|
-| 2,000 boxes of 5 | 242 µs |
-| 8,388 boxes of 5 | 1.23 ms |
-| 8,388 boxes of 4, 5, 16 and 60 | 8.48 ms |
+| 2,000 boxes, 5×5 each | 242 µs |
+| 8,388 boxes, 5×5 each | 1.23 ms |
+| 8,388 boxes of mixed sizes: 4×4, 5×5, 16×16 and 60×60 | 8.48 ms |
 
-Profile of the 8,388×5 case: building the query cells ≈31%, building the pair sweep ≈24%,
+Profile of the 8,388 boxes 5×5 case: building the query cells ≈31%, building the pair sweep ≈24%,
 testing pairs ≈32%, the eight queries ≈2%.
 
 ## Collision solver — `Benchmark_Solver_*`
@@ -60,8 +63,8 @@ The solver alone, fed pre-computed pairs.
 
 | Benchmark | Scene | per solve |
 |:---|:---|---:|
-| `Solver_Field` | 100×50 field of 10-boxes, 9,850 neighbour pairs, 1 in 25 overlapping | 221 µs |
-| `Solver_Dense` | 8,388 boxes of 5 over a fifth of a torus: 13,547 pairs, 3,763 contacts | 4.25 ms |
+| `Solver_Field` | a 100×50 lattice of 10×10 boxes, 9,850 neighbour pairs, 1 box in 25 nudged into its neighbour | 221 µs |
+| `Solver_Dense` | 8,388 boxes, 5×5 each, crowded on a 1024×1024 torus: 13,547 candidate pairs, 3,763 real contacts | 4.25 ms |
 
 ## Sight — `Benchmark_View_*`
 
