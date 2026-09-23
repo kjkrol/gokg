@@ -254,8 +254,8 @@ make bench
 
 # Projects using aabbworld
 
-- [`gokebiten`](https://github.com/kjkrol/gokebiten) — an Ebitengine game framework built on the
-  [GOKe](https://github.com/kjkrol/goke) ECS; its world, collision and vision plugins are built on
+- [`gram`](https://github.com/kjkrol/gram) — a game engine over the [GOKe](https://github.com/kjkrol/goke)
+  ECS and Ebitengine (formerly gokebiten); its world, collision and vision plugins are built on
   `Space`.
 
 <a id="documentation"></a>
