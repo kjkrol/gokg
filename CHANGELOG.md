@@ -1,5 +1,32 @@
 # Changelog
 
+## v1.7.0 — 2026-09-24
+
+Sight with heights: an eye, entities with a bottom and a top, ground that rises and falls.
+
+**Sight**
+- `Cone.Eye`, `Cone.Elevation func(id) (bottom, top float64)`, `Cone.Ground func(p geom.Vec)
+  float64` and `Cone.GroundStep` give sight heights. An entity is seen when the straight line from
+  the eye to its top stays above every nearer ground sample, passes through no nearer blocking
+  entity's band, and the budget lasts — a see-through entity charges `1/τ` per unit only for the
+  stretch the line spends inside its band. Entities are seen whether or not they block: a walker
+  under a hawk is seen beside it. `Elevation` nil spans every entity over all heights, `Ground` nil
+  is flat ground at 0, `GroundStep` 0 is a sixteenth of the radius; with both funcs nil the scan is
+  the one from v1.6.0.
+- The reach of an angle (`View.Depths`, `View.Outline`) is the farthest lit ground: the last ground
+  sample in sight or the foot of a box standing on the ground. A wall taller than the eye cuts the
+  reach at its foot as before; a wall lower than the eye is looked over; a hill hides the plain
+  behind it from the lowland and not from a hawk. Over uneven ground the whole cone is sampled
+  every two degrees.
+- **Changed**: a see-through entity the ray enters within its budget is now listed by
+  `View.Entities` — a forest looked into is seen. Casts note what they see on the candidates, so
+  `Depths` no longer changes what `Entities` reports.
+- `Scan` stays at 0 allocs/op; the scan without heights measures as in v1.6.0 (0–6% over six
+  alternating runs, one row at p < 0.05). Against the same scan without heights, bands alone cost
+  2.5–2.8×, a ground raster sampled every 32 of the radius 800 3.2–5.2×, at the default step
+  2.3–4.1× — the price is the angles and ground points cast, see
+  [BENCHMARKS.md](BENCHMARKS.md#sight-with-heights--benchmark_view_elevated).
+
 ## v1.6.0 — 2026-09-24
 
 Sight through see-through entities.

@@ -77,11 +77,36 @@ An observer on a 4000×4000 plane with 256-unit buckets scans a 90° cone of rad
 | `Scan` + both | 4.55 µs | 30.1 µs |
 | `Scan` + `Depths` (63 angles) | 5.31 µs | 29.3 µs |
 | `Scan` + both, 3 entities in 10 see-through at τ = 0.5 (`View_Translucent`) | 4.52 µs | 32.4 µs |
+| `Scan` + both with heights: eye 6 up, 3 in 10 see-through, 1 in 5 flying at 30, ground a sine sampled every 32 (`View_Elevated`) | 74.6 µs | 220 µs |
 
 The scan dominates; each read of the samples adds a microsecond or two. Sight through see-through
 entities (v1.6.0) costs the opaque-only scan nothing measurable — six alternating runs against the
 v1.5.0 tree differ by 1–3% with p > 0.3 on every row — and adds about 8% when three entities in ten
 are see-through: the extra samples across their spans and the budget walk behind them.
+
+### Sight with heights — `Benchmark_View_Elevated`
+
+The `View_Translucent` scene and cone (90°, radius 800, three entities in ten see-through at τ = 0.5,
+`Entities` + `Outline`) climbed rung by rung into heights, every rung measured in the same run as the
+scan without them. The eye is 6 up; every fifth entity flies at 30–34, every other stands to 2, the
+rest to 12. The ground is a sine 0–10 high, sampled every 32 units along a ray.
+
+| Rung | What is added | 100 entities | × none | 1,000 entities | × none |
+|:---|:---|---:|---:|---:|---:|
+| `none` | the v1.6.0 cone, the reference | 4.86 µs | 1.0 | 34.6 µs | 1.0 |
+| `entities` | `Eye` + `Elevation`, ground flat: bands, each box's span sampled every 2° | 12.1 µs | 2.5 | 96.0 µs | 2.8 |
+| `flat` | + `Ground` returning a constant, `GroundStep` 32: the whole cone every 2°, 25 ground points per angle | 28.8 µs | 5.9 | 119 µs | 3.4 |
+| `raster` | `Ground` as a lookup in a 32-unit heightfield — what an engine pays | 25.4 µs | 5.2 | 112 µs | 3.2 |
+| `raster-step50` | the raster at the default step, radius/16: 16 ground points per angle | 20.0 µs | 4.1 | 79.7 µs | 2.3 |
+| `sine` | `Ground` computed with sin·cos on the spot | 77.8 µs | 16 | 233 µs | 6.7 |
+
+Every rung is 0 allocs/op. The cost is what gets sampled: bands alone triple the scan because every
+box's span is now cast every two degrees, as a see-through box's was; ground adds the casts between
+boxes — 45 angles for 90° — and a horizon and line test per ground point, about 17 ns each with a
+cheap `Ground`; the step sets how many points there are (25 at 32, 16 at 50); and the `Ground`
+function itself is paid once per point, some 2,500 times a scan here, which is why the sine rung
+doubles the raster one. The scan without heights measures as in v1.6.0: six alternating runs against
+that tree differ by 0–6% and only `Depths` at 1,000 entities clears p < 0.05 (+6%).
 
 ## Primitives — `Benchmark_AABB_*`, `Benchmark_Surface_*`, `Benchmark_Vec_*`
 

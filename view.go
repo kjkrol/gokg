@@ -7,14 +7,24 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-// Cone bounds a visibility query: a direction, a half-angle either side of it, how far it reaches
-// and how see-through each entity is. The budget model behind Transparency is in the package doc.
+// Cone bounds a visibility query: a direction, a half-angle either side of it, how far it reaches,
+// how see-through each entity is and, when sight has heights, where the eye is and how the world
+// stands. The budget model behind Transparency and the sightlines behind Eye, Elevation and
+// Ground are in the package doc.
 type Cone struct {
 	Direction geom.Vec
 	HalfAngle float64 // below π
 	Radius    float64
 	// Transparency is τ per entity: 1 as empty, 0.5 costs twice its depth, ≤ 0 blocks; nil blocks all.
 	Transparency func(id uid.UID64) float64
+	// Eye is the height the observer looks from; it matters once Elevation or Ground is set.
+	Eye float64
+	// Elevation is the bottom and top of each entity; nil spans every entity over all heights.
+	Elevation func(id uid.UID64) (bottom, top float64)
+	// Ground is the height of the ground at a point, sampled every GroundStep along a ray (0: a
+	// sixteenth of Radius); nil is flat ground at 0.
+	Ground     func(p geom.Vec) float64
+	GroundStep float64
 }
 
 // View is one observer's line of sight: filled by Space.Scan, then read as many ways as needed.

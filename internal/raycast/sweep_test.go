@@ -18,7 +18,11 @@ func bruteForce(boxes map[uid.UID64][4]float64, taus map[uid.UID64]float64, orig
 	arcs := map[uid.UID64]float64{}
 	for i := 0; i <= steps; i++ {
 		a := dir - cone.HalfAngle + 2*cone.HalfAngle*float64(i)/float64(steps)
-		if _, id, hit := castRay(boxes, taus, origin, a, cone.Radius); hit {
+		_, id, hit, through := castRaySeeing(boxes, taus, origin, a, cone.Radius)
+		if hit {
+			arcs[id] += step
+		}
+		for _, id := range through {
 			arcs[id] += step
 		}
 	}

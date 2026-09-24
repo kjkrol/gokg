@@ -66,7 +66,7 @@ go get github.com/kjkrol/aabbworld
 | **Transformations** | `Place`, `Move`, `MoveTo`, `WrapAABB` fold a box into the space under its edge rules and say when it has left |
 | **Spatial index** | `Rebuild` from a slice, `Query` by rectangle and `Capability` mask, seams included |
 | **Collisions** | `CollideEngine`: pairs every two `CanCollide` boxes within reach, asks your `Handler` to confirm each overlap, separates them over a few passes, reports who moved and who left |
-| **Sight** | `Scan` fills a `View` with what an observer sees through a `Cone`: entities nearest first, depth samples, or the lit outline; `Cone.Transparency` lets a forest shorten sight where a wall cuts it |
+| **Sight** | `Scan` fills a `View` with what an observer sees through a `Cone`: entities nearest first, depth samples, or the lit outline; `Cone.Transparency` lets a forest shorten sight where a wall cuts it; `Cone.Eye`, `Elevation` and `Ground` give sight heights, so a hawk looks over the wall and a hill hides the plain behind it |
 
 <a id="example"></a>
 # Example
@@ -244,6 +244,7 @@ reports 0 allocs/op.
 | Solve confirmed pairs | 13,547 candidate pairs, 3,763 contacts | 4.25 ms |
 | Scan a 90° cone and list what it sees | 1,000 entities in sight range | 26.7 µs |
 | Scan a 90° cone through see-through entities, list and outline | 1,000 entities, 3 in 10 at τ = 0.5 | 32.4 µs |
+| The same scan with heights over a 32-unit heightfield | 1,000 entities, 3 in 10 at τ = 0.5, ground sampled every 32 | 112 µs (3.2× the scan without heights) |
 | Fold a box across the far corner (`WrapAABB`) | torus | 31 ns |
 
 > **Deep dive**: per-scene tables, what each benchmark measures, and what the numbers taught us

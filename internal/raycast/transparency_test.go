@@ -19,7 +19,8 @@ func seeThrough(c raycast.Cone, taus map[uid.UID64]float64) raycast.Cone {
 }
 
 // forestScene is an eye at x 100, a forest 100 thick starting 100 ahead, and a target 400 ahead:
-// looked through a τ = 0.5 forest the target costs 100 + 200 + 200 = 500 of reach.
+// looked through a τ = 0.5 forest the target costs 100 + 200 + 200 = 500 of reach. The forest
+// itself, looked into, is always seen.
 func forestScene() *fakeSpace {
 	s := newFake(2000, 2000, false)
 	s.put(eye, 100, 100, 10, 10)
@@ -32,8 +33,8 @@ func TestTransparency_ForestChargesItsThicknessAgainstTheReach(t *testing.T) {
 	s := forestScene()
 	taus := map[uid.UID64]float64{forest: 0.5}
 
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 501), taus)), far)
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 499), taus)))
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 501), taus)), forest, far)
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 499), taus)), forest)
 }
 
 func TestTransparency_FullyTransparentIsAsGoodAsEmpty(t *testing.T) {
@@ -41,8 +42,8 @@ func TestTransparency_FullyTransparentIsAsGoodAsEmpty(t *testing.T) {
 	for name, tau := range map[string]float64{"tau one": 1, "tau above one is capped": 5} {
 		t.Run(name, func(t *testing.T) {
 			taus := map[uid.UID64]float64{forest: tau}
-			assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 401), taus)), far)
-			assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 399), taus)))
+			assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 401), taus)), forest, far)
+			assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 399), taus)), forest)
 		})
 	}
 }
@@ -71,8 +72,8 @@ func TestTransparency_ObserverInsideAForestPaysFromWhereItStands(t *testing.T) {
 	s.put(far, 505, 100, 10, 10)    // 400 ahead: 245·2 + 155 = 645 of reach
 	taus := map[uid.UID64]float64{forest: 0.5}
 
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 646), taus)), far)
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 644), taus)))
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 646), taus)), forest, far)
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 644), taus)), forest)
 
 	v := scan(t, s, eye, seeThrough(eastward(math.Pi/8, 500), taus))
 	if d := v.Depths(5, nil)[2]; math.Abs(float64(d)-255) > 1e-3 { // 490 of the 500 spent inside, 10 left
@@ -88,8 +89,8 @@ func TestTransparency_TwoForestsAddUp(t *testing.T) {
 	s.put(far, 505, 100, 10, 10)      // 400 ahead: 100 + 100 + 50 + 100 + 150 = 500
 	taus := map[uid.UID64]float64{forest: 0.5, forest + 1: 0.5}
 
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 501), taus)), far)
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 499), taus)))
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 501), taus)), forest, forest+1, far)
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 499), taus)), forest, forest+1)
 }
 
 func TestTransparency_OverlappingForestsChargeTheStretchOnce(t *testing.T) {
@@ -100,8 +101,8 @@ func TestTransparency_OverlappingForestsChargeTheStretchOnce(t *testing.T) {
 	s.put(far, 505, 100, 10, 10)       // 400 ahead: 100 + 300 + 150 = 550
 	taus := map[uid.UID64]float64{forest: 0.5, forest + 1: 0.5}
 
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 551), taus)), far)
-	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 549), taus)))
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 551), taus)), forest, forest+1, far)
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 549), taus)), forest, forest+1)
 }
 
 func TestTransparency_AWallInsideAForestStillCuts(t *testing.T) {
@@ -109,10 +110,7 @@ func TestTransparency_AWallInsideAForestStillCuts(t *testing.T) {
 	s.put(near, 255, 100, 10, 10) // 150 ahead, inside the forest, covering the target
 	taus := map[uid.UID64]float64{forest: 0.5}
 
-	got := visible(t, s, eye, seeThrough(eastward(math.Pi/8, 600), taus))
-	if !got[near] || got[far] {
-		t.Errorf("visible = %v, want the wall inside the forest and nothing behind it", keys(got))
-	}
+	assertVisible(t, visible(t, s, eye, seeThrough(eastward(math.Pi/8, 600), taus)), forest, near)
 }
 
 func TestTransparency_OutlineIsPulledInWithoutAHit(t *testing.T) {
@@ -122,9 +120,7 @@ func TestTransparency_OutlineIsPulledInWithoutAHit(t *testing.T) {
 	taus := map[uid.UID64]float64{forest: 0.5}
 	cone := seeThrough(eastward(math.Pi/4, 600), taus)
 
-	if n := scan(t, s, eye, cone).Entities(func(uid.UID64, float64) {}); n != 0 {
-		t.Errorf("Entities = %d, want none: a see-through entity is not seen", n)
-	}
+	assertVisible(t, visible(t, s, eye, cone), forest)
 	pts := outline(t, s, eye, cone, 0)
 	shortest, longest := math.Inf(1), 0.0
 	for i := 1; i < len(pts); i++ {
@@ -200,11 +196,6 @@ func TestTransparency_MissesNothingADenseFanOfRaysReaches(t *testing.T) {
 		origin := geom.NewVec(2005.0, 2005.0)
 
 		got := visible(t, s, eye, cone)
-		for id := range got {
-			if taus[id] > 0 {
-				t.Errorf("trial %d: see-through %d reported as seen", trial, id)
-			}
-		}
 		minArc := math.Pi / 90 // the sweep samples the reach behind a see-through box every two degrees
 		for id := range bruteForce(boxes, taus, origin, cone, 4000, minArc) {
 			if !got[id] {

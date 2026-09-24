@@ -16,12 +16,17 @@ type QueryableSpace interface {
 }
 
 // Cone bounds a visibility query: a direction, a half-angle either side of it, how far it reaches,
-// and how see-through each entity is (nil: nothing is).
+// how see-through each entity is (nil: nothing is) and, when sight has heights, where the eye is,
+// how tall each entity stands (nil: all heights) and how high the ground lies (nil: flat).
 type Cone struct {
 	Direction    geom.Vec
 	HalfAngle    float64
 	Radius       float64
 	Transparency func(id uid.UID64) float64
+	Eye          float64
+	Elevation    func(id uid.UID64) (bottom, top float64)
+	Ground       func(p geom.Vec) float64
+	GroundStep   float64
 }
 
 // View is one observer's line of sight: scanned once, then read as many ways as needed.
@@ -40,6 +45,8 @@ type View struct {
 	coneDir   float64
 	halfAngle float64
 	radius    float64
+	elev      elevation
+	elevated  bool
 	valid     bool
 }
 
@@ -70,8 +77,18 @@ func (v *View) Scan(space QueryableSpace, observer uid.UID64, cone Cone) bool {
 	v.coneDir = math.Atan2(cone.Direction.Y, cone.Direction.X)
 	v.halfAngle = cone.HalfAngle
 	v.radius = cone.Radius
+	v.elevated = cone.Elevation != nil || cone.Ground != nil
+	var elev *elevation
+	if v.elevated {
+		step := cone.GroundStep
+		if step <= 0 {
+			step = cone.Radius / 16
+		}
+		v.elev = elevation{eye: cone.Eye, ground: cone.Ground, step: step, w: wrapSize(w, wrapX), h: wrapSize(h, wrapY)}
+		elev = &v.elev
+	}
 
-	v.samples = sweep(v.origin, v.coneDir, cone.HalfAngle, cone.Radius, v.gather(space, observer, eyeBox, cone, w, h, wrapX, wrapY), &v.scratch)
+	v.samples = sweep(v.origin, v.coneDir, cone.HalfAngle, cone.Radius, v.gather(space, observer, eyeBox, cone, w, h, wrapX, wrapY), elev, &v.scratch)
 	v.valid = true
 	return true
 }
@@ -83,22 +100,9 @@ func (v *View) Entities(fn func(id uid.UID64, dist float64)) int {
 	}
 
 	found := v.found[:0]
-	for _, s := range v.samples {
-		if !s.hit {
-			continue
-		}
-		at := -1
-		for i := range found {
-			if found[i].id == s.id {
-				at = i
-				break
-			}
-		}
-		switch {
-		case at < 0:
-			found = append(found, seen{s.id, s.dist})
-		case s.dist < found[at].dist:
-			found[at].dist = s.dist
+	for _, c := range v.cands {
+		if !math.IsInf(c.seenAt, 1) {
+			found = append(found, seen{c.id, c.seenAt})
 		}
 	}
 	v.found = found
@@ -132,8 +136,12 @@ func (v *View) Depths(k int, dst []float32) []float32 {
 	}
 	v.uniform = angles
 
+	var elev *elevation
+	if v.elevated {
+		elev = &v.elev
+	}
 	v.active, v.depths = walk(v.origin, v.coneDir, v.radius, 0,
-		angles, v.events, v.cands, v.active, &v.crossings, v.depths[:0])
+		angles, v.events, v.cands, v.active, elev, &v.scratch, false, v.depths[:0])
 
 	for _, s := range v.depths {
 		dst = append(dst, float32(s.dist))
@@ -182,6 +190,7 @@ type scratch struct {
 	events    []event
 	active    []int
 	crossings []crossing
+	stretches []crossing
 	samples   []sample
 }
 
@@ -195,17 +204,27 @@ func (s *scratch) reset() {
 	s.events = s.events[:0]
 	s.active = s.active[:0]
 	s.crossings = s.crossings[:0]
+	s.stretches = s.stretches[:0]
 	s.samples = s.samples[:0]
 }
 
-// candidate is an entity the cone may reach; tau is its transparency, 0 for one that blocks sight.
+// candidate is an entity the cone may reach: tau is its transparency (0 blocks sight), bottom and
+// top its heights, foot the ground under it, standing whether it rests on that ground, and seenAt
+// the nearest distance a cast saw it from (+Inf until one does).
 type candidate struct {
-	id   uid.UID64
-	dist float64
-	span arc
-	box  geom.AABB
-	tau  float64
+	id       uid.UID64
+	dist     float64
+	span     arc
+	box      geom.AABB
+	tau      float64
+	bottom   float64
+	top      float64
+	foot     float64
+	standing bool
+	seenAt   float64
 }
+
+func (c *candidate) see(dist float64) { c.seenAt = math.Min(c.seenAt, dist) }
 
 // collector is what one gather needs while the index walks it.
 type collector struct {
@@ -252,8 +271,16 @@ func (c *collector) take(id uid.UID64) {
 	if span.empty() {
 		return
 	}
+	cand := candidate{id: id, dist: dist, span: span, box: box, tau: tau, bottom: math.Inf(-1), top: math.Inf(1), standing: true, seenAt: math.Inf(1)}
+	if c.cone.Elevation != nil {
+		cand.bottom, cand.top = c.cone.Elevation(id)
+	}
+	if c.cone.Ground != nil {
+		cand.foot = c.cone.Ground(centerOf(raw))
+	}
+	cand.standing = cand.bottom <= cand.foot+1e-6 // resting on the ground, not floating above it
 	c.sc.dedup[id] = struct{}{}
-	c.sc.cands = append(c.sc.cands, candidate{id: id, dist: dist, span: span, box: box, tau: tau})
+	c.sc.cands = append(c.sc.cands, cand)
 }
 
 // gather collects the entities within range whose angular span overlaps the cone.

@@ -35,8 +35,17 @@ func slabHit(b [4]float64, origin geom.Vec, dx, dy float64) (near, far float64, 
 // castRay is the sight model spelled out plainly over a map of boxes; taus nil makes every box
 // block.
 func castRay(boxes map[uid.UID64][4]float64, taus map[uid.UID64]float64, origin geom.Vec, angle, radius float64) (dist float64, id uid.UID64, hit bool) {
+	dist, id, hit, _ = castRaySeeing(boxes, taus, origin, angle, radius)
+	return dist, id, hit
+}
+
+// castRaySeeing is castRay that also lists the see-through boxes the ray enters within its reach.
+func castRaySeeing(boxes map[uid.UID64][4]float64, taus map[uid.UID64]float64, origin geom.Vec, angle, radius float64) (dist float64, id uid.UID64, hit bool, through []uid.UID64) {
 	dx, dy := math.Cos(angle), math.Sin(angle)
-	type span struct{ near, far, tau float64 }
+	type span struct {
+		near, far, tau float64
+		id             uid.UID64
+	}
 	var seeThrough []span
 	wall, wallID, walled := radius, uid.UID64(0), false
 	for bid, b := range boxes {
@@ -45,7 +54,7 @@ func castRay(boxes map[uid.UID64][4]float64, taus map[uid.UID64]float64, origin 
 			continue
 		}
 		if tau := math.Min(taus[bid], 1); tau > 0 {
-			seeThrough = append(seeThrough, span{near, far, tau})
+			seeThrough = append(seeThrough, span{near, far, tau, bid})
 			continue
 		}
 		if near <= wall {
@@ -76,7 +85,15 @@ func castRay(boxes map[uid.UID64][4]float64, taus map[uid.UID64]float64, origin 
 	}
 	reach := pos + budget
 	if walled && wall <= reach {
-		return wall, wallID, true
+		reach = wall
 	}
-	return reach, 0, false
+	for _, s := range seeThrough {
+		if s.near <= reach {
+			through = append(through, s.id)
+		}
+	}
+	if walled && wall <= reach {
+		return wall, wallID, true, through
+	}
+	return reach, 0, false, through
 }

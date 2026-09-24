@@ -43,10 +43,10 @@ func TestScan_SeesThroughAForestAtTheCostOfReach(t *testing.T) {
 	if got := sees(600, nil); !got[forest] || got[tower] {
 		t.Errorf("without Transparency the forest blocks: saw %v", got)
 	}
-	if got := sees(501, forestOnly); got[forest] || !got[tower] {
-		t.Errorf("through the forest at 501: saw %v, want the tower alone", got)
+	if got := sees(501, forestOnly); !got[forest] || !got[tower] {
+		t.Errorf("through the forest at 501: saw %v, want the forest and the tower", got)
 	}
-	if got := sees(499, forestOnly); len(got) != 0 {
-		t.Errorf("through the forest at 499: saw %v, want nothing", got)
+	if got := sees(499, forestOnly); !got[forest] || got[tower] {
+		t.Errorf("through the forest at 499: saw %v, want the forest alone", got)
 	}
 }

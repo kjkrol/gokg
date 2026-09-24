@@ -67,7 +67,16 @@
 // stretch through an entity of transparency τ costs its length divided by τ; an entity at τ ≤ 0
 // blocks sight where it is met. A forest at τ = 0.5 is thus looked through at half the reach, a
 // wall is not looked through at all. Cone.Transparency gives τ per entity and is nil by default,
-// when everything blocks. See-through entities shorten sight but are not listed as seen.
+// when everything blocks. Every entity sight reaches is seen, a forest looked into as much as a
+// wall looked at.
+//
+// Sight has heights once Cone.Elevation or Cone.Ground is set: the eye is Cone.Eye up, an entity
+// spans its bottom to its top, the ground lies at Cone.Ground of a point and is sampled every
+// Cone.GroundStep along a ray. An entity is seen when the straight line from the eye to its top
+// clears the ground and every nearer blocking entity's band, within the budget — a see-through
+// entity charges only the stretch the line spends inside its band. The reach of an angle is the
+// farthest lit ground, so a hawk looks over a wall the walker beside it is stopped by, and a hill
+// hides the plain behind it from the lowland alone. Details are in internal/raycast.
 //
 // # Package dependencies
 //
