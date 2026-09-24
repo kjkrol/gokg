@@ -7,12 +7,14 @@ import (
 	"github.com/kjkrol/uid"
 )
 
-// Cone bounds a visibility query: a direction, a half-angle either side of it,
-// and how far it reaches.
+// Cone bounds a visibility query: a direction, a half-angle either side of it, how far it reaches
+// and how see-through each entity is. The budget model behind Transparency is in the package doc.
 type Cone struct {
 	Direction geom.Vec
 	HalfAngle float64 // below π
 	Radius    float64
+	// Transparency is τ per entity: 1 as empty, 0.5 costs twice its depth, ≤ 0 blocks; nil blocks all.
+	Transparency func(id uid.UID64) float64
 }
 
 // View is one observer's line of sight: filled by Space.Scan, then read as many ways as needed.

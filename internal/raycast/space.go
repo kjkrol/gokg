@@ -6,6 +6,11 @@ import (
 	"github.com/kjkrol/aabbworld/geom"
 )
 
+// surrounds reports whether p lies inside box, its edges included.
+func surrounds(box geom.AABB, p geom.Vec) bool {
+	return p.X >= box.TopLeft.X && p.X <= box.BottomRight.X && p.Y >= box.TopLeft.Y && p.Y <= box.BottomRight.Y
+}
+
 func centerOf(a geom.AABB) geom.Vec {
 	return geom.NewVec(
 		(a.TopLeft.X+a.BottomRight.X)/2,

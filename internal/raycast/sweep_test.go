@@ -11,38 +11,15 @@ import (
 )
 
 // bruteForce is what a dense fan of rays meets across an arc wider than minArc.
-func bruteForce(boxes map[uid.UID64][4]float64, origin geom.Vec, cone raycast.Cone, steps int, minArc float64) map[uid.UID64]bool {
+// bruteForce casts a dense fan of rays and reports every box hit over an arc wider than minArc.
+func bruteForce(boxes map[uid.UID64][4]float64, taus map[uid.UID64]float64, origin geom.Vec, cone raycast.Cone, steps int, minArc float64) map[uid.UID64]bool {
 	dir := math.Atan2(cone.Direction.Y, cone.Direction.X)
 	step := 2 * cone.HalfAngle / float64(steps)
 	arcs := map[uid.UID64]float64{}
 	for i := 0; i <= steps; i++ {
 		a := dir - cone.HalfAngle + 2*cone.HalfAngle*float64(i)/float64(steps)
-		dx, dy := math.Cos(a), math.Sin(a)
-
-		best, hit := cone.Radius, uid.UID64(0)
-		for id, b := range boxes {
-			near, far := math.Inf(-1), math.Inf(1)
-			for axis, ray := range [2][2]float64{{origin.X, dx}, {origin.Y, dy}} {
-				o, d := ray[0], ray[1]
-				lo, hi := b[axis], b[axis+2]
-				if d == 0 {
-					if o < lo || o > hi {
-						near, far = 1, -1
-					}
-					continue
-				}
-				t1, t2 := (lo-o)/d, (hi-o)/d
-				if t1 > t2 {
-					t1, t2 = t2, t1
-				}
-				near, far = math.Max(near, t1), math.Min(far, t2)
-			}
-			if far >= near && far >= 0 && near <= best {
-				best, hit = math.Max(near, 0), id
-			}
-		}
-		if hit != 0 {
-			arcs[hit] += step
+		if _, id, hit := castRay(boxes, taus, origin, a, cone.Radius); hit {
+			arcs[id] += step
 		}
 	}
 
@@ -87,7 +64,7 @@ func TestVisible_MissesNothingADenseFanOfRaysReaches(t *testing.T) {
 		scan(t, s, eye, cone).Entities(func(id uid.UID64, _ float64) { got[id] = true })
 
 		minArc := 2 * math.Atan2(1, cone.Radius)
-		for id := range bruteForce(boxes, origin, cone, 4000, minArc) {
+		for id := range bruteForce(boxes, nil, origin, cone, 4000, minArc) {
 			if !got[id] {
 				t.Errorf("trial %d: rays reach %d, but Visible does not report it", trial, id)
 			}

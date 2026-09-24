@@ -103,3 +103,29 @@ func Benchmark_View_Depths(b *testing.B) {
 		})
 	}
 }
+
+// Benchmark_View_Translucent is Benchmark_View_Both with three entities in ten see-through at τ = 0.5.
+func Benchmark_View_Translucent(b *testing.B) {
+	translucent := func(id uid.UID64) float64 {
+		if id%10 < 3 {
+			return 0.5
+		}
+		return 0
+	}
+	cone := viewCone
+	cone.Transparency = translucent
+	for _, n := range []int{100, 1000} {
+		b.Run(entities(n), func(b *testing.B) {
+			space, observer := realSpace(b, n)
+			v := &aabbworld.View{}
+			var fog []geom.Vec
+			b.ReportAllocs()
+			for b.Loop() {
+				if space.Scan(observer, cone, v) {
+					v.Entities(func(uid.UID64, float64) {})
+					fog = v.Outline(0, fog[:0])
+				}
+			}
+		})
+	}
+}

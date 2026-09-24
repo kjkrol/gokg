@@ -63,6 +63,12 @@
 // of sight at evenly spaced angles ([View.Depths]), or the lit region as a fan of points
 // ([View.Outline]). A View is a reusable buffer for one goroutine.
 //
+// Sight has a budget of the cone's radius along every angle. An empty stretch costs its length; a
+// stretch through an entity of transparency τ costs its length divided by τ; an entity at τ ≤ 0
+// blocks sight where it is met. A forest at τ = 0.5 is thus looked through at half the reach, a
+// wall is not looked through at all. Cone.Transparency gives τ per entity and is nil by default,
+// when everything blocks. See-through entities shorten sight but are not listed as seen.
+//
 // # Package dependencies
 //
 // The packages form a strict acyclic graph. Each layer imports only layers below it:

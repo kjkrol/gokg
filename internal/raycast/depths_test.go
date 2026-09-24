@@ -11,33 +11,14 @@ import (
 )
 
 // nearestAlong is the reach of one ray, tested against every box directly.
+// nearestAlong is how far a ray gets among boxes that all block sight.
 func nearestAlong(boxes [][4]float64, origin geom.Vec, angle, radius float64) float64 {
-	dx, dy := math.Cos(angle), math.Sin(angle)
-	best := radius
-	for _, b := range boxes {
-		near, far := math.Inf(-1), math.Inf(1)
-		for axis, ray := range [2][2]float64{{origin.X, dx}, {origin.Y, dy}} {
-			o, d := ray[0], ray[1]
-			lo, hi := b[axis], b[axis+2]
-			if d == 0 {
-				if o < lo || o > hi {
-					near, far = 1, -1
-				}
-				continue
-			}
-			t1, t2 := (lo-o)/d, (hi-o)/d
-			if t1 > t2 {
-				t1, t2 = t2, t1
-			}
-			near, far = math.Max(near, t1), math.Min(far, t2)
-		}
-		if far >= near && far >= 0 {
-			if h := math.Max(near, 0); h < best {
-				best = h
-			}
-		}
+	keyed := map[uid.UID64][4]float64{}
+	for i, b := range boxes {
+		keyed[uid.UID64(100+i)] = b
 	}
-	return best
+	dist, _, _ := castRay(keyed, nil, origin, angle, radius)
+	return dist
 }
 
 func TestDepths_MatchRaysCastDirectly(t *testing.T) {

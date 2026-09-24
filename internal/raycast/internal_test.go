@@ -72,27 +72,42 @@ func TestHitDistance(t *testing.T) {
 
 	cases := map[string]struct {
 		origin, dir geom.Vec
-		want        float64
+		near, far   float64
 		hit         bool
 	}{
-		"straight at it, parallel to Y":   {origin, geom.NewVec(1.0, 0.0), 10, true},
-		"parallel but above the slab":     {geom.NewVec(0.0, 5.0), geom.NewVec(1.0, 0.0), 0, false},
-		"parallel but below the slab":     {geom.NewVec(0.0, 25.0), geom.NewVec(1.0, 0.0), 0, false},
-		"parallel to X, straight down":    {geom.NewVec(15.0, 0.0), geom.NewVec(0.0, 1.0), 10, true},
-		"pointing away":                   {origin, geom.NewVec(-1.0, 0.0), 0, false},
-		"diagonal miss":                   {geom.NewVec(0.0, 0.0), geom.NewVec(0.0, 1.0), 0, false},
-		"starting inside hits at zero":    {geom.NewVec(15.0, 15.0), geom.NewVec(1.0, 0.0), 0, true},
-		"diagonal hit through the corner": {geom.NewVec(0.0, 0.0), geom.NewVec(0.7071067811865476, 0.7071067811865476), 14.142135623730951, true},
+		"straight at it, parallel to Y":   {origin, geom.NewVec(1.0, 0.0), 10, 20, true},
+		"parallel but above the slab":     {geom.NewVec(0.0, 5.0), geom.NewVec(1.0, 0.0), 0, 0, false},
+		"parallel but below the slab":     {geom.NewVec(0.0, 25.0), geom.NewVec(1.0, 0.0), 0, 0, false},
+		"parallel to X, straight down":    {geom.NewVec(15.0, 0.0), geom.NewVec(0.0, 1.0), 10, 20, true},
+		"pointing away":                   {origin, geom.NewVec(-1.0, 0.0), 0, 0, false},
+		"diagonal miss":                   {geom.NewVec(0.0, 0.0), geom.NewVec(0.0, 1.0), 0, 0, false},
+		"starting inside hits at zero":    {geom.NewVec(15.0, 15.0), geom.NewVec(1.0, 0.0), 0, 5, true},
+		"diagonal hit through the corner": {geom.NewVec(0.0, 0.0), geom.NewVec(0.7071067811865476, 0.7071067811865476), 14.142135623730951, 28.284271247461902, true},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			got, ok := hitDistance(tc.origin, tc.dir, box)
+			near, far, ok := hitDistance(tc.origin, tc.dir, box)
 			if ok != tc.hit {
 				t.Fatalf("hitDistance hit = %v, want %v", ok, tc.hit)
 			}
-			if ok && math.Abs(got-tc.want) > 1e-9 {
-				t.Errorf("hitDistance = %v, want %v", got, tc.want)
+			if ok && (math.Abs(near-tc.near) > 1e-9 || math.Abs(far-tc.far) > 1e-9) {
+				t.Errorf("hitDistance = (%v, %v), want (%v, %v)", near, far, tc.near, tc.far)
 			}
 		})
+	}
+}
+
+func TestInsertCrossing_KeepsEntriesSortedByWhereTheyAreEntered(t *testing.T) {
+	var cross []crossing
+	for _, near := range []float64{30, 10, 20, 5, 25} {
+		cross = insertCrossing(cross, crossing{near: near, far: near + 1})
+	}
+	for i := 1; i < len(cross); i++ {
+		if cross[i-1].near > cross[i].near {
+			t.Fatalf("crossings out of order: %v", cross)
+		}
+	}
+	if len(cross) != 5 {
+		t.Errorf("kept %d crossings, want 5", len(cross))
 	}
 }

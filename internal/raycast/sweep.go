@@ -25,6 +25,9 @@ type event struct {
 	enter bool
 }
 
+// arcStep is the angle between samples where the reach is curved: a free arc, a see-through box.
+const arcStep = math.Pi / 90 // two degrees
+
 // sweep records what the view meets at every angle where the reach can change shape.
 func sweep(origin geom.Vec, coneDir, halfAngle, radius float64, cands []candidate, sc *scratch) []sample {
 	eps := math.Atan2(1, radius)
@@ -44,6 +47,12 @@ func sweep(origin geom.Vec, coneDir, halfAngle, radius float64, cands []candidat
 		add(c.span.lo + eps)
 		add(c.span.hi - eps)
 		add(c.span.hi + eps)
+		// The reach behind a see-through box is curved, so its span is sampled at the arc step too.
+		if c.tau > 0 {
+			for a := c.span.lo + arcStep; a < c.span.hi; a += arcStep {
+				add(a)
+			}
+		}
 		events = append(events,
 			event{angle: c.span.lo - eps, idx: i, enter: true},
 			event{angle: c.span.hi + eps, idx: i})
@@ -60,7 +69,7 @@ func sweep(origin geom.Vec, coneDir, halfAngle, radius float64, cands []candidat
 		}
 	})
 
-	active, out := walk(origin, coneDir, radius, eps/8, angles, events, cands, sc.active, sc.samples)
+	active, out := walk(origin, coneDir, radius, eps/8, angles, events, cands, sc.active, &sc.crossings, sc.samples)
 	sc.angles, sc.events, sc.active, sc.samples = angles, events, active, out
 	return out
 }
@@ -73,6 +82,7 @@ func walk(
 	events []event,
 	cands []candidate,
 	active []int,
+	cross *[]crossing,
 	out []sample,
 ) ([]int, []sample) {
 	active = active[:0]
@@ -91,24 +101,79 @@ func walk(
 			}
 			next++
 		}
-		out = append(out, castAt(origin, coneDir, a, radius, cands, active))
+		out = append(out, castAt(origin, coneDir, a, radius, cands, active, cross))
 	}
 	return active, out
 }
 
-// castAt finds the nearest active candidate along one angle, or the range limit.
-func castAt(origin geom.Vec, coneDir, rel, radius float64, cands []candidate, active []int) sample {
+// crossing is one see-through box on a ray: entry, exit and the budget each unit inside costs.
+type crossing struct {
+	near, far float64
+	rate      float64 // 1/tau
+}
+
+// castAt follows one angle: the nearest blocking candidate is the wall, see-through ones eat the
+// budget. The sample is a hit only when the wall is reached before the budget runs out.
+func castAt(origin geom.Vec, coneDir, rel, radius float64, cands []candidate, active []int, cross *[]crossing) sample {
 	abs := coneDir + rel
 	dir := geom.NewVec(math.Cos(abs), math.Sin(abs))
 
 	best := sample{angle: rel, dist: radius}
+	crossed := 0
 	for _, i := range active {
 		c := cands[i]
-		d, ok := hitDistance(origin, dir, c.box)
-		if !ok || d > best.dist {
+		near, far, ok := hitDistance(origin, dir, c.box)
+		if !ok {
 			continue
 		}
-		best.dist, best.id, best.hit = d, c.id, true
+		if c.tau > 0 {
+			if crossed == 0 {
+				*cross = (*cross)[:0]
+			}
+			*cross = insertCrossing(*cross, crossing{near: near, far: far, rate: 1 / c.tau})
+			crossed++
+			continue
+		}
+		if near > best.dist {
+			continue
+		}
+		best.dist, best.id, best.hit = near, c.id, true
+	}
+	if crossed == 0 {
+		return best
+	}
+
+	// An empty stretch costs its length, one inside a box length·rate; overlaps are charged once.
+	budget, pos := radius, 0.0
+	for _, x := range *cross {
+		if x.far <= pos || x.near >= best.dist {
+			continue
+		}
+		start := math.Max(x.near, pos)
+		if gap := start - pos; gap >= budget {
+			break
+		}
+		budget, pos = budget-(start-pos), start
+		cost := (x.far - start) * x.rate
+		if cost >= budget {
+			budget, pos = 0, start+budget/x.rate
+			break
+		}
+		budget, pos = budget-cost, x.far
+	}
+	reach := pos + budget
+	if !best.hit || best.dist > reach {
+		best.dist, best.id, best.hit = reach, 0, false
 	}
 	return best
+}
+
+// insertCrossing keeps cross sorted by where each box is entered; the list is a handful long.
+func insertCrossing(cross []crossing, x crossing) []crossing {
+	cross = append(cross, x)
+	for i := len(cross) - 1; i > 0 && cross[i-1].near > x.near; i-- {
+		cross[i] = cross[i-1]
+		cross[i-1] = x
+	}
+	return cross
 }

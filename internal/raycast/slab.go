@@ -6,13 +6,13 @@ import (
 	"github.com/kjkrol/aabbworld/geom"
 )
 
-// hitDistance reports how far along a unit ray box is first met — zero from inside — if at all.
-func hitDistance(origin, dir geom.Vec, box geom.AABB) (float64, bool) {
-	near, far := math.Inf(-1), math.Inf(1)
+// hitDistance reports where a unit ray enters box (zero from inside) and leaves it, if at all.
+func hitDistance(origin, dir geom.Vec, box geom.AABB) (near, far float64, ok bool) {
+	near, far = math.Inf(-1), math.Inf(1)
 
 	if dir.X == 0 {
 		if origin.X < box.TopLeft.X || origin.X > box.BottomRight.X {
-			return 0, false
+			return 0, 0, false
 		}
 	} else {
 		inv := 1 / dir.X
@@ -26,7 +26,7 @@ func hitDistance(origin, dir geom.Vec, box geom.AABB) (float64, bool) {
 
 	if dir.Y == 0 {
 		if origin.Y < box.TopLeft.Y || origin.Y > box.BottomRight.Y {
-			return 0, false
+			return 0, 0, false
 		}
 	} else {
 		inv := 1 / dir.Y
@@ -44,10 +44,7 @@ func hitDistance(origin, dir geom.Vec, box geom.AABB) (float64, bool) {
 	}
 
 	if far < near || far < 0 {
-		return 0, false
+		return 0, 0, false
 	}
-	if near < 0 {
-		return 0, true
-	}
-	return near, true
+	return math.Max(near, 0), far, true
 }

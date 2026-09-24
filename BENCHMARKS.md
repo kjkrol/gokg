@@ -72,12 +72,16 @@ An observer on a 4000×4000 plane with 256-unit buckets scans a 90° cone of rad
 
 | Read | 100 entities | 1,000 entities |
 |:---|---:|---:|
-| `Scan` + `Entities` (nearest first) | 2.88 µs | 24.8 µs |
-| `Scan` + `Outline` (lit region as a fan) | 4.09 µs | 26.4 µs |
-| `Scan` + both | 4.17 µs | 28.0 µs |
-| `Scan` + `Depths` (63 angles) | 4.78 µs | 26.8 µs |
+| `Scan` + `Entities` (nearest first) | 3.08 µs | 26.7 µs |
+| `Scan` + `Outline` (lit region as a fan) | 4.45 µs | 28.3 µs |
+| `Scan` + both | 4.55 µs | 30.1 µs |
+| `Scan` + `Depths` (63 angles) | 5.31 µs | 29.3 µs |
+| `Scan` + both, 3 entities in 10 see-through at τ = 0.5 (`View_Translucent`) | 4.52 µs | 32.4 µs |
 
-The scan dominates; each read of the samples adds a microsecond or two.
+The scan dominates; each read of the samples adds a microsecond or two. Sight through see-through
+entities (v1.6.0) costs the opaque-only scan nothing measurable — six alternating runs against the
+v1.5.0 tree differ by 1–3% with p > 0.3 on every row — and adds about 8% when three entities in ten
+are see-through: the extra samples across their spans and the budget walk behind them.
 
 ## Primitives — `Benchmark_AABB_*`, `Benchmark_Surface_*`, `Benchmark_Vec_*`
 

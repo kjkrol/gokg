@@ -66,7 +66,7 @@ go get github.com/kjkrol/aabbworld
 | **Transformations** | `Place`, `Move`, `MoveTo`, `WrapAABB` fold a box into the space under its edge rules and say when it has left |
 | **Spatial index** | `Rebuild` from a slice, `Query` by rectangle and `Capability` mask, seams included |
 | **Collisions** | `CollideEngine`: pairs every two `CanCollide` boxes within reach, asks your `Handler` to confirm each overlap, separates them over a few passes, reports who moved and who left |
-| **Sight** | `Scan` fills a `View` with what an observer sees through a `Cone`: entities nearest first, depth samples, or the lit outline |
+| **Sight** | `Scan` fills a `View` with what an observer sees through a `Cone`: entities nearest first, depth samples, or the lit outline; `Cone.Transparency` lets a forest shorten sight where a wall cuts it |
 
 <a id="example"></a>
 # Example
@@ -242,7 +242,8 @@ reports 0 allocs/op.
 | Collision tick | 33,554 boxes, 5×5 each, covering 20% of the same torus | 8.6 ms |
 | Rebuild + pairs + 8 queries | 8,388 boxes, 5×5 each, on a 1024×1024 torus | 1.23 ms |
 | Solve confirmed pairs | 13,547 candidate pairs, 3,763 contacts | 4.25 ms |
-| Scan a 90° cone and list what it sees | 1,000 entities in sight range | 24.8 µs |
+| Scan a 90° cone and list what it sees | 1,000 entities in sight range | 26.7 µs |
+| Scan a 90° cone through see-through entities, list and outline | 1,000 entities, 3 in 10 at τ = 0.5 | 32.4 µs |
 | Fold a box across the far corner (`WrapAABB`) | torus | 31 ns |
 
 > **Deep dive**: per-scene tables, what each benchmark measures, and what the numbers taught us

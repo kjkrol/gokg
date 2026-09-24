@@ -15,12 +15,13 @@ type QueryableSpace interface {
 	Bounds() (width, height uint32, wrapX, wrapY bool)
 }
 
-// Cone bounds a visibility query: a direction, a half-angle either side of it,
-// and how far it reaches.
+// Cone bounds a visibility query: a direction, a half-angle either side of it, how far it reaches,
+// and how see-through each entity is (nil: nothing is).
 type Cone struct {
-	Direction geom.Vec
-	HalfAngle float64
-	Radius    float64
+	Direction    geom.Vec
+	HalfAngle    float64
+	Radius       float64
+	Transparency func(id uid.UID64) float64
 }
 
 // View is one observer's line of sight: scanned once, then read as many ways as needed.
@@ -132,7 +133,7 @@ func (v *View) Depths(k int, dst []float32) []float32 {
 	v.uniform = angles
 
 	v.active, v.depths = walk(v.origin, v.coneDir, v.radius, 0,
-		angles, v.events, v.cands, v.active, v.depths[:0])
+		angles, v.events, v.cands, v.active, &v.crossings, v.depths[:0])
 
 	for _, s := range v.depths {
 		dst = append(dst, float32(s.dist))
@@ -146,7 +147,7 @@ func (v *View) Outline(maxArcStep float64, dst []geom.Vec) []geom.Vec {
 		return dst
 	}
 	if maxArcStep <= 0 {
-		maxArcStep = defaultArcStep
+		maxArcStep = arcStep
 	}
 
 	dst = append(dst, v.origin)
@@ -158,7 +159,7 @@ func (v *View) Outline(maxArcStep float64, dst []geom.Vec) []geom.Vec {
 	for i, s := range v.samples {
 		if i > 0 {
 			prev := v.samples[i-1]
-			if !prev.hit && !s.hit {
+			if v.free(prev) && v.free(s) {
 				for a := prev.angle + maxArcStep; a < s.angle; a += maxArcStep {
 					dst = append(dst, at(a, v.radius))
 				}
@@ -169,18 +170,19 @@ func (v *View) Outline(maxArcStep float64, dst []geom.Vec) []geom.Vec {
 	return dst
 }
 
-// defaultArcStep keeps an unobstructed arc smooth enough to read as round.
-const defaultArcStep = math.Pi / 90 // two degrees
+// free reports whether s reached the full radius, so the outline runs along the arc up to it.
+func (v *View) free(s sample) bool { return !s.hit && v.radius-s.dist <= 1e-9*v.radius }
 
 // scratch holds the working buffers one scan needs — candidates, event list,
 // samples — kept across scans so a repeated query stops allocating.
 type scratch struct {
-	cands   []candidate
-	dedup   map[uid.UID64]struct{}
-	angles  []float64
-	events  []event
-	active  []int
-	samples []sample
+	cands     []candidate
+	dedup     map[uid.UID64]struct{}
+	angles    []float64
+	events    []event
+	active    []int
+	crossings []crossing
+	samples   []sample
 }
 
 func (s *scratch) reset() {
@@ -192,14 +194,17 @@ func (s *scratch) reset() {
 	s.angles = s.angles[:0]
 	s.events = s.events[:0]
 	s.active = s.active[:0]
+	s.crossings = s.crossings[:0]
 	s.samples = s.samples[:0]
 }
 
+// candidate is an entity the cone may reach; tau is its transparency, 0 for one that blocks sight.
 type candidate struct {
 	id   uid.UID64
 	dist float64
 	span arc
 	box  geom.AABB
+	tau  float64
 }
 
 // collector is what one gather needs while the index walks it.
@@ -236,12 +241,19 @@ func (c *collector) take(id uid.UID64) {
 	if dist > c.cone.Radius || c.edges.excludes(c.origin, box) {
 		return
 	}
+	tau := 0.0
+	if c.cone.Transparency != nil {
+		tau = min(c.cone.Transparency(id), 1)
+	}
 	span := subtendedArc(c.origin, box, c.coneDir, c.cone.HalfAngle)
+	if tau > 0 && surrounds(box, c.origin) {
+		span = arc{-c.cone.HalfAngle, c.cone.HalfAngle} // a see-through box around the eye dims the whole cone
+	}
 	if span.empty() {
 		return
 	}
 	c.sc.dedup[id] = struct{}{}
-	c.sc.cands = append(c.sc.cands, candidate{id: id, dist: dist, span: span, box: box})
+	c.sc.cands = append(c.sc.cands, candidate{id: id, dist: dist, span: span, box: box, tau: tau})
 }
 
 // gather collects the entities within range whose angular span overlaps the cone.
