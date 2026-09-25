@@ -76,7 +76,9 @@
 // clears the ground and every nearer blocking entity's band, within the budget — a see-through
 // entity charges only the stretch the line spends inside its band. The reach of an angle is the
 // farthest lit ground, so a hawk looks over a wall the walker beside it is stopped by, and a hill
-// hides the plain behind it from the lowland alone. Details are in internal/raycast.
+// hides the plain behind it from the lowland alone. [View.Shadows] lists the stretches of ground an
+// observer cannot see within the radius, so a view with heights can be drawn to its full reach with
+// holes where the ground is out of sight. Details are in internal/raycast.
 //
 // # Package dependencies
 //

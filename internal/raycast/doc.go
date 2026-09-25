@@ -23,7 +23,9 @@
 // reaches how near it saw them. The samples are then read three ways: [View.Entities] lists every
 // candidate some cast reached, nearest first; [View.Depths] resamples the reach at evenly spaced
 // angles without touching what was seen; [View.Outline] traces the lit region as a fan of points
-// from the observer. A View keeps its buffers between scans and serves one goroutine.
+// from the observer; [View.Shadows] lists, at the same angles as Depths, the stretches of ground
+// the observer cannot see within the radius. A View keeps its buffers between scans and serves one
+// goroutine.
 //
 // # Budget
 //
@@ -56,10 +58,17 @@
 // Over uneven ground the whole cone is sampled every two degrees; with Ground nil only each box's
 // span is.
 //
+// One reach per angle cannot show ground that is hidden and then seen again, and with heights the
+// reach of sight is not the reach of the ground: past a cliff the plain is hidden, a hawk above it
+// or a higher hill beyond is not. Shadows reads the ground point by point instead — every run of
+// hidden points is a [Shadow] reaching halfway to the lit points either side, or to the radius
+// when none follows — so a view can be drawn to its full radius with holes where the ground is
+// out of sight. On a plane a shadow is the stretch from the reach to the radius.
+//
 // # Files
 //
 // sweep.go is the angular sweep and the budgeted cast along one angle on a plane; elevation.go the
-// cast with heights; shadow.go the arcs a box subtends and the wedge test that dismisses a box
+// cast with heights; shadow_bands.go the runs of hidden ground a cast is shown; shadow.go the arcs a box subtends and the wedge test that dismisses a box
 // outside the cone; slab.go the ray-box entry and exit distances; space.go the search rectangles,
 // the nearest wrapped image of a box and the distances on a torus.
 package raycast

@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.8.0 — 2026-09-25
+
+Shadows: the ground out of sight, as holes in a view.
+
+**Sight**
+- `View.Shadows(k, dst)` lists, at the same k angles as `Depths`, the stretches of ground the
+  observer cannot see within the radius (`Shadow{Sample, From, To}`). With heights every run of
+  hidden ground — behind a crest, in a wall's shadow, past a cliff — is one shadow, reaching halfway
+  to the lit points either side, or to the radius when none follows; ground seen again farther on
+  ends it. On a plane a shadow is the stretch from the reach to the radius. One reach per angle
+  could not show ground hidden and then seen again; with heights the reach of sight is not the
+  reach of the ground, and a view can now be drawn to its full radius with holes.
+- `Depths`, `Outline` and `Entities` are unchanged; `Scan` and every read stay at 0 allocs/op.
+  `Shadows` costs what `Depths` costs, and the reads without it measure as in v1.7.0 (six
+  alternating runs, p ≥ 0.13 on every row) — see
+  [BENCHMARKS.md](BENCHMARKS.md#shadows--benchmark_view_shadows).
+
 ## v1.7.0 — 2026-09-24
 
 Sight with heights: an eye, entities with a bottom and a top, ground that rises and falls.

@@ -66,7 +66,7 @@ go get github.com/kjkrol/aabbworld
 | **Transformations** | `Place`, `Move`, `MoveTo`, `WrapAABB` fold a box into the space under its edge rules and say when it has left |
 | **Spatial index** | `Rebuild` from a slice, `Query` by rectangle and `Capability` mask, seams included |
 | **Collisions** | `CollideEngine`: pairs every two `CanCollide` boxes within reach, asks your `Handler` to confirm each overlap, separates them over a few passes, reports who moved and who left |
-| **Sight** | `Scan` fills a `View` with what an observer sees through a `Cone`: entities nearest first, depth samples, or the lit outline; `Cone.Transparency` lets a forest shorten sight where a wall cuts it; `Cone.Eye`, `Elevation` and `Ground` give sight heights, so a hawk looks over the wall and a hill hides the plain behind it |
+| **Sight** | `Scan` fills a `View` with what an observer sees through a `Cone`: entities nearest first, depth samples, or the lit outline; `Cone.Transparency` lets a forest shorten sight where a wall cuts it; `Cone.Eye`, `Elevation` and `Ground` give sight heights, so a hawk looks over the wall and a hill hides the plain behind it; `View.Shadows` lists the ground out of sight, holes in a view drawn to its full reach |
 
 <a id="example"></a>
 # Example

@@ -104,6 +104,7 @@ func walk(
 		if i > 0 && a-angles[i-1] < minGap {
 			continue
 		}
+		sc.shade.sample = i
 		for next < len(events) && events[next].angle <= a {
 			e := events[next]
 			if e.enter {
@@ -116,7 +117,11 @@ func walk(
 		if elev != nil {
 			out = append(out, castElevated(origin, coneDir, a, radius, cands, active, elev, sc, mark))
 		} else {
-			out = append(out, castFlat(origin, coneDir, a, radius, cands, active, &sc.crossings, mark))
+			s := castFlat(origin, coneDir, a, radius, cands, active, &sc.crossings, mark)
+			if sc.shade.on {
+				sc.shade.emit(s.dist, radius) // on a plane nothing past the reach is seen
+			}
+			out = append(out, s)
 		}
 	}
 	return active, out

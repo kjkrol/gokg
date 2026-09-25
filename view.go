@@ -29,13 +29,34 @@ type Cone struct {
 
 // View is one observer's line of sight: filled by Space.Scan, then read as many ways as needed.
 // The zero value is ready; it must not be copied once scanned, and serves one goroutine.
-type View struct{ impl iraycast.View }
+type View struct {
+	impl    iraycast.View
+	shadows []iraycast.Shadow
+}
 
 // Entities calls fn for every entity in view, nearest first, and returns how many.
 func (v *View) Entities(fn func(id uid.UID64, dist float64)) int { return v.impl.Entities(fn) }
 
 // Depths appends to dst the reach at k ≥ 2 angles evenly spaced across the cone.
 func (v *View) Depths(k int, dst []float32) []float32 { return v.impl.Depths(k, dst) }
+
+// Shadow is a stretch of ground along one of the angles a View reads, From to To away from the
+// observer, that the observer cannot see; Sample is the angle's index, as in Depths.
+type Shadow struct {
+	Sample   int
+	From, To float32
+}
+
+// Shadows appends to dst the stretches of ground the observer cannot see within the radius, at the
+// same k ≥ 2 angles as Depths: with heights every run of hidden ground — behind a crest, in a
+// wall's shadow, past a cliff — up to where ground is lit again; on a plane, the reach to the radius.
+func (v *View) Shadows(k int, dst []Shadow) []Shadow {
+	v.shadows = v.impl.Shadows(k, v.shadows[:0])
+	for _, s := range v.shadows {
+		dst = append(dst, Shadow{Sample: s.Sample, From: s.From, To: s.To})
+	}
+	return dst
+}
 
 // Outline appends the lit region to dst as a fan from the observer; maxArcStep 0 picks a default.
 func (v *View) Outline(maxArcStep float64, dst []geom.Vec) []geom.Vec {

@@ -296,13 +296,111 @@ func TestElevation_ScanDoesNotAllocateOnceWarm(t *testing.T) {
 	depths := make([]float32, 0, 64)
 	var pts []geom.Vec
 
+	shadows := make([]raycast.Shadow, 0, 512)
 	allocs := testing.AllocsPerRun(20, func() {
 		v.Scan(s, eye, cone)
 		v.Entities(func(uid.UID64, float64) {})
 		depths = v.Depths(63, depths[:0])
 		pts = v.Outline(0, pts[:0])
+		shadows = v.Shadows(63, shadows[:0])
 	})
 	if allocs > 0 {
-		t.Errorf("a warm Scan, Entities, Depths and Outline allocate %.0f times per run, want none", allocs)
+		t.Errorf("a warm Scan, Entities, Depths, Outline and Shadows allocate %.0f times per run, want none", allocs)
+	}
+}
+
+// ahead3 is the shadows straight ahead of a scan read at three angles.
+func ahead3(t *testing.T, s raycast.QueryableSpace, c raycast.Cone) []raycast.Shadow {
+	t.Helper()
+	var out []raycast.Shadow
+	for _, sh := range scan(t, s, eye, c).Shadows(3, nil) {
+		if sh.Sample == 1 {
+			out = append(out, sh)
+		}
+	}
+	return out
+}
+
+func near32(a, b float32) bool { return math.Abs(float64(a-b)) < 1e-3 }
+
+func TestShadows_AHillHidesTheLowlandBehindIt(t *testing.T) {
+	s := newFake(2000, 2000, false)
+	s.put(eye, 100, 100, 10, 10)
+	cone := elevated(eastward(math.Pi/8, 500), 1.5, nil)
+	cone.Ground, cone.GroundStep = plateau, 25
+
+	// The plateau's face is lit at 200; its top from 225 on is above the line no more, nor is anything past it.
+	got := ahead3(t, s, cone)
+	if len(got) != 1 || !near32(got[0].From, 212.5) || !near32(got[0].To, 500) {
+		t.Errorf("shadows ahead = %+v, want one from 212.5, between the lit face and the hidden top, to the radius", got)
+	}
+}
+
+// valley is the plateau of 20 on [300, 340), a dip back to 0, and a steep far slope from 480 on.
+func valley(p geom.Vec) float64 {
+	switch {
+	case p.X >= 300 && p.X < 340:
+		return 20
+	case p.X >= 480:
+		return (p.X - 480) * 3
+	}
+	return 0
+}
+
+func TestShadows_EndWhereTheGroundIsSeenAgain(t *testing.T) {
+	s := newFake(2000, 2000, false)
+	s.put(eye, 100, 100, 10, 10)
+	cone := elevated(eastward(math.Pi/8, 500), 1.5, nil)
+	cone.Ground, cone.GroundStep = valley, 25
+
+	got := ahead3(t, s, cone)
+	if len(got) != 1 || !near32(got[0].From, 212.5) || !near32(got[0].To, 387.5) {
+		t.Errorf("shadows ahead = %+v, want one over the dip, from 212.5 to 387.5, the far slope lit again", got)
+	}
+	if d := ahead(t, s, eye, cone); d != 500 {
+		t.Errorf("reach ahead = %v, want the far slope lit to the radius", d)
+	}
+}
+
+func TestShadows_OnAPlaneRunFromTheReachToTheRadius(t *testing.T) {
+	s := newFake(2000, 2000, false)
+	s.put(eye, 100, 100, 10, 10)
+	s.put(near, 305, 100, 10, 10) // 200 ahead, covering straight ahead only
+	got := ahead3(t, s, eastward(math.Pi/4, 500))
+	if len(got) != 1 || !near32(got[0].From, 200) || !near32(got[0].To, 500) {
+		t.Errorf("shadows ahead = %+v, want the wall's, from 200 to the radius", got)
+	}
+	for _, sh := range scan(t, s, eye, eastward(math.Pi/4, 500)).Shadows(3, nil) {
+		if sh.Sample != 1 {
+			t.Errorf("shadow %+v off the wall's line, want none at the cone's edges", sh)
+		}
+	}
+}
+
+func TestShadows_MatchWhatTheOracleSees(t *testing.T) {
+	r := rand.New(rand.NewPCG(61, 67))
+	for trial := range 10 {
+		s, o := elevatedScene(r)
+		coneDir := float64(trial)
+		cone := o.cone(coneDir, math.Pi/4, 500)
+		origin := geom.NewVec(2005.0, 2005.0)
+		const k = 17
+		step := 2 * cone.HalfAngle / float64(k-1)
+		shadows := scan(t, s, eye, cone).Shadows(k, nil)
+		for i := range k {
+			_, _, ground := o.castAll(origin, coneDir-cone.HalfAngle+float64(i)*step, cone.Radius)
+			for _, g := range ground {
+				inShadow := false
+				for _, sh := range shadows {
+					to := float64(sh.To)
+					if sh.Sample == i && float64(sh.From) < g.dist && (g.dist < to || g.dist == cone.Radius && to == cone.Radius) {
+						inShadow = true
+					}
+				}
+				if inShadow == g.visible {
+					t.Errorf("trial %d, angle %d: ground %.2f away is visible %v to the oracle but in shadow %v", trial, i, g.dist, g.visible, inShadow)
+				}
+			}
+		}
 	}
 }

@@ -47,8 +47,9 @@ type ray struct {
 	horizon     float64
 	reach       float64
 	cut         int
-	walls       int // blocking crossings entered so far
-	veils       int // see-through crossings entered so far
+	walls       int        // blocking crossings entered so far
+	veils       int        // see-through crossings entered so far
+	shade       *shadowing // nil unless the shadows of this angle are being read
 }
 
 // castElevated follows one angle with heights: an entry is seen when the sightline to its top
@@ -73,6 +74,10 @@ func castElevated(origin geom.Vec, coneDir, rel, radius float64, cands []candida
 	sc.crossings = cross
 
 	r := ray{origin: origin, dir: dir, radius: radius, cands: cands, cross: cross, e: e, sc: sc, mark: mark, horizon: math.Inf(-1), cut: -1}
+	if sc.shade.on {
+		r.shade = &sc.shade
+		r.shade.begin()
+	}
 	j := 0
 	for d := e.step; ; d += e.step {
 		if d > radius {
@@ -87,10 +92,15 @@ func castElevated(origin geom.Vec, coneDir, rel, radius float64, cands []candida
 			}
 			j++
 		}
-		r.ground(d, e.at(origin, dir, d), j, -1)
+		if lit := r.ground(d, e.at(origin, dir, d), j, -1); r.shade != nil {
+			r.shade.point(d, lit)
+		}
 		if d >= radius {
 			break
 		}
+	}
+	if r.shade != nil {
+		r.shade.end(radius)
 	}
 	out := sample{angle: rel, dist: r.reach}
 	if r.cut >= 0 {
@@ -117,25 +127,29 @@ func (r *ray) enter(j int) {
 	if x.rate == 0 {
 		cut = x.idx
 	}
-	r.ground(x.near, c.foot, j, cut)
+	if lit := r.ground(x.near, c.foot, j, cut); r.shade != nil {
+		r.shade.point(x.near, lit)
+	}
 }
 
 // ground takes the ground point at d as a target: lit when the sightline to it clears everything
-// nearer, it becomes the reach, cut by candidate cut if any; hidden ground is passed over.
-func (r *ray) ground(d, alt float64, j, cut int) {
+// nearer, it becomes the reach, cut by candidate cut if any; hidden ground is passed over. It
+// reports whether the point was seen.
+func (r *ray) ground(d, alt float64, j, cut int) bool {
 	tan := (alt - r.e.eye) / d
 	if tan < r.horizon {
-		return
+		return false
 	}
 	r.horizon = tan
 	if r.blocked(tan, d, j) {
-		return
+		return false
 	}
 	if reach := r.spend(tan, d, j); reach < d {
 		r.lit(reach, -1)
-	} else {
-		r.lit(d, cut)
+		return false
 	}
+	r.lit(d, cut)
+	return true
 }
 
 func (r *ray) see(c *candidate, dist float64) {

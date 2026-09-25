@@ -36,6 +36,18 @@ type groundPoint struct {
 
 // cast follows one ray: the lit reach along it and the entities it sees.
 func (o elevatedOracle) cast(origin geom.Vec, angle, radius float64) (reach float64, seen map[uid.UID64]bool) {
+	reach, seen, _ = o.castAll(origin, angle, radius)
+	return reach, seen
+}
+
+// groundSeen is one ground point of a ray, a sample or a foot, and whether the eye sees it.
+type groundSeen struct {
+	dist    float64
+	visible bool
+}
+
+// castAll is cast with every ground point the ray judges, in no particular order.
+func (o elevatedOracle) castAll(origin geom.Vec, angle, radius float64) (reach float64, seen map[uid.UID64]bool, ground []groundSeen) {
 	dx, dy := math.Cos(angle), math.Sin(angle)
 	at := func(d float64) geom.Vec { return geom.NewVec(origin.X+dx*d, origin.Y+dy*d) }
 
@@ -157,9 +169,12 @@ func (o elevatedOracle) cast(origin geom.Vec, angle, radius float64) (reach floa
 	for _, p := range points {
 		tan := (p.alt - o.eye) / p.dist
 		if !aboveGround(tan, p.dist) || !clearOfWalls(tan, p.dist, p.self) {
+			ground = append(ground, groundSeen{p.dist, false})
 			continue
 		}
-		reach = math.Max(reach, math.Min(p.dist, budgetEnd(tan, p.dist, p.self)))
+		end := budgetEnd(tan, p.dist, p.self)
+		reach = math.Max(reach, math.Min(p.dist, end))
+		ground = append(ground, groundSeen{p.dist, end >= p.dist})
 	}
-	return reach, seen
+	return reach, seen, ground
 }

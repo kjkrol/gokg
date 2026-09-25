@@ -205,3 +205,55 @@ func Benchmark_View_Elevated(b *testing.B) {
 		}
 	}
 }
+
+// Benchmark_View_Shadows reads a scan two ways at 63 angles: the reach (Depths) and the stretches of
+// hidden ground (Shadows), on a plane and over the raster rung of Benchmark_View_Elevated.
+func Benchmark_View_Shadows(b *testing.B) {
+	flat := viewCone
+	flat.Transparency = func(id uid.UID64) float64 {
+		if id%10 < 3 {
+			return 0.5
+		}
+		return 0
+	}
+	high := flat
+	high.Eye, high.Ground, high.GroundStep = 6, raster(), 32
+	high.Elevation = func(id uid.UID64) (float64, float64) {
+		switch {
+		case id%5 == 0:
+			return 30, 34
+		case id%2 == 0:
+			return 0, 2
+		}
+		return 0, 12
+	}
+	for _, n := range []int{100, 1000} {
+		for _, c := range []struct {
+			name string
+			cone aabbworld.Cone
+		}{{"flat", flat}, {"raster", high}} {
+			b.Run(entities(n)+"/"+c.name+"/depths", func(b *testing.B) {
+				space, observer := realSpace(b, n)
+				v := &aabbworld.View{}
+				var depths []float32
+				b.ReportAllocs()
+				for b.Loop() {
+					if space.Scan(observer, c.cone, v) {
+						depths = v.Depths(63, depths[:0])
+					}
+				}
+			})
+			b.Run(entities(n)+"/"+c.name+"/shadows", func(b *testing.B) {
+				space, observer := realSpace(b, n)
+				v := &aabbworld.View{}
+				var shadows []aabbworld.Shadow
+				b.ReportAllocs()
+				for b.Loop() {
+					if space.Scan(observer, c.cone, v) {
+						shadows = v.Shadows(63, shadows[:0])
+					}
+				}
+			})
+		}
+	}
+}

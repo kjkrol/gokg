@@ -149,6 +149,33 @@ func (v *View) Depths(k int, dst []float32) []float32 {
 	return dst
 }
 
+// Shadows appends to dst the stretches of ground the observer cannot see within the radius, at the
+// same k ≥ 2 angles as Depths: with heights, every run of hidden ground (behind a crest, in a wall's
+// shadow, past a cliff) up to where ground is lit again; on a plane, the stretch from the reach to
+// the radius. Shadow.Sample is the angle's index.
+func (v *View) Shadows(k int, dst []Shadow) []Shadow {
+	if !v.valid || k < 2 {
+		return dst
+	}
+	angles := v.uniform[:0]
+	step := 2 * v.halfAngle / float64(k-1)
+	for i := range k {
+		angles = append(angles, -v.halfAngle+float64(i)*step)
+	}
+	v.uniform = angles
+
+	var elev *elevation
+	if v.elevated {
+		elev = &v.elev
+	}
+	v.shade.on, v.shade.out = true, dst
+	v.active, v.depths = walk(v.origin, v.coneDir, v.radius, 0,
+		angles, v.events, v.cands, v.active, elev, &v.scratch, false, v.depths[:0])
+	dst = v.shade.out
+	v.shade.on, v.shade.out = false, nil
+	return dst
+}
+
 // Outline appends the lit region to dst as a fan from the observer; maxArcStep 0 picks a default.
 func (v *View) Outline(maxArcStep float64, dst []geom.Vec) []geom.Vec {
 	if !v.valid {
@@ -192,6 +219,7 @@ type scratch struct {
 	crossings []crossing
 	stretches []crossing
 	samples   []sample
+	shade     shadowing
 }
 
 func (s *scratch) reset() {

@@ -108,6 +108,24 @@ function itself is paid once per point, some 2,500 times a scan here, which is w
 doubles the raster one. The scan without heights measures as in v1.6.0: six alternating runs against
 that tree differ by 0–6% and only `Depths` at 1,000 entities clears p < 0.05 (+6%).
 
+### Shadows — `Benchmark_View_Shadows`
+
+The same scan read two ways at 63 angles: the reach per angle (`Depths`) and the stretches of ground
+out of sight (`Shadows`, v1.8.0), on a plane and over the raster rung above.
+
+| Scene | 100 entities | 1,000 entities |
+|:---|---:|---:|
+| plane, `Depths` | 6.1 µs | 37.4 µs |
+| plane, `Shadows` | 6.8 µs | 38.8 µs |
+| raster, `Depths` | 53.6 µs | 136 µs |
+| raster, `Shadows` | 52.5 µs | 138 µs |
+
+Shadows costs what Depths costs: it is the same walk, the hidden runs noted as the ground points go
+by. Keeping that noting out of the way matters — a first cut that split the ground test into two
+calls made the height rungs 8–13% slower even with no shadows read; folded back into one call, six
+alternating runs against the v1.7.0 tree differ by 1–10% on those rungs with p ≥ 0.13, and by less
+on the rest.
+
 ## Primitives — `Benchmark_AABB_*`, `Benchmark_Surface_*`, `Benchmark_Vec_*`
 
 | Operation | euclidean | toroidal |
