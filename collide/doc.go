@@ -19,6 +19,17 @@
 // one Tick spends on chained overlaps: separating one pair may push a box into a third, which the
 // next pass resolves.
 //
+// # Field
+//
+// Config.Field is a [SolidField], the solid ground of a world on a grid, which need not be boxes
+// in the Space. In every pass, after the pairs, the engine asks it for the solid boxes around each
+// movable box (CanCollide, not Static) that moved since it last asked, and pushes the box out of
+// each it overlaps through the shallowest side marked open in [FieldBox.Open] — the shallowest
+// side at all when none is — so a box sliding along a wall of many cells never catches on the
+// seams between them. A Sensor is told but not pushed. A pushed box is Moved like any other. A
+// Handler that is also a [FieldHandler] is asked TouchField and told ContactField once per entity
+// and cell a tick; any other Handler hears nothing of the ground.
+//
 // # Engine
 //
 // An Engine serves one goroutine. Tick reads the boxes of its Space as they are now — the Space

@@ -71,9 +71,16 @@ func castElevated(origin geom.Vec, coneDir, rel, radius float64, cands []candida
 		}
 		cross = insertCrossing(cross, crossing{near: near, far: far, rate: rate, idx: i})
 	}
+	// The cover all the way to the radius: with heights a wall may be looked over.
+	if sc.field != nil {
+		sc.walkCover(origin, dir, radius, false, 0)
+		for k := range sc.cover.near {
+			cross = insertCrossing(cross, sc.crossingOf(k))
+		}
+	}
 	sc.crossings = cross
 
-	r := ray{origin: origin, dir: dir, radius: radius, cands: cands, cross: cross, e: e, sc: sc, mark: mark, horizon: math.Inf(-1), cut: -1}
+	r := ray{origin: origin, dir: dir, radius: radius, cands: cands, cross: cross, e: e, sc: sc, mark: mark, horizon: math.Inf(-1), cut: noCut}
 	if sc.shade.on {
 		r.shade = &sc.shade
 		r.shade.begin()
@@ -92,7 +99,7 @@ func castElevated(origin geom.Vec, coneDir, rel, radius float64, cands []candida
 			}
 			j++
 		}
-		if lit := r.ground(d, e.at(origin, dir, d), j, -1); r.shade != nil {
+		if lit := r.ground(d, e.at(origin, dir, d), j, noCut); r.shade != nil {
 			r.shade.point(d, lit)
 		}
 		if d >= radius {
@@ -103,8 +110,11 @@ func castElevated(origin geom.Vec, coneDir, rel, radius float64, cands []candida
 		r.shade.end(radius)
 	}
 	out := sample{angle: rel, dist: r.reach}
-	if r.cut >= 0 {
+	switch {
+	case r.cut >= 0:
 		out.id, out.hit = cands[r.cut].id, true
+	case isCover(r.cut):
+		out.hit = true // a wall of cover, no entity
 	}
 	return out
 }
@@ -112,7 +122,7 @@ func castElevated(origin geom.Vec, coneDir, rel, radius float64, cands []candida
 // enter looks at crossing j as a target and, when it stands on the ground, lights its foot.
 func (r *ray) enter(j int) {
 	x := r.cross[j]
-	c := &r.cands[x.idx]
+	c := candidateOf(r.cands, r.sc, x.idx)
 	if x.near == 0 {
 		r.see(c, 0) // the eye is inside the box: seen from where it stands
 		return
@@ -123,7 +133,7 @@ func (r *ray) enter(j int) {
 	if !c.standing {
 		return
 	}
-	cut := -1
+	cut := noCut
 	if x.rate == 0 {
 		cut = x.idx
 	}
@@ -145,7 +155,7 @@ func (r *ray) ground(d, alt float64, j, cut int) bool {
 		return false
 	}
 	if reach := r.spend(tan, d, j); reach < d {
-		r.lit(reach, -1)
+		r.lit(reach, noCut)
 		return false
 	}
 	r.lit(d, cut)
@@ -174,7 +184,7 @@ func (r *ray) blocked(tan, upto float64, j int) bool {
 		if x.rate != 0 {
 			continue
 		}
-		c := &r.cands[x.idx]
+		c := candidateOf(r.cands, r.sc, x.idx)
 		lo, hi := r.heights(tan, x.near, min(x.far, upto))
 		if hi > c.bottom && lo < c.top {
 			return true
@@ -195,7 +205,7 @@ func (r *ray) spend(tan, upto float64, j int) float64 {
 		if x.rate == 0 {
 			continue
 		}
-		c := &r.cands[x.idx]
+		c := candidateOf(r.cands, r.sc, x.idx)
 		if lo, hi, ok := r.inBand(tan, x.near, min(x.far, upto), c.bottom, c.top); ok {
 			st = insertCrossing(st, crossing{near: lo, far: hi, rate: x.rate})
 		}

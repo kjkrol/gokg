@@ -139,5 +139,5 @@ func (s *Space) Query(box geom.AABB, want Capability, fn func(id uid.UID64)) int
 
 // CollideEngine builds an engine over the Space's CanCollide boxes, reporting to handler.
 func (s *Space) CollideEngine(handler collide.Handler, cfg collide.Config) collide.Engine {
-	return icollide.New(s.grid, s.surface, handler, cfg.Reach, cfg.Iterations)
+	return icollide.New(s.grid, s.surface, handler, cfg.Reach, cfg.Iterations, cfg.Field)
 }

@@ -65,10 +65,21 @@
 // when none follows — so a view can be drawn to its full radius with holes where the ground is
 // out of sight. On a plane a shadow is the stretch from the reach to the radius.
 //
+// # Cover
+//
+// Cone.Cover is a [CoverField], the ground cover of a grid walked along each ray by its owner. A
+// cast asks it for the stretches of the ray inside cells with cover and adds them to the crossings
+// beside the candidates: a crossing names a candidate by its index or a stretch of cover by an
+// index below noCut, so the budget, the walls, the bands and the shadows treat both alike, while
+// only candidates are ever seen. On a plane the walk ends at the first blocking stretch, and where
+// the budget runs out when nothing else on the ray is see-through; with heights it runs to the
+// radius, a wall being looked over. With cover the whole cone is sampled every two degrees, and the
+// marking sweep halves the gap between two samples whose reach jumps, down to a unit at the radius.
+//
 // # Files
 //
-// sweep.go is the angular sweep and the budgeted cast along one angle on a plane; elevation.go the
-// cast with heights; shadow_bands.go the runs of hidden ground a cast is shown; shadow.go the arcs a box subtends and the wedge test that dismisses a box
+// sweep.go is the angular sweep and the budgeted cast along one angle on a plane; cover.go the walk
+// over ground cover; elevation.go the cast with heights; shadow_bands.go the runs of hidden ground a cast is shown; shadow.go the arcs a box subtends and the wedge test that dismisses a box
 // outside the cone; slab.go the ray-box entry and exit distances; space.go the search rectangles,
 // the nearest wrapped image of a box and the distances on a torus.
 package raycast

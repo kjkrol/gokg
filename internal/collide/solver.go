@@ -41,6 +41,13 @@ type Solver struct {
 	// clock counts measurements; movedAt is its reading when each item was last pushed.
 	clock   uint32
 	movedAt []uint32
+
+	// fieldAt is the clock when each item was last pushed out of the ground, fieldMoved who was.
+	fieldAt    []uint32
+	fieldMoved []int32
+	field      fieldPass
+	items      int  // how many items the batch holds, for the field's state
+	fieldReady bool // the field's state is cleared for this batch
 }
 
 // Reset empties the Solver for a new batch of at most items entries, keeping the memory.
@@ -53,6 +60,25 @@ func (s *Solver) Reset(items int) {
 	}
 	s.movedAt = s.movedAt[:items]
 	clear(s.movedAt)
+	s.items, s.fieldReady = items, false
+	s.fieldMoved = s.fieldMoved[:0]
+}
+
+// readyField clears the field's state for the batch, the first time a solve meets the ground.
+func (s *Solver) readyField() {
+	if s.fieldReady {
+		return
+	}
+	if cap(s.fieldAt) < s.items {
+		s.fieldAt = make([]uint32, s.items)
+	}
+	s.fieldAt = s.fieldAt[:s.items]
+	clear(s.fieldAt)
+	if s.field.met == nil {
+		s.field.met = map[fieldKey]uint8{}
+	}
+	clear(s.field.met)
+	s.fieldReady = true
 }
 
 // Add enters a pair into the batch and returns its index.
@@ -65,8 +91,9 @@ func (s *Solver) Add(p Pair) int {
 // Pair is the i-th pair of the batch.
 func (s *Solver) Pair(i int) *Pair { return &s.pairs[i] }
 
-// Solve reports each overlapping pair once and pushes it apart, in up to iterations passes.
-func (s *Solver) Solve(items []spatial.Item, surface *iplane.Surface, iterations int, touch Touch, onContact func(i int, pen geom.Vec)) {
+// Solve reports each overlapping pair once and pushes it apart, and every movable item out of the
+// field's solid ground when there is one, in up to iterations passes.
+func (s *Solver) Solve(items []spatial.Item, surface *iplane.Surface, iterations int, touch Touch, onContact func(i int, pen geom.Vec), field *Field) {
 	pairs, states, movedAt := s.pairs, s.states[:len(s.pairs)], s.movedAt
 	for range iterations {
 		moved := false
@@ -119,10 +146,42 @@ func (s *Solver) Solve(items []spatial.Item, surface *iplane.Surface, iterations
 				moved = true
 			}
 		}
+		if field != nil && s.pushOutOfGround(items, surface, field) {
+			moved = true
+		}
 		if !moved {
 			return
 		}
 	}
+}
+
+// pushOutOfGround pushes every movable item that moved since it last met the ground out of it, and
+// reports whether any was pushed.
+func (s *Solver) pushOutOfGround(items []spatial.Item, surface *iplane.Surface, field *Field) bool {
+	s.readyField()
+	p := &s.field
+	if p.visit == nil {
+		p.visit = p.meet
+	}
+	p.field, p.surface = field, surface
+	any := false
+	for i := range items {
+		it := &items[i]
+		if !movable(it) || s.fieldAt[i] > s.movedAt[i] {
+			continue
+		}
+		s.clock++
+		s.fieldAt[i] = s.clock
+		p.item, p.it, p.sensor, p.pushed = int32(i), it, it.Caps&spatial.Sensor != 0, false
+		box := geom.AABB{TopLeft: it.Box.TopLeft, BottomRight: it.Box.TopLeft.Add(it.Box.Size)}
+		field.Solid.Solid(it.ID, box, p.visit)
+		if p.pushed {
+			s.movedAt[i] = s.clock
+			s.fieldMoved = append(s.fieldMoved, int32(i))
+			any = true
+		}
+	}
+	return any
 }
 
 // VisitMoved calls fn for every item the solver pushed, once per pair it was pushed in.
@@ -135,6 +194,9 @@ func (s *Solver) VisitMoved(fn func(item int32)) {
 		if f&movedB != 0 {
 			fn(s.pairs[i].B)
 		}
+	}
+	for _, i := range s.fieldMoved {
+		fn(i)
 	}
 }
 

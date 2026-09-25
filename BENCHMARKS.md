@@ -126,6 +126,43 @@ calls made the height rungs 8–13% slower even with no shadows read; folded bac
 alternating runs against the v1.7.0 tree differ by 1–10% on those rungs with p ≥ 0.13, and by less
 on the rest.
 
+### Ground cover — `Benchmark_View_Cover`
+
+A 90° cone of radius 220 scanned into a forest of τ 0.5 on a grid of 20-unit cells, 40 cells a
+side, just ahead of the observer — the whole square, or three cells in ten scattered over it — held
+three ways: as `Cone.Cover` (v1.9.0), as one entity per cell, and, whole, as one merged entity. The
+scan lists what it sees and traces the outline.
+
+| Forest | cover | one entity per cell | one merged entity |
+|:---|---:|---:|---:|
+| whole, 1,600 cells | 14.2 µs | 327 µs | 5.2 µs |
+| three in ten, 480 cells | 14.5 µs | 47 µs | — |
+
+Through cover the scan costs the same whichever way the forest is laid out: each ray reads the cells
+it crosses until its budget runs out (on a plane) or its radius (with heights). One entity per cell
+costs what its candidates cost and grows with the forest; a merged entity is the cheapest but exists
+only where the forest is a rectangle, and has to be rebuilt when a cell of it changes. A first cut
+kept a full candidate per stretch of cover and walked every ray to the radius: 24 µs whole, 15.6 µs
+scattered. Scans without cover measure as in v1.8.0: six alternating runs, geomean +1%, no row past
++2.7%.
+
+## Solid ground — `Benchmark_Collide_Ground`
+
+One collision tick over 400 boxes resting 2 units into walls from above — a wall along every tenth
+row of a 100×100 grid of 20-unit cells, with a gap every tenth cell — the walls held as
+`collide.Config.Field` (v1.9.0), as one static entity per run of wall, or as one per cell.
+
+| Ground | per tick |
+|:---|---:|
+| field | 83 µs |
+| one static entity per run | 72 µs |
+| one static entity per cell | 184 µs |
+
+The field costs a little more than walls merged into runs, and nothing depends on how the walls are
+laid out or on rebuilding them when one changes. A wall of one entity per cell also catches: a box
+straddling the seam between two of them is pushed sideways both ways and stays in the wall, where the
+field pushes it out through the only open side. The solver without a field measures as in v1.8.0.
+
 ## Primitives — `Benchmark_AABB_*`, `Benchmark_Surface_*`, `Benchmark_Vec_*`
 
 | Operation | euclidean | toroidal |

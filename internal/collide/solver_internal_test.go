@@ -117,7 +117,7 @@ func TestSolve_SkippingChangesNothing(t *testing.T) {
 			for _, p := range c.pairs {
 				s.Add(p)
 			}
-			s.Solve(got, surface, 16, nil, func(i int, _ geom.Vec) { gotContacts = append(gotContacts, i) })
+			s.Solve(got, surface, 16, nil, func(i int, _ geom.Vec) { gotContacts = append(gotContacts, i) }, nil)
 
 			for i := range want {
 				if got[i].Box.AABB != want[i].Box.AABB {
@@ -154,7 +154,7 @@ func TestSolve_MeasuresLessThanEveryPairEveryPass(t *testing.T) {
 	for _, p := range c.pairs {
 		s.Add(p)
 	}
-	s.Solve(items, surface, 16, nil, nil)
+	s.Solve(items, surface, 16, nil, nil, nil)
 	if int(s.clock) >= everything {
 		t.Errorf("measured %d pairs, every pair every pass is %d — want the active set to save measurements", s.clock, everything)
 	}

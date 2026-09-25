@@ -1,5 +1,32 @@
 # Changelog
 
+## v1.9.0 — 2026-09-25
+
+The ground on a grid, for sight and for collisions, without entities.
+
+**Sight**
+- `Cone.Cover` is a `CoverField`: `Walk(origin, dir, length, visit(near, far, bottom, top, tau)
+  bool)`. For every ray the scan asks the owner of a grid for the stretches of the ray inside cells
+  with cover and treats them as entities of the ray — a blocking stretch is a wall, a see-through
+  one spends the budget, with heights their bands cut sight and cast shadows — but never lists them
+  as seen. On a plane the walk stops at the first wall and where the budget runs out.
+- With cover the cone is sampled every two degrees and between two samples whose reach jumps, halved
+  down to a unit at the radius, so an entity seen through a gap is found.
+- Tests hold every scan through cover against the same cells as entities: `Depths` and `Shadows`
+  equal, flat and with heights, the view from a cliff past a wall included; what a dense fan of rays
+  reaches is seen. Scans without cover measure as in v1.8.0; through cover the cost no longer
+  depends on how the cover is laid out — see [BENCHMARKS.md](BENCHMARKS.md#ground-cover--benchmark_view_cover).
+
+**Collisions**
+- `collide.Config.Field` is a `collide.SolidField`: `Solid(id, box, visit(FieldBox) bool)`, a
+  `FieldBox` being a solid box, its cell and its `Open` sides. In every pass, after the pairs, each
+  movable box that moved is pushed out of the solid boxes round it through the shallowest open side,
+  so a box never catches on the seam between two cells of a wall; a `Sensor` is told, not pushed.
+- `collide.FieldHandler` — `TouchField(id, cell, pen)`, `ContactField(id, cell, pen)` — is asked and
+  told once per entity and cell a tick when the Handler implements it.
+- The solver without a field measures as in v1.8.0 — see
+  [BENCHMARKS.md](BENCHMARKS.md#solid-ground--benchmark_collide_ground).
+
 ## v1.8.0 — 2026-09-25
 
 Shadows: the ground out of sight, as holes in a view.

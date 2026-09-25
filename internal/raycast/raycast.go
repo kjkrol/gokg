@@ -27,6 +27,7 @@ type Cone struct {
 	Elevation    func(id uid.UID64) (bottom, top float64)
 	Ground       func(p geom.Vec) float64
 	GroundStep   float64
+	Cover        CoverField
 }
 
 // View is one observer's line of sight: scanned once, then read as many ways as needed.
@@ -60,6 +61,7 @@ type seen struct {
 func (v *View) Scan(space QueryableSpace, observer uid.UID64, cone Cone) bool {
 	v.scratch.reset()
 	v.valid = false
+	v.field = cone.Cover
 
 	if cone.HalfAngle <= 0 || cone.HalfAngle >= math.Pi || cone.Radius <= 0 {
 		return false
@@ -220,6 +222,8 @@ type scratch struct {
 	stretches []crossing
 	samples   []sample
 	shade     shadowing
+	field     CoverField // the ground cover the casts walk, nil for none
+	cover     coverWalk  // the current cast's stretches of cover
 }
 
 func (s *scratch) reset() {

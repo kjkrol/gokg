@@ -63,7 +63,7 @@ func Benchmark_Solver_Field(b *testing.B) {
 		for _, p := range batch.pairs {
 			s.Add(collide.Pair{A: int32(p[0]), B: int32(p[1])})
 		}
-		s.Solve(items, surface, solverIterations, nil, nil)
+		s.Solve(items, surface, solverIterations, nil, nil, nil)
 	}
 	b.ReportMetric(float64(len(batch.pairs)), "pairs")
 }
@@ -107,7 +107,7 @@ func Benchmark_Solver_Dense(b *testing.B) {
 			s.Add(p)
 		}
 		contacts = 0
-		s.Solve(items, sc.surface, solverIterations, nil, onContact)
+		s.Solve(items, sc.surface, solverIterations, nil, onContact, nil)
 	}
 	b.ReportMetric(float64(len(sc.pairs)), "pairs")
 	b.ReportMetric(float64(contacts), "contacts")

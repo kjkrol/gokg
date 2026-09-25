@@ -22,6 +22,9 @@ type Config struct {
 	Reach float64
 	// Iterations caps the passes one Tick spends on chained overlaps.
 	Iterations int
+	// Field is the solid ground the Engine pushes movable boxes out of in the same passes as the
+	// pairs; nil is none.
+	Field SolidField
 }
 
 // Engine finds and separates the overlapping CanCollide boxes of its Space, on one goroutine.

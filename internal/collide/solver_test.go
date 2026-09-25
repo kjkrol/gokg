@@ -52,7 +52,7 @@ func (b *batch) pair(i, j int, flags uint8) int {
 }
 
 func (b *batch) solve(surface *iplane.Surface, onContact func(i int, pen geom.Vec)) {
-	b.s.Solve(b.items, surface, iterations, nil, onContact)
+	b.s.Solve(b.items, surface, iterations, nil, onContact, nil)
 }
 
 func (b *batch) box(i int) plane.AABB { return b.items[i].Box }

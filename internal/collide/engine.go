@@ -1,6 +1,7 @@
 package collide
 
 import (
+	pcollide "github.com/kjkrol/aabbworld/collide"
 	"github.com/kjkrol/aabbworld/geom"
 	iplane "github.com/kjkrol/aabbworld/internal/plane"
 	"github.com/kjkrol/aabbworld/internal/spatial"
@@ -33,12 +34,23 @@ type Engine struct {
 	touch  Touch
 	tell   func(i int, pen geom.Vec)
 	visit  func(item int32)
+	field  *Field
 }
 
-// New builds an Engine over the CanCollide items of grid, reporting to handler.
-func New(grid *spatial.Grid, surface *iplane.Surface, handler Handler, reach float64, iterations int) *Engine {
+// New builds an Engine over the CanCollide items of grid, reporting to handler; field, when not
+// nil, is solid ground the movable items are pushed out of.
+func New(grid *spatial.Grid, surface *iplane.Surface, handler Handler, reach float64, iterations int, field pcollide.SolidField) *Engine {
 	e := &Engine{grid: grid, surface: surface, handler: handler, reach: reach, iterations: iterations}
 	e.onPair, e.touch, e.tell, e.visit = e.add, e.ask, e.report, e.pushed
+	if field != nil {
+		e.field = &Field{Solid: field}
+		if fh, ok := handler.(pcollide.FieldHandler); ok {
+			e.field.Touch = func(item int32, cell uint64, pen geom.Vec) (geom.Vec, bool) {
+				return fh.TouchField(e.items[item].ID, cell, pen)
+			}
+			e.field.Contact = func(item int32, cell uint64, pen geom.Vec) { fh.ContactField(e.items[item].ID, cell, pen) }
+		}
+	}
 	return e
 }
 
@@ -49,7 +61,7 @@ func (e *Engine) Tick() {
 	e.solver.Reset(len(e.items))
 	e.left = e.left[:0]
 	e.grid.Pairs(e.reach, spatial.CanCollide, e.onPair)
-	e.solver.Solve(e.items, e.surface, e.iterations, e.touch, e.tell)
+	e.solver.Solve(e.items, e.surface, e.iterations, e.touch, e.tell, e.field)
 
 	e.stamp++
 	if cap(e.moved) < len(e.items) {

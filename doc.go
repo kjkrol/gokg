@@ -51,7 +51,8 @@
 //     within reach of each other are paired, each overlapping pair is put to the handler's Touch,
 //     confirmed pairs are separated over a few passes and reported by Contact, and every box that
 //     was pushed is reported once by Moved — unless the push took it out through an open edge, in
-//     which case it is listed by [collide.Engine.Left] instead.
+//     which case it is listed by [collide.Engine.Left] instead. With collide.Config.Field the
+//     engine also pushes every movable box out of the solid ground of a grid, in the same passes.
 //  4. Ask: [Space.Query] and [Space.Scan] see the pushed boxes as they are now; no further Rebuild is
 //     owed for that.
 //
@@ -79,6 +80,19 @@
 // hides the plain behind it from the lowland alone. [View.Shadows] lists the stretches of ground an
 // observer cannot see within the radius, so a view with heights can be drawn to its full reach with
 // holes where the ground is out of sight. Details are in internal/raycast.
+//
+// # Ground on a grid
+//
+// Walls, forests and rock laid out on a grid need not be entities. Cone.Cover is a [CoverField]:
+// for every ray the scan asks its owner for the stretches of the ray inside cells with cover —
+// where the ray enters and leaves each cell, the band the cover spans, how see-through it is — and
+// treats them as it treats entities, budget, walls and shadows alike; they are never listed as
+// seen. The owner walks its cells exactly, so on a plane nothing behind a wall is read, and the cost
+// of a scan follows the cells the rays cross, not how much cover the world holds or how it is laid
+// out. collide.Config.Field is a collide.SolidField: for every movable box the engine asks for the
+// solid boxes of the ground around it, with the sides of each that face open ground, and pushes the
+// box out only through those — a box sliding along a wall of many cells never catches on a seam.
+// A collide.FieldHandler hears of each contact with the ground once per entity and cell a tick.
 //
 // # Package dependencies
 //

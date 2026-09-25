@@ -25,7 +25,18 @@ type Cone struct {
 	// sixteenth of Radius); nil is flat ground at 0.
 	Ground     func(p geom.Vec) float64
 	GroundStep float64
+	// Cover is the ground cover of a world on a grid — walls, forests — walked cell by cell along
+	// each ray instead of being entities in the Space; nil is none.
+	Cover CoverField
 }
+
+// CoverField is what stands on the cells of a grid and holds sight back, as a ray meets it: Walk
+// follows the ray from origin along the unit dir for length and calls visit, nearest first, for
+// every stretch inside a cell with cover — where the ray enters and leaves the cell, the band the
+// cover spans (bottom, top; ±Inf without heights) and how see-through it is (tau as Transparency:
+// ≤ 0 blocks). visit returning false ends the walk. The owner of the grid walks it exactly (a DDA
+// over its cells), so what lies behind a wall on a plane is never read.
+type CoverField = iraycast.CoverField
 
 // View is one observer's line of sight: filled by Space.Scan, then read as many ways as needed.
 // The zero value is ready; it must not be copied once scanned, and serves one goroutine.
